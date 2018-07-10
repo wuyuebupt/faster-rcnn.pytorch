@@ -86,6 +86,9 @@ def parse_args():
   parser.add_argument('--vis', dest='vis',
                       help='visualization mode',
                       action='store_true')
+  parser.add_argument('--bs', dest='batch_size',
+                      help='batch_size',
+                      default=1, type=int)
   args = parser.parse_args()
   return args
 
