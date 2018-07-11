@@ -24,43 +24,40 @@ except NameError:
 
 
 class imagenet_vid(imdb):
-    def __init__(self, image_set, devkit_path, data_path):
+    def __init__(self, det_vid, image_set, devkit_path, data_path):
         imdb.__init__(self, image_set)
+        self._det_vid = det_vid
         self._image_set = image_set
         self._devkit_path = devkit_path
         self._data_path = data_path
-        synsets_image = sio.loadmat(os.path.join(self._devkit_path, 'data', 'meta_det.mat'))
+        # synsets_image = sio.loadmat(os.path.join(self._devkit_path, 'data', 'meta_det.mat'))
         synsets_video = sio.loadmat(os.path.join(self._devkit_path, 'data', 'meta_vid.mat'))
-        self._classes_image = ('__background__',)
-        self._wnid_image = (0,)
+        # self._classes_image = ('__background__',)
+        # self._wnid_image = (0,)
 
         self._classes = ('__background__',)
         self._wnid = (0,)
 
-        for i in xrange(200):
-            self._classes_image = self._classes_image + (synsets_image['synsets'][0][i][2][0],)
-            self._wnid_image = self._wnid_image + (synsets_image['synsets'][0][i][1][0],)
-            self._classes = self._classes_image + (synsets_image['synsets'][0][i][2][0],)
-            self._wnid = self._wnid_image + (synsets_image['synsets'][0][i][1][0],)
+        # for i in xrange(200):
+        #     self._classes_image = self._classes_image + (synsets_image['synsets'][0][i][2][0],)
+        #     self._wnid_image = self._wnid_image + (synsets_image['synsets'][0][i][1][0],)
 
-        # for i in xrange(30):
-        #     self._classes = self._classes + (synsets_video['synsets'][0][i][2][0],)
-        #     self._wnid = self._wnid + (synsets_video['synsets'][0][i][1][0],)
+        for i in xrange(30):
+            self._classes = self._classes + (synsets_video['synsets'][0][i][2][0],)
+            self._wnid = self._wnid + (synsets_video['synsets'][0][i][1][0],)
 
-        self._wnid_to_ind_image = dict(zip(self._wnid_image, xrange(201)))
-        self._class_to_ind_image = dict(zip(self._classes_image, xrange(201)))
-        self._wnid_to_ind = dict(zip(self._wnid, xrange(201)))
-        self._class_to_ind = dict(zip(self._classes, xrange(201)))
-
-        # self._wnid_to_ind = dict(zip(self._wnid, xrange(31)))
-        # self._class_to_ind = dict(zip(self._classes, xrange(31)))
+        # self._wnid_to_ind_image = dict(zip(self._wnid_image, xrange(201)))
+        # self._class_to_ind_image = dict(zip(self._classes_image, xrange(201)))
+        self._wnid_to_ind = dict(zip(self._wnid, xrange(31)))
+        self._class_to_ind = dict(zip(self._classes, xrange(31)))
 
         #check for valid intersection between video and image classes
-        self._valid_image_flag = [0]*201
+        # self._valid_image_flag = [0]*201
+        # self._valid_image_flag = [0]*31
 
-        for i in range(1,201):
-            if self._wnid_image[i] in self._wnid_to_ind:
-                self._valid_image_flag[i] = 1
+        # for i in range(1,201):
+        #     if self._wnid_image[i] in self._wnid_to_ind:
+        #         self._valid_image_flag[i] = 1
 
         self._image_ext = ['.JPEG']
 
@@ -94,7 +91,12 @@ class imagenet_vid(imdb):
         """
         # image_path = os.path.join(self._data_path, 'Data', self._image_set, index + self._image_ext[0])
         # image_path = os.path.join(self._data_path, 'Data', 'DET', self._image_set, index + self._image_ext[0])
-        image_path = os.path.join(self._data_path, 'Data', 'DET', self._image_set, index + self._image_ext[0])
+        if self._det_vid == 'det':
+            image_path = os.path.join(self._data_path, 'Data', 'DET', index + self._image_ext[0])
+        else:
+            image_path = os.path.join(self._data_path, 'Data', 'VID', index + self._image_ext[0])
+            
+        # image_path = os.path.join(self._data_path, 'Data', 'DET', self._image_set, index + self._image_ext[0])
         assert os.path.exists(image_path), 'path does not exist: {}'.format(image_path)
         return image_path
 
@@ -102,68 +104,79 @@ class imagenet_vid(imdb):
         """
         Load the indexes listed in this dataset's image set file.
         """
-        # Example path to image set file:
+        # two datasets
+       # Example path to image set file:
         # self._data_path + /ImageSets/val.txt
+        print ("loading ", self._det_vid, " ", self._image_set)
 
         if self._image_set == 'train':
-            image_set_file = os.path.join(self._data_path, 'ImageSets', 'trainr.txt')
-            image_index = []
-            if os.path.exists(image_set_file):
-                f = open(image_set_file, 'r')
-                data = f.read().split()
-                for lines in data:
-                    if lines != '':
-                        image_index.append(lines)
-                f.close()
-                return image_index
+            if self._det_vid == 'det':
+                image_set_index_file = os.path.join(self._data_path, 'ImageSets', 'DET_VID', 'DET_train_30classes.txt')
+            elif self._det_vid == 'vid':
+                image_set_index_file = os.path.join(self._data_path, 'ImageSets', 'DET_VID', 'VID_train_15frames.txt')
+            else:
+                print ("should not happen")
+    
+            assert os.path.exists(image_set_index_file), 'Path does not exist: {}'.format(image_set_index_file)
+            with open(image_set_index_file) as f:
+                lines = [x.strip().split(' ') for x in f.readlines()]
 
-            for i in range(1,200):
-                print(i)
-                image_set_file = os.path.join(self._data_path, 'ImageSets', 'DET', 'train_' + str(i) + '.txt')
-                with open(image_set_file) as f:
-                    tmp_index = [x.strip() for x in f.readlines()]
-                    # print (tmp_index)
-                    vtmp_index = []
-                    for line in tmp_index:
-                        line = line.split(' ')
-                        # vtmp_index.append(self._data_path + '/Data/DET/train/' + line[0])
-                        if int(line[1]) == 1:
-                            vtmp_index.append(line[0])
-                        # image_list = os.popen('ls ' + self._data_path + '/Data/DET/train/' + line[0] + '/*.JPEG').read().split()
-                        # image_list = os.popen('ls ' + self._data_path + '/Data/DET/train/' + line[0] + '*.JPEG').read().split()
-                        # tmp_list = []
-                        # for imgs in image_list:
-                        #     tmp_list.append(imgs[:-5])
-                        # vtmp_index = vtmp_index + tmp_list
-                        # print (len(vtmp_index))
-                
+            # if len(lines[0]) == 2: # det
+            if self._det_vid == 'det':
+                image_index = [x[0] for x in lines]
+            else:
+                image_index = ['%s/%06d' % (x[0], int(x[2])) for x in lines]
+                # self.image_set_index = ['%s/%06d' % (x[0], int(x[2])) for x in lines]
+                # self._pattern = [x[0]+'/%06d' for x in lines]
 
-                num_lines = len(vtmp_index)
-                # print (num_lines)
-                # exit()
-                ids = np.random.permutation(num_lines)
-                count = 0
-                while count < 2000:
-                    image_index.append(vtmp_index[ids[count % num_lines]])
-                    count = count + 1
-            # for i in range(1,201):
-            # for i in range(1,201):
-            #     if self._valid_image_flag[i] == 1:
-            #         # image_set_file = os.path.join(self._data_path, 'ImageSets', 'train_pos_' + str(i) + '.txt')
-            #         image_set_file = os.path.join(self._data_path, 'ImageSets', 'train_pos_' + str(i) + '.txt')
-            #         with open(image_set_file) as f:
-            #             tmp_index = [x.strip() for x in f.readlines()]
-            #         num_lines = len(tmp_index)
-            #         ids = np.random.permutation(num_lines)
-            #         count = 0
-            #         while count < 2000:
-            #             image_index.append(tmp_index[ids[count % num_lines]])
-            #             count = count + 1
-            image_set_file = os.path.join(self._data_path, 'ImageSets', 'trainr.txt')
-            f = open(image_set_file, 'w')
-            for lines in image_index:
-                f.write(lines + '\n')
-            f.close()
+            return image_index
+            # for i in range(1,200):
+            #     print(i)
+            #     image_set_file = os.path.join(self._data_path, 'ImageSets', 'DET', 'train_' + str(i) + '.txt')
+            #     with open(image_set_file) as f:
+            #         tmp_index = [x.strip() for x in f.readlines()]
+            #         # print (tmp_index)
+            #         vtmp_index = []
+            #         for line in tmp_index:
+            #             line = line.split(' ')
+            #             # vtmp_index.append(self._data_path + '/Data/DET/train/' + line[0])
+            #             if int(line[1]) == 1:
+            #                 vtmp_index.append(line[0])
+            #             # image_list = os.popen('ls ' + self._data_path + '/Data/DET/train/' + line[0] + '/*.JPEG').read().split()
+            #             # image_list = os.popen('ls ' + self._data_path + '/Data/DET/train/' + line[0] + '*.JPEG').read().split()
+            #             # tmp_list = []
+            #             # for imgs in image_list:
+            #             #     tmp_list.append(imgs[:-5])
+            #             # vtmp_index = vtmp_index + tmp_list
+            #             # print (len(vtmp_index))
+            #     
+
+            #     num_lines = len(vtmp_index)
+            #     # print (num_lines)
+            #     # exit()
+            #     ids = np.random.permutation(num_lines)
+            #     count = 0
+            #     while count < 2000:
+            #         image_index.append(vtmp_index[ids[count % num_lines]])
+            #         count = count + 1
+            # # for i in range(1,201):
+            # # for i in range(1,201):
+            # #     if self._valid_image_flag[i] == 1:
+            # #         # image_set_file = os.path.join(self._data_path, 'ImageSets', 'train_pos_' + str(i) + '.txt')
+            # #         image_set_file = os.path.join(self._data_path, 'ImageSets', 'train_pos_' + str(i) + '.txt')
+            # #         with open(image_set_file) as f:
+            # #             tmp_index = [x.strip() for x in f.readlines()]
+            # #         num_lines = len(tmp_index)
+            # #         ids = np.random.permutation(num_lines)
+            # #         count = 0
+            # #         while count < 2000:
+            # #             image_index.append(tmp_index[ids[count % num_lines]])
+            # #             count = count + 1
+            # image_set_file = os.path.join(self._data_path, 'ImageSets', 'trainr.txt')
+            # f = open(image_set_file, 'w')
+            # for lines in image_index:
+            #     f.write(lines + '\n')
+            # f.close()
         else:
             image_set_file = os.path.join(self._data_path, 'ImageSets', 'val.txt')
             with open(image_set_file) as f:
@@ -175,7 +188,8 @@ class imagenet_vid(imdb):
         Return the database of ground-truth regions of interest.
         This function loads/saves from/to a cache file to speed up future calls.
         """
-        cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
+        # cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
+        cache_file = os.path.join(self.cache_path, self._det_vid + '_' + self.name + '_gt_roidb.pkl')
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 roidb = pickle.load(fid)
@@ -196,7 +210,18 @@ class imagenet_vid(imdb):
         Load image and bounding boxes info from txt files of imagenet.
         """
         # filename = os.path.join(self._data_path, 'Annotations', self._image_set, index + '.xml')
-        filename = os.path.join(self._data_path, 'Annotations', 'DET', self._image_set, index + '.xml')
+        # filename = os.path.join(self._data_path, 'Annotations', 'DET', self._image_set, index + '.xml')
+        if self._det_vid == 'det':
+            filename = os.path.join(self._data_path, 'Annotations', 'DET', index + '.xml')
+        else:
+            filename = os.path.join(self._data_path, 'Annotations', 'VID', index + '.xml')
+        
+
+        # import xml.etree.ElementTree as ET
+        # tree = ET.parse(filename)
+        # size = tree.find('size')
+        # roi_rec['height'] = float(size.find('height').text)
+        # roi_rec['width'] = float(size.find('width').text)
 
         # print 'Loading: {}'.format(filename)
         def get_data_from_tag(node, tag):
@@ -208,9 +233,13 @@ class imagenet_vid(imdb):
         objs = data.getElementsByTagName('object')
         num_objs = len(objs)
 
-        boxes = np.zeros((num_objs, 4), dtype=np.uint16)
+        # boxes = np.zeros((num_objs, 4), dtype=np.uint16)
+        boxes = np.zeros((num_objs, 4), dtype=np.int32)
         gt_classes = np.zeros((num_objs), dtype=np.int32)
         overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
+        valid_objs = np.zeros((num_objs), dtype=np.bool)
+
+        class_to_index = valid_objs = np.zeros((num_objs), dtype=np.bool)
 
         # Load object bounding boxes into a data frame.
         for ix, obj in enumerate(objs):
@@ -220,12 +249,15 @@ class imagenet_vid(imdb):
             y2 = float(get_data_from_tag(obj, 'ymax'))
             # cls = self._wnid_to_ind_image[
             #         str(get_data_from_tag(obj, "name")).lower().strip()]
+            if not self._wnid_to_ind.has_key(str(get_data_from_tag(obj, "name")).lower().strip() ):
+                continue
             cls = self._wnid_to_ind[
                     str(get_data_from_tag(obj, "name")).lower().strip()]
             boxes[ix, :] = [x1, y1, x2, y2]
             gt_classes[ix] = cls
             overlaps[ix, cls] = 1.0
 
+        assert (boxes[:, 2] >= boxes[:, 0]).all()
         overlaps = scipy.sparse.csr_matrix(overlaps)
 
         return {'boxes' : boxes,

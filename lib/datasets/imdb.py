@@ -118,15 +118,18 @@ class imdb(object):
       boxes = self.roidb[i]['boxes'].copy()
       oldx1 = boxes[:, 0].copy()
       oldx2 = boxes[:, 2].copy()
-      # boxes[:, 0] = widths[i] - oldx2 - 1
-      # boxes[:, 2] = widths[i] - oldx1 - 1
-      boxes[:, 0] = widths[i] - oldx2 
-      boxes[:, 2] = widths[i] - oldx1
+      boxes[:, 0] = widths[i] - oldx2 - 1
+      boxes[:, 2] = widths[i] - oldx1 - 1
+      # boxes[:, 0] = widths[i] - oldx2 
+      # boxes[:, 2] = widths[i] - oldx1
       # an potential error, 0-1=65535 -> 
 
-      # if (boxes[:, 2] < boxes[:, 0]).all():
-      #     print (boxes)
-      assert (boxes[:, 2] >= boxes[:, 0]).all()
+      if (boxes[:, 2] < boxes[:, 0]).all():
+          print (boxes, widths[i], oldx2, oldx1, i)
+          print (self.image_path_at(i))
+          print (self.roidb[i]['boxes'])
+          print (self.roidb[i])
+      assert ((boxes[:, 2] >= boxes[:, 0]).all())
       entry = {'boxes': boxes,
                'gt_overlaps': self.roidb[i]['gt_overlaps'],
                'gt_classes': self.roidb[i]['gt_classes'],
