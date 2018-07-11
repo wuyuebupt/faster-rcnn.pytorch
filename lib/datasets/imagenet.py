@@ -40,16 +40,20 @@ class imagenet(imdb):
         for i in xrange(200):
             self._classes_image = self._classes_image + (synsets_image['synsets'][0][i][2][0],)
             self._wnid_image = self._wnid_image + (synsets_image['synsets'][0][i][1][0],)
+            self._classes = self._classes_image + (synsets_image['synsets'][0][i][2][0],)
+            self._wnid = self._wnid_image + (synsets_image['synsets'][0][i][1][0],)
 
-        for i in xrange(30):
-            self._classes = self._classes + (synsets_video['synsets'][0][i][2][0],)
-            self._wnid = self._wnid + (synsets_video['synsets'][0][i][1][0],)
+        # for i in xrange(30):
+        #     self._classes = self._classes + (synsets_video['synsets'][0][i][2][0],)
+        #     self._wnid = self._wnid + (synsets_video['synsets'][0][i][1][0],)
 
         self._wnid_to_ind_image = dict(zip(self._wnid_image, xrange(201)))
         self._class_to_ind_image = dict(zip(self._classes_image, xrange(201)))
+        self._wnid_to_ind = dict(zip(self._wnid, xrange(201)))
+        self._class_to_ind = dict(zip(self._classes, xrange(201)))
 
-        self._wnid_to_ind = dict(zip(self._wnid, xrange(31)))
-        self._class_to_ind = dict(zip(self._classes, xrange(31)))
+        # self._wnid_to_ind = dict(zip(self._wnid, xrange(31)))
+        # self._class_to_ind = dict(zip(self._classes, xrange(31)))
 
         #check for valid intersection between video and image classes
         self._valid_image_flag = [0]*201
@@ -78,11 +82,19 @@ class imagenet(imdb):
         """
         return self.image_path_from_index(self._image_index[i])
 
+    def image_id_at(self, i):
+        """
+        Return the absolute path to image i in the image sequence.
+        """
+        return i
+
     def image_path_from_index(self, index):
         """
         Construct an image path from the image's "index" identifier.
         """
-        image_path = os.path.join(self._data_path, 'Data', self._image_set, index + self._image_ext[0])
+        # image_path = os.path.join(self._data_path, 'Data', self._image_set, index + self._image_ext[0])
+        # image_path = os.path.join(self._data_path, 'Data', 'DET', self._image_set, index + self._image_ext[0])
+        image_path = os.path.join(self._data_path, 'Data', 'DET', self._image_set, index + self._image_ext[0])
         assert os.path.exists(image_path), 'path does not exist: {}'.format(image_path)
         return image_path
 
@@ -110,33 +122,43 @@ class imagenet(imdb):
                 image_set_file = os.path.join(self._data_path, 'ImageSets', 'DET', 'train_' + str(i) + '.txt')
                 with open(image_set_file) as f:
                     tmp_index = [x.strip() for x in f.readlines()]
+                    # print (tmp_index)
                     vtmp_index = []
                     for line in tmp_index:
                         line = line.split(' ')
-                        image_list = os.popen('ls ' + self._data_path + '/Data/DET/train/' + line[0] + '/*.JPEG').read().split()
-                        tmp_list = []
-                        for imgs in image_list:
-                            tmp_list.append(imgs[:-5])
-                        vtmp_index = vtmp_index + tmp_list
+                        # vtmp_index.append(self._data_path + '/Data/DET/train/' + line[0])
+                        if int(line[1]) == 1:
+                            vtmp_index.append(line[0])
+                        # image_list = os.popen('ls ' + self._data_path + '/Data/DET/train/' + line[0] + '/*.JPEG').read().split()
+                        # image_list = os.popen('ls ' + self._data_path + '/Data/DET/train/' + line[0] + '*.JPEG').read().split()
+                        # tmp_list = []
+                        # for imgs in image_list:
+                        #     tmp_list.append(imgs[:-5])
+                        # vtmp_index = vtmp_index + tmp_list
+                        # print (len(vtmp_index))
+                
 
                 num_lines = len(vtmp_index)
+                # print (num_lines)
+                # exit()
                 ids = np.random.permutation(num_lines)
                 count = 0
                 while count < 2000:
                     image_index.append(vtmp_index[ids[count % num_lines]])
                     count = count + 1
-
-            for i in range(1,201):
-                if self._valid_image_flag[i] == 1:
-                    image_set_file = os.path.join(self._data_path, 'ImageSets', 'train_pos_' + str(i) + '.txt')
-                    with open(image_set_file) as f:
-                        tmp_index = [x.strip() for x in f.readlines()]
-                    num_lines = len(tmp_index)
-                    ids = np.random.permutation(num_lines)
-                    count = 0
-                    while count < 2000:
-                        image_index.append(tmp_index[ids[count % num_lines]])
-                        count = count + 1
+            # for i in range(1,201):
+            # for i in range(1,201):
+            #     if self._valid_image_flag[i] == 1:
+            #         # image_set_file = os.path.join(self._data_path, 'ImageSets', 'train_pos_' + str(i) + '.txt')
+            #         image_set_file = os.path.join(self._data_path, 'ImageSets', 'train_pos_' + str(i) + '.txt')
+            #         with open(image_set_file) as f:
+            #             tmp_index = [x.strip() for x in f.readlines()]
+            #         num_lines = len(tmp_index)
+            #         ids = np.random.permutation(num_lines)
+            #         count = 0
+            #         while count < 2000:
+            #             image_index.append(tmp_index[ids[count % num_lines]])
+            #             count = count + 1
             image_set_file = os.path.join(self._data_path, 'ImageSets', 'trainr.txt')
             f = open(image_set_file, 'w')
             for lines in image_index:
@@ -173,7 +195,8 @@ class imagenet(imdb):
         """
         Load image and bounding boxes info from txt files of imagenet.
         """
-        filename = os.path.join(self._data_path, 'Annotations', self._image_set, index + '.xml')
+        # filename = os.path.join(self._data_path, 'Annotations', self._image_set, index + '.xml')
+        filename = os.path.join(self._data_path, 'Annotations', 'DET', self._image_set, index + '.xml')
 
         # print 'Loading: {}'.format(filename)
         def get_data_from_tag(node, tag):
@@ -195,6 +218,8 @@ class imagenet(imdb):
             y1 = float(get_data_from_tag(obj, 'ymin'))
             x2 = float(get_data_from_tag(obj, 'xmax'))
             y2 = float(get_data_from_tag(obj, 'ymax'))
+            # cls = self._wnid_to_ind_image[
+            #         str(get_data_from_tag(obj, "name")).lower().strip()]
             cls = self._wnid_to_ind[
                     str(get_data_from_tag(obj, "name")).lower().strip()]
             boxes[ix, :] = [x1, y1, x2, y2]
