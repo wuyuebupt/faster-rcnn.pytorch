@@ -178,9 +178,14 @@ class imagenet_vid(imdb):
             #     f.write(lines + '\n')
             # f.close()
         else:
-            image_set_file = os.path.join(self._data_path, 'ImageSets', 'val.txt')
+            if self._det_vid == 'det':
+                print ("sorry, not for det")
+            elif self._det_vid == 'vid':
+                image_set_file = os.path.join(self._data_path, 'ImageSets', 'DET_VID', 'val.txt')
+
+            # image_set_file = os.path.join(self._data_path, 'ImageSets', 'val.txt')
             with open(image_set_file) as f:
-                image_index = [x.strip() for x in f.readlines()]
+                image_index = [x.strip().split()[0] for x in f.readlines()]
         return image_index
 
     def gt_roidb(self):
