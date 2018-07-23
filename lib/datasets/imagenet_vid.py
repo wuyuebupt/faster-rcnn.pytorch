@@ -111,7 +111,9 @@ class imagenet_vid(imdb):
 
         if self._image_set == 'train':
             if self._det_vid == 'det':
-                image_set_index_file = os.path.join(self._data_path, 'ImageSets', 'DET_VID', 'DET_train_30classes.txt')
+                # image_set_index_file = os.path.join(self._data_path, 'ImageSets', 'DET_VID', 'DET_train_30classes.txt')
+                image_set_index_file = os.path.join(self._data_path, 'ImageSets', 'DET_VID', 'DET_train_rpn.txt')
+
             elif self._det_vid == 'vid':
                 image_set_index_file = os.path.join(self._data_path, 'ImageSets', 'DET_VID', 'VID_train_15frames.txt')
             else:
