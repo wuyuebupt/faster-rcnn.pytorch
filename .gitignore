@@ -2,6 +2,6 @@ data/*
 save_dir/
 *.pyc
 *~
-*swp
-*o
-*so
+*.swp
+*.o
+*.so
