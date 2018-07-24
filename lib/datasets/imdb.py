@@ -87,6 +87,9 @@ class imdb(object):
   def num_images(self):
     return len(self.image_index)
 
+  def image_offline_proposal_at(self, i):
+    raise NotImplementedError
+
   def image_path_at(self, i):
     raise NotImplementedError
 
