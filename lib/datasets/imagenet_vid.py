@@ -93,7 +93,10 @@ class imagenet_vid(imdb):
             proposal_path = os.path.join(self._data_path, 'RPNs', 'VID', index + self._proposal_ext[0])
             
         # image_path = os.path.join(self._data_path, 'Data', 'DET', self._image_set, index + self._image_ext[0])
-        assert os.path.exists(proposal_path), 'path does not exist: {}'.format(proposal_path)
+        # NOTE: the proposal file might not exit in training 
+        # 1084113 .mat  in offline proposals files
+        # 1122397 .JPEG in all training images
+        # assert os.path.exists(proposal_path), 'path does not exist: {}'.format(proposal_path)
         return proposal_path
 
 
