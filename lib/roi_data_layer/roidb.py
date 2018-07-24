@@ -79,7 +79,7 @@ def filter_roidb(roidb):
     print('before filtering, there are %d images...' % (len(roidb)))
     i = 0
     while i < len(roidb):
-      if len(roidb[i]['boxes']) == 0 or os.path.exists(roidb[i]['offline_proposal']):
+      if len(roidb[i]['boxes']) == 0 or not os.path.exists(roidb[i]['offline_proposal']):
         del roidb[i]
         i -= 1
       i += 1
