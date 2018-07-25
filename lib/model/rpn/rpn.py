@@ -79,7 +79,7 @@ class _RPN(nn.Module):
 
         # use offline proposals
         rois = proposal_boxes
-        print (rois.shape)
+        # print (rois.shape)
 
         self.rpn_loss_cls = 0
         self.rpn_loss_box = 0

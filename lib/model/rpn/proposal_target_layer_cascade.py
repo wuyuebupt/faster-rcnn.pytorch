@@ -126,6 +126,7 @@ class _ProposalTargetLayer(nn.Module):
         batch_size = overlaps.size(0)
         num_proposal = overlaps.size(1)
         num_boxes_per_img = overlaps.size(2)
+        # print (batch_size, num_proposal, num_boxes_per_img)
 
         offset = torch.arange(0, batch_size)*gt_boxes.size(1)
         offset = offset.view(-1, 1).type_as(gt_assignment) + gt_assignment
