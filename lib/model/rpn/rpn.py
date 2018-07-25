@@ -75,11 +75,15 @@ class _RPN(nn.Module):
         cfg_key = 'TRAIN' if self.training else 'TEST'
 
         # rois = self.RPN_proposal((rpn_cls_prob.data, rpn_bbox_pred.data,
-        #                          im_info, cfg_key))
+        #                           im_info, cfg_key))
+        # print (rois.shape)
+        # print (rois)
 
         # use offline proposals
         rois = proposal_boxes
         # print (rois.shape)
+        # print (rois)
+        # exit()
 
         self.rpn_loss_cls = 0
         self.rpn_loss_box = 0

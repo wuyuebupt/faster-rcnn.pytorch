@@ -227,8 +227,10 @@ class roibatchLoader(data.Dataset):
         if keep_proposal.numel() != 0:
             proposal_boxes = proposal_boxes[keep_proposal]
             num_proposals = min(proposal_boxes.size(0), 2000)
-            print (proposal_boxes.size(), proposal_boxes.size(0), num_proposals)
-            proposal_boxes_padding[:num_proposals,:] = proposal_boxes[:num_proposals]
+            # print (proposal_boxes.size(), proposal_boxes.size(0), num_proposals)
+            # swith the [bbox, score] to [~, bbox] to follow the rpn output format
+            proposal_boxes_padding[:num_proposals,1:5] = proposal_boxes[:num_proposals,:4]
+            proposal_boxes_padding[:num_proposals, 0] = proposal_boxes[:num_proposals, 4]
         else:
             num_proposals = 0
  
@@ -255,7 +257,9 @@ class roibatchLoader(data.Dataset):
         if keep_proposal.numel() != 0:
             proposal_boxes = proposal_boxes[keep_proposal]
             num_proposals = min(proposal_boxes.size(0), 300)
-            proposal_boxes_padding[:num_proposals,:] = proposal_boxes[:num_proposals]
+            # proposal_boxes_padding[:num_proposals,:] = proposal_boxes[:num_proposals]
+            proposal_boxes_padding[:num_proposals,1:5] = proposal_boxes[:num_proposals,:4]
+            proposal_boxes_padding[:num_proposals, 0] = proposal_boxes[:num_proposals, 4]
         else:
             num_proposals = 0
  
