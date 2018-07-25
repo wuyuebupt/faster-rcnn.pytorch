@@ -330,7 +330,7 @@ if __name__ == '__main__':
 
       fasterRCNN.zero_grad()
       rois, cls_prob, bbox_pred, \
-      rpn_loss_cls, rpn_loss_box, \
+      # rpn_loss_cls, rpn_loss_box, \
       RCNN_loss_cls, RCNN_loss_bbox, \
       rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals)
 
