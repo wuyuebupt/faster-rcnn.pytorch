@@ -229,6 +229,13 @@ if __name__ == '__main__':
   num_proposals = torch.LongTensor(1)
   proposal_boxes = torch.FloatTensor(1)
 
+  im_data_2 = torch.FloatTensor(1)
+  im_info_2 = torch.FloatTensor(1)
+  num_boxes_2 = torch.LongTensor(1)
+  gt_boxes_2 = torch.FloatTensor(1)
+  num_proposals_2 = torch.LongTensor(1)
+  proposal_boxes_2 = torch.FloatTensor(1)
+
 
   # ship to cuda
   if args.cuda:
@@ -239,6 +246,13 @@ if __name__ == '__main__':
     num_proposals = num_proposals.cuda()
     proposal_boxes = proposal_boxes.cuda()
 
+    im_data_2 = im_data_2.cuda()
+    im_info_2 = im_info_2.cuda()
+    num_boxes_2 = num_boxes_2.cuda()
+    gt_boxes_2 = gt_boxes_2.cuda()
+    num_proposals_2 = num_proposals_2.cuda()
+    proposal_boxes_2 = proposal_boxes_2.cuda()
+
   # make variable
   im_data = Variable(im_data)
   im_info = Variable(im_info)
@@ -246,6 +260,13 @@ if __name__ == '__main__':
   gt_boxes = Variable(gt_boxes)
   num_proposals = Variable(num_proposals)
   proposal_boxes = Variable(proposal_boxes)
+
+  im_data_2 = Variable(im_data_2)
+  im_info_2 = Variable(im_info_2)
+  num_boxes_2 = Variable(num_boxes_2)
+  gt_boxes_2 = Variable(gt_boxes_2)
+  num_proposals_2 = Variable(num_proposals_2)
+  proposal_boxes_2 = Variable(proposal_boxes_2)
 
   if args.cuda:
     cfg.CUDA = True
@@ -321,6 +342,8 @@ if __name__ == '__main__':
     data_iter = iter(dataloader)
     for step in range(iters_per_epoch):
       data = next(data_iter)
+
+      # the first part
       im_data.data.resize_(data[0].size()).copy_(data[0])
       im_info.data.resize_(data[1].size()).copy_(data[1])
       gt_boxes.data.resize_(data[2].size()).copy_(data[2])
@@ -328,10 +351,19 @@ if __name__ == '__main__':
       proposal_boxes.data.resize_(data[4].size()).copy_(data[4])
       num_proposals.data.resize_(data[5].size()).copy_(data[5])
 
+      # the second part
+      im_data_2.data.resize_(data[6].size()).copy_(data[6])
+      im_info_2.data.resize_(data[7].size()).copy_(data[7])
+      gt_boxes_2.data.resize_(data[8].size()).copy_(data[8])
+      num_boxes_2.data.resize_(data[9].size()).copy_(data[9])
+      proposal_boxes_2.data.resize_(data[10].size()).copy_(data[10])
+      num_proposals_2.data.resize_(data[11].size()).copy_(data[11])
+
       fasterRCNN.zero_grad()
       rois, cls_prob, bbox_pred, \
       RCNN_loss_cls, RCNN_loss_bbox, \
-      rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals)
+      rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals,
+				im_data_2, im_info_2, gt_boxes_2, num_boxes_2, proposal_boxes_2, num_proposals_2)
 
       # rois, cls_prob, bbox_pred, \
       # rpn_loss_cls, rpn_loss_box, \
