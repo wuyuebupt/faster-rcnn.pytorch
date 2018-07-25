@@ -239,7 +239,26 @@ class roibatchLoader(data.Dataset):
         padding_data = padding_data.permute(2, 0, 1).contiguous()
         im_info = im_info.view(3)
 
-        return padding_data, im_info, gt_boxes_padding, num_boxes, proposal_boxes_padding, num_proposals
+        # TODO: unshared processing 
+        # share preprocessing
+        # split into two batches 
+        # print (padding_data.shape)
+        # print (im_info.shape)
+        # print (gt_boxes_padding.shape)
+        # print (num_boxes)
+        # print (proposal_boxes_padding.shape)
+        # print (num_proposals)
+
+        padding_data_2 = padding_data
+        im_info_2 = im_info
+        gt_boxes_padding_2 = gt_boxes_padding
+        num_boxes_2 = num_boxes
+        proposal_boxes_padding_2 = proposal_boxes_padding
+        num_proposals_2 = num_proposals
+ 
+        return padding_data, im_info, gt_boxes_padding, num_boxes, proposal_boxes_padding, num_proposals, \
+                padding_data_2, im_info_2, gt_boxes_padding_2, num_boxes_2, proposal_boxes_padding_2, num_proposals_2
+
     else:
         data = data.permute(0, 3, 1, 2).contiguous().view(3, data_height, data_width)
         im_info = im_info.view(3)
