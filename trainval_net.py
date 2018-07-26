@@ -362,7 +362,8 @@ if __name__ == '__main__':
       fasterRCNN.zero_grad()
       rois, cls_prob, bbox_pred, \
       RCNN_loss_cls, RCNN_loss_bbox, \
-      rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals,
+      rois_label, \
+      RCNN_loss_cls_2, RCNN_loss_bbox_2 = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals,
 				im_data_2, im_info_2, gt_boxes_2, num_boxes_2, proposal_boxes_2, num_proposals_2)
 
       # rois, cls_prob, bbox_pred, \
@@ -373,7 +374,7 @@ if __name__ == '__main__':
       # loss = rpn_loss_cls.mean() + rpn_loss_box.mean() \
       #      + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
 
-      loss = RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
+      loss = RCNN_loss_cls.mean() + RCNN_loss_bbox.mean() + RCNN_loss_cls_2.mean() + RCNN_loss_bbox_2.mean()
       loss_temp += loss.data[0]
 
       # backward

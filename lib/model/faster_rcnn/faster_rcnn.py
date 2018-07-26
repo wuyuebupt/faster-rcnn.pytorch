@@ -40,14 +40,14 @@ class _fasterRCNN(nn.Module):
     def forward(self, im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals, im_data_2, im_info_2, gt_boxes_2, num_boxes_2, proposal_boxes_2, num_proposals_2):
         batch_size = im_data.size(0)
 
+ 
         im_info = im_info.data
         gt_boxes = gt_boxes.data
         num_boxes = num_boxes.data
         proposal_boxes = proposal_boxes.data
         num_proposals = num_proposals.data
 
-
-        # feed image data to base model to obtain base feature map
+       # feed image data to base model to obtain base feature map
         base_feat = self.RCNN_base(im_data)
 
         # feed base feature map tp RPN to obtain rois
@@ -119,8 +119,99 @@ class _fasterRCNN(nn.Module):
         cls_prob = cls_prob.view(batch_size, rois.size(1), -1)
         bbox_pred = bbox_pred.view(batch_size, rois.size(1), -1)
 
+
+        # part 2 
+        batch_size_2 = im_data_2.size(0)
+
+        im_info_2 = im_info_2.data
+        gt_boxes_2 = gt_boxes_2.data
+        num_boxes_2 = num_boxes_2.data
+        proposal_boxes_2 = proposal_boxes_2.data
+        num_proposals_2 = num_proposals_2.data
+
+        base_feat_2 = self.RCNN_base(im_data_2)
+
+        rois_2, rpn_loss_cls_2, rpn_loss_bbox_2 = self.RCNN_rpn(base_feat_2, im_info_2, gt_boxes_2, num_boxes_2, proposal_boxes_2, num_proposals_2)
+
+        if self.training:
+            roi_data_2 = self.RCNN_proposal_target(rois_2, gt_boxes_2, num_boxes_2)
+            rois_2, rois_label_2, rois_target_2, rois_inside_ws_2, rois_outside_ws_2 = roi_data_2
+            # print (rois.shape)
+            # exit()
+
+            rois_label_2 = Variable(rois_label_2.view(-1).long())
+            rois_target_2= Variable(rois_target_2.view(-1, rois_target_2.size(2)))
+            rois_inside_ws_2  = Variable(rois_inside_ws_2.view(-1, rois_inside_ws_2.size(2)))
+            rois_outside_ws_2 = Variable(rois_outside_ws_2.view(-1, rois_outside_ws_2.size(2)))
+        else:
+            rois_label_2 = None
+            rois_target_2 = None
+            rois_inside_ws_2 = None
+            rois_outside_ws_2 = None
+            rpn_loss_cls_2 = 0
+            rpn_loss_bbox_2 = 0
+
+        rois_2 = Variable(rois_2)
+        # do roi pooling based on predicted rois
+
+        if cfg.POOLING_MODE == 'crop':
+            # pdb.set_trace()
+            # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
+            grid_xy_2 = _affine_grid_gen(rois_2.view(-1, 5), base_feat_2.size()[2:], self.grid_size)
+            grid_yx_2 = torch.stack([grid_xy_2.data[:,:,:,1], grid_xy_2.data[:,:,:,0]], 3).contiguous()
+            pooled_feat_2 = self.RCNN_roi_crop(base_feat_2, Variable(grid_yx_2).detach())
+            if cfg.CROP_RESIZE_WITH_MAX_POOL:
+                pooled_feat_2 = F.max_pool2d(pooled_feat_2, 2, 2)
+        elif cfg.POOLING_MODE == 'align':
+            pooled_feat_2 = self.RCNN_roi_align(base_feat_2, rois_2.view(-1, 5))
+        elif cfg.POOLING_MODE == 'pool':
+            pooled_feat_2 = self.RCNN_roi_pool(base_feat_2, rois_2.view(-1,5))
+
+        # feed pooled features to top model
+        pooled_feat_2 = self._head_to_tail(pooled_feat_2)
+
+        # compute bbox offset
+        bbox_pred_2 = self.RCNN_bbox_pred(pooled_feat_2)
+        if self.training and not self.class_agnostic:
+            # select the corresponding columns according to roi labels
+            bbox_pred_view_2 = bbox_pred_2.view(bbox_pred_2.size(0), int(bbox_pred_2.size(1) / 4), 4)
+            bbox_pred_select_2 = torch.gather(bbox_pred_view_2, 1, rois_label_2.view(rois_label_2.size(0), 1, 1).expand(rois_label_2.size(0), 1, 4))
+            bbox_pred_2 = bbox_pred_select_2.squeeze(1)
+
+        # compute object classification probability
+        cls_score_2 = self.RCNN_cls_score(pooled_feat_2)
+        cls_prob_2 = F.softmax(cls_score_2)
+
+        RCNN_loss_cls_2 = 0
+        RCNN_loss_bbox_2 = 0
+
+        if self.training:
+            # classification loss
+            RCNN_loss_cls_2 = F.cross_entropy(cls_score_2, rois_label_2)
+
+            # bounding box regression L1 loss
+            RCNN_loss_bbox_2 = _smooth_l1_loss(bbox_pred_2, rois_target_2, rois_inside_ws_2, rois_outside_ws_2)
+
+
+        cls_prob_2 = cls_prob.view(batch_size, rois_2.size(1), -1)
+        bbox_pred_2 = bbox_pred.view(batch_size, rois_2.size(1), -1)
+
+        # combine two part losses
+        # print (RCNN_loss_cls)
+        # print (RCNN_loss_bbox)
+        # print (cls_score_2.shape)
+        # print (bbox_pred_2.shape)
+        # print (RCNN_loss_cls_2)
+        # print (RCNN_loss_bbox_2)
+
+        # RCNN_loss_cls_all  = RCNN_loss_cls  + RCNN_loss_cls_2
+        # RCNN_loss_bbox_all = RCNN_loss_bbox + RCNN_loss_bbox_2
+ 
+
         # return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label
-        return rois, cls_prob, bbox_pred, RCNN_loss_cls, RCNN_loss_bbox, rois_label
+        # return rois, cls_prob, bbox_pred, RCNN_loss_cls, RCNN_loss_bbox, rois_label
+        # return rois, cls_prob, bbox_pred, RCNN_loss_cls_all, RCNN_loss_bbox_all, rois_label, RCNN_loss_cls_2, RCNN_loss_bbox_2
+        return rois, cls_prob, bbox_pred, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_cls_2, RCNN_loss_bbox_2
 
     def _init_weights(self):
         def normal_init(m, mean, stddev, truncated=False):
