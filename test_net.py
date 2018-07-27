@@ -250,7 +250,7 @@ if __name__ == '__main__':
       RCNN_loss_cls, RCNN_loss_bbox, \
       rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals)
     
-      print (bbox_pred.shape)
+      # print (bbox_pred.shape)
 
       scores = cls_prob.data
       boxes = rois.data[:, :, 1:5]

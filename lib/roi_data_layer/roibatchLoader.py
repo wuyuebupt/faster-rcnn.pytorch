@@ -263,7 +263,7 @@ class roibatchLoader(data.Dataset):
         else:
             num_proposals = 0
  
-        print (num_proposals)
+        # print (num_proposals)
  
         return data, im_info, gt_boxes, num_boxes, proposal_boxes_padding, num_proposals
 
