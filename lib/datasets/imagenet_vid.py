@@ -71,16 +71,19 @@ class imagenet_vid(imdb):
         # image_path = os.path.join(self._data_path, 'Data', self._image_set, index + self._image_ext[0])
         # image_path = os.path.join(self._data_path, 'Data', 'DET', self._image_set, index + self._image_ext[0])
         if self._det_vid == 'det':
-            proposal_path = os.path.join(self._data_path, 'RPNs', 'DET', index + self._proposal_ext[0])
+            proposal_path = os.path.join(self._data_path, 'RPNs', 'DET', index[0] + self._proposal_ext[0])
+            proposal_path_1 = os.path.join(self._data_path, 'RPNs', 'DET', index[1] + self._proposal_ext[0])
         else:
-            proposal_path = os.path.join(self._data_path, 'RPNs', 'VID', index + self._proposal_ext[0])
+            proposal_path = os.path.join(self._data_path, 'RPNs', 'VID', index[0] + self._proposal_ext[0])
+            proposal_path_1 = os.path.join(self._data_path, 'RPNs', 'VID', index[1] + self._proposal_ext[0])
             
         # image_path = os.path.join(self._data_path, 'Data', 'DET', self._image_set, index + self._image_ext[0])
         # NOTE: the proposal file might not exit in training 
         # 1084113 .mat  in offline proposals files
         # 1122397 .JPEG in all training images
         # assert os.path.exists(proposal_path), 'path does not exist: {}'.format(proposal_path)
-        return proposal_path
+        # return proposal_path
+        return (proposal_path, proposal_path_1)
 
 
     def image_path_at(self, i):
@@ -99,15 +102,24 @@ class imagenet_vid(imdb):
         """
         Construct an image path from the image's "index" identifier.
         """
+        print (index)
         # image_path = os.path.join(self._data_path, 'Data', self._image_set, index + self._image_ext[0])
         # image_path = os.path.join(self._data_path, 'Data', 'DET', self._image_set, index + self._image_ext[0])
         if self._det_vid == 'det':
-            image_path = os.path.join(self._data_path, 'Data', 'DET', index + self._image_ext[0])
+            image_path_first  = os.path.join(self._data_path, 'Data', 'DET', index[0] + self._image_ext[0])
+            image_path_second = os.path.join(self._data_path, 'Data', 'DET', index[1] + self._image_ext[0])
         else:
-            image_path = os.path.join(self._data_path, 'Data', 'VID', index + self._image_ext[0])
+            image_path_first  = os.path.join(self._data_path, 'Data', 'VID', index[0] + self._image_ext[0])
+            image_path_second = os.path.join(self._data_path, 'Data', 'VID', index[1] + self._image_ext[0])
+            if not os.path.exists(image_path_second):
+                image_path_second = image_path_first
+        
+        assert os.path.exists(image_path_first), 'path does not exist: {}'.format(image_path_first)
+        assert os.path.exists(image_path_second), 'path does not exist: {}'.format(image_path_second)
+        image_path = (image_path_first, image_path_second)
             
         # image_path = os.path.join(self._data_path, 'Data', 'DET', self._image_set, index + self._image_ext[0])
-        assert os.path.exists(image_path), 'path does not exist: {}'.format(image_path)
+        # assert os.path.exists(image_path), 'path does not exist: {}'.format(image_path)
         return image_path
 
     def _load_image_set_index(self):
@@ -135,12 +147,14 @@ class imagenet_vid(imdb):
 
             # if len(lines[0]) == 2: # det
             if self._det_vid == 'det':
-                image_index = [(x[0],x[0]) for x in lines]
-
+                image_index = [(x[0], x[0]) for x in lines]
             else:
                 image_index = [('%s/%06d' % (x[0], int(x[2])), '%s/%06d' % (x[0], int(x[2]) + 1)) for x in lines]
+                # TODO: filter unexist pairs
+
                 # self.image_set_index = ['%s/%06d' % (x[0], int(x[2])) for x in lines]
                 # self._pattern = [x[0]+'/%06d' for x in lines]
+
 
             return image_index
             # for i in range(1,200):
@@ -215,7 +229,7 @@ class imagenet_vid(imdb):
             return roidb
 
         gt_roidb = [self._load_imagenet_annotation(index)
-                    for index in self.image_index]
+                    for index in self._image_index]
         with open(cache_file, 'wb') as fid:
             pickle.dump(gt_roidb, fid, pickle.HIGHEST_PROTOCOL)
         print('wrote gt roidb to {}'.format(cache_file))
@@ -230,22 +244,20 @@ class imagenet_vid(imdb):
         # filename = os.path.join(self._data_path, 'Annotations', self._image_set, index + '.xml')
         # filename = os.path.join(self._data_path, 'Annotations', 'DET', self._image_set, index + '.xml')
         if self._det_vid == 'det':
-            filename = os.path.join(self._data_path, 'Annotations', 'DET', index + '.xml')
+            filename_0 = os.path.join(self._data_path, 'Annotations', 'DET', index[0] + '.xml')
+            filename_1 = os.path.join(self._data_path, 'Annotations', 'DET', index[1] + '.xml')
         else:
-            filename = os.path.join(self._data_path, 'Annotations', 'VID', index + '.xml')
-        
-
-        # import xml.etree.ElementTree as ET
-        # tree = ET.parse(filename)
-        # size = tree.find('size')
-        # roi_rec['height'] = float(size.find('height').text)
-        # roi_rec['width'] = float(size.find('width').text)
-
+            filename_0 = os.path.join(self._data_path, 'Annotations', 'VID', index[0] + '.xml')
+            filename_1 = os.path.join(self._data_path, 'Annotations', 'VID', index[1] + '.xml')
+            if not os.path.exists(filename_1):
+                filename_1 =  filename_0
+ 
         # print 'Loading: {}'.format(filename)
         def get_data_from_tag(node, tag):
             return node.getElementsByTagName(tag)[0].childNodes[0].data
 
-        with open(filename) as f:
+        # the first image label
+        with open(filename_0) as f:
             data = minidom.parseString(f.read())
 
         objs = data.getElementsByTagName('object')
@@ -278,10 +290,53 @@ class imagenet_vid(imdb):
         assert (boxes[:, 2] >= boxes[:, 0]).all()
         overlaps = scipy.sparse.csr_matrix(overlaps)
 
-        return {'boxes' : boxes,
-                'gt_classes': gt_classes,
-                'gt_overlaps' : overlaps,
+        # read the second image label
+        with open(filename_1) as f:
+            data_1 = minidom.parseString(f.read())
+
+        objs_1 = data_1.getElementsByTagName('object')
+        num_objs_1 = len(objs_1)
+
+        # boxes = np.zeros((num_objs, 4), dtype=np.uint16)
+        boxes_1 = np.zeros((num_objs_1, 4), dtype=np.int32)
+        gt_classes_1 = np.zeros((num_objs_1), dtype=np.int32)
+        overlaps_1 = np.zeros((num_objs_1, self.num_classes), dtype=np.float32)
+        valid_objs_1 = np.zeros((num_objs_1), dtype=np.bool)
+
+        class_to_index_1 = valid_objs_1 = np.zeros((num_objs_1), dtype=np.bool)
+
+        # Load object bounding boxes into a data frame.
+        for ix, obj in enumerate(objs_1):
+            x1 = float(get_data_from_tag(obj, 'xmin'))
+            y1 = float(get_data_from_tag(obj, 'ymin'))
+            x2 = float(get_data_from_tag(obj, 'xmax'))
+            y2 = float(get_data_from_tag(obj, 'ymax'))
+            # cls = self._wnid_to_ind_image[
+            #         str(get_data_from_tag(obj, "name")).lower().strip()]
+            if not self._wnid_to_ind.has_key(str(get_data_from_tag(obj, "name")).lower().strip() ):
+                continue
+            cls = self._wnid_to_ind[
+                    str(get_data_from_tag(obj, "name")).lower().strip()]
+            boxes_1[ix, :] = [x1, y1, x2, y2]
+            gt_classes_1[ix] = cls
+            overlaps_1[ix, cls] = 1.0
+
+        assert (boxes_1[:, 2] >= boxes_1[:, 0]).all()
+        overlaps_1 = scipy.sparse.csr_matrix(overlaps_1)
+
+        # boxes returned
+        boxes_pair = (boxes, boxes_1)
+        gt_classes_pair = (gt_classes, gt_classes_1)
+        overlaps_pair   = (overlaps, overlaps_1)
+        return {'boxes' : boxes_pair,
+                'gt_classes': gt_classes_pair,
+                'gt_overlaps' : overlaps_pair,
                 'flipped' : False}
+        # return {'boxes' : boxes,
+        #         'gt_classes': gt_classes,
+        #         'gt_overlaps' : overlaps,
+        #         'flipped' : False}
+
 
 if __name__ == '__main__':
     d = datasets.imagenet('val', '')

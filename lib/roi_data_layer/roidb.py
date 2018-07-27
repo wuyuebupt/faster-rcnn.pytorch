@@ -21,7 +21,7 @@ def prepare_roidb(imdb):
 
   roidb = imdb.roidb
   if not (imdb.name.startswith('coco')):
-    sizes = [PIL.Image.open(imdb.image_path_at(i)).size
+    sizes = [PIL.Image.open(imdb.image_path_at(i)[0]).size
          for i in range(imdb.num_images)]
          
   for i in range(len(imdb.image_index)):
@@ -33,20 +33,27 @@ def prepare_roidb(imdb):
       roidb[i]['width'] = sizes[i][0]
       roidb[i]['height'] = sizes[i][1]
     # need gt_overlaps as a dense array for argmax
-    gt_overlaps = roidb[i]['gt_overlaps'].toarray()
+    gt_overlaps_0 = roidb[i]['gt_overlaps'][0].toarray()
+    gt_overlaps_1 = roidb[i]['gt_overlaps'][1].toarray()
     # max overlap with gt over classes (columns)
-    max_overlaps = gt_overlaps.max(axis=1)
+    max_overlaps_0 = gt_overlaps_0.max(axis=1)
+    max_overlaps_1 = gt_overlaps_1.max(axis=1)
     # gt class that had the max overlap
-    max_classes = gt_overlaps.argmax(axis=1)
-    roidb[i]['max_classes'] = max_classes
-    roidb[i]['max_overlaps'] = max_overlaps
+    max_classes_0 = gt_overlaps_0.argmax(axis=1)
+    max_classes_1 = gt_overlaps_1.argmax(axis=1)
+    roidb[i]['max_classes'] = (max_classes_0, max_classes_1)
+    roidb[i]['max_overlaps'] = (max_overlaps_0, max_overlaps_1)
     # sanity checks
     # max overlap of 0 => class should be zero (background)
-    zero_inds = np.where(max_overlaps == 0)[0]
-    assert all(max_classes[zero_inds] == 0)
+    zero_inds_0 = np.where(max_overlaps_0 == 0)[0]
+    assert all(max_classes_0[zero_inds_0] == 0)
+    zero_inds_1 = np.where(max_overlaps_1 == 0)[0]
+    assert all(max_classes_1[zero_inds_1] == 0)
     # max overlap > 0 => class should not be zero (must be a fg class)
-    nonzero_inds = np.where(max_overlaps > 0)[0]
-    assert all(max_classes[nonzero_inds] != 0)
+    nonzero_inds_0 = np.where(max_overlaps_0 > 0)[0]
+    assert all(max_classes_0[nonzero_inds_0] != 0)
+    nonzero_inds_1 = np.where(max_overlaps_1 > 0)[0]
+    assert all(max_classes_1[nonzero_inds_1] != 0)
 
 
 def rank_roidb_ratio(roidb):
@@ -80,7 +87,7 @@ def filter_roidb(roidb):
     print('before filtering, there are %d images...' % (len(roidb)))
     i = 0
     while i < len(roidb):
-      if len(roidb[i]['boxes']) == 0 or not os.path.exists(roidb[i]['offline_proposal']):
+      if len(roidb[i]['boxes'][0]) == 0 or not os.path.exists(roidb[i]['offline_proposal'][0]) or len(roidb[i]['boxes'][0]) == 0 or not os.path.exists(roidb[i]['offline_proposal'][0]):
         del roidb[i]
         i -= 1
       i += 1
