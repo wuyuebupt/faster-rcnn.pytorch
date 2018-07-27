@@ -1,5 +1,6 @@
 data/*
 save_dir/
+output/
 *.o
 *.so
 # READ THIS BEFORE YOU REFACTOR ME
