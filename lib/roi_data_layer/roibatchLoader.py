@@ -256,13 +256,14 @@ class roibatchLoader(data.Dataset):
         proposal_boxes_padding = torch.FloatTensor( 300, proposal_boxes.size(1)).zero_()
         if keep_proposal.numel() != 0:
             proposal_boxes = proposal_boxes[keep_proposal]
-            num_proposals = min(proposal_boxes.size(0), 300)
+            num_proposals = min(proposal_boxes.size(0), 300) 
             # proposal_boxes_padding[:num_proposals,:] = proposal_boxes[:num_proposals]
             proposal_boxes_padding[:num_proposals,1:5] = proposal_boxes[:num_proposals,:4]
-            proposal_boxes_padding[:num_proposals, 0] = proposal_boxes[:num_proposals, 4]
+            # proposal_boxes_padding[:num_proposals, 0] = proposal_boxes[:num_proposals, 4]
         else:
             num_proposals = 0
  
+        print (num_proposals)
  
         return data, im_info, gt_boxes, num_boxes, proposal_boxes_padding, num_proposals
 

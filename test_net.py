@@ -197,8 +197,8 @@ if __name__ == '__main__':
   im_info = Variable(im_info, volatile=True)
   num_boxes = Variable(num_boxes, volatile=True)
   gt_boxes = Variable(gt_boxes, volatile=True)
-  num_proposals = Variable(num_proposals)
-  proposal_boxes = Variable(proposal_boxes)
+  num_proposals = Variable(num_proposals, volatile=True)
+  proposal_boxes = Variable(proposal_boxes, volatile=True)
 
   if args.cuda:
     cfg.CUDA = True
@@ -250,7 +250,7 @@ if __name__ == '__main__':
       RCNN_loss_cls, RCNN_loss_bbox, \
       rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals)
     
-      print (bbox_pred)
+      print (bbox_pred.shape)
 
       scores = cls_prob.data
       boxes = rois.data[:, :, 1:5]
