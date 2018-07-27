@@ -28,6 +28,7 @@ def prepare_roidb(imdb):
     roidb[i]['img_id'] = imdb.image_id_at(i)
     roidb[i]['image'] = imdb.image_path_at(i)
     roidb[i]['offline_proposal'] = imdb.image_offline_proposal_at(i)
+
     if not (imdb.name.startswith('coco')):
       roidb[i]['width'] = sizes[i][0]
       roidb[i]['height'] = sizes[i][1]
@@ -121,6 +122,7 @@ def combined_roidb(imdb_names, training=True):
   if len(roidbs) > 1:
     for r in roidbs[1:]:
       roidb.extend(r)
+    # just some name
     tmp = get_imdb(imdb_names.split('+')[1])
     imdb = datasets.imdb.imdb(imdb_names, tmp.classes)
   else:

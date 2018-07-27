@@ -71,6 +71,7 @@ class roibatchLoader(data.Dataset):
     # we need to random shuffle the bounding box.
     data_height, data_width = data.size(1), data.size(2)
     if self.training:
+        # shuffle is used for gt boxes and proposals -> 
         np.random.shuffle(blobs['gt_boxes'])
         gt_boxes = torch.from_numpy(blobs['gt_boxes'])
         proposal_boxes = torch.from_numpy(blobs['offline_proposals'])
@@ -239,7 +240,8 @@ class roibatchLoader(data.Dataset):
         padding_data = padding_data.permute(2, 0, 1).contiguous()
         im_info = im_info.view(3)
 
-        # TODO: unshared processing 
+
+        # TODO: split the data into two parts
         # share preprocessing
         # split into two batches 
         # print (padding_data.shape)
@@ -248,6 +250,7 @@ class roibatchLoader(data.Dataset):
         # print (num_boxes)
         # print (proposal_boxes_padding.shape)
         # print (num_proposals)
+
 
         padding_data_2 = padding_data
         im_info_2 = im_info

@@ -30,34 +30,17 @@ class imagenet_vid(imdb):
         self._image_set = image_set
         self._devkit_path = devkit_path
         self._data_path = data_path
-        # synsets_image = sio.loadmat(os.path.join(self._devkit_path, 'data', 'meta_det.mat'))
         synsets_video = sio.loadmat(os.path.join(self._devkit_path, 'data', 'meta_vid.mat'))
-        # self._classes_image = ('__background__',)
-        # self._wnid_image = (0,)
 
         self._classes = ('__background__',)
         self._wnid = (0,)
-
-        # for i in xrange(200):
-        #     self._classes_image = self._classes_image + (synsets_image['synsets'][0][i][2][0],)
-        #     self._wnid_image = self._wnid_image + (synsets_image['synsets'][0][i][1][0],)
 
         for i in xrange(30):
             self._classes = self._classes + (synsets_video['synsets'][0][i][2][0],)
             self._wnid = self._wnid + (synsets_video['synsets'][0][i][1][0],)
 
-        # self._wnid_to_ind_image = dict(zip(self._wnid_image, xrange(201)))
-        # self._class_to_ind_image = dict(zip(self._classes_image, xrange(201)))
         self._wnid_to_ind = dict(zip(self._wnid, xrange(31)))
         self._class_to_ind = dict(zip(self._classes, xrange(31)))
-
-        #check for valid intersection between video and image classes
-        # self._valid_image_flag = [0]*201
-        # self._valid_image_flag = [0]*31
-
-        # for i in range(1,201):
-        #     if self._wnid_image[i] in self._wnid_to_ind:
-        #         self._valid_image_flag[i] = 1
 
         self._image_ext = ['.JPEG']
         self._proposal_ext = ['.mat']
@@ -152,9 +135,10 @@ class imagenet_vid(imdb):
 
             # if len(lines[0]) == 2: # det
             if self._det_vid == 'det':
-                image_index = [x[0] for x in lines]
+                image_index = [(x[0],x[0]) for x in lines]
+
             else:
-                image_index = ['%s/%06d' % (x[0], int(x[2])) for x in lines]
+                image_index = [('%s/%06d' % (x[0], int(x[2])), '%s/%06d' % (x[0], int(x[2]) + 1)) for x in lines]
                 # self.image_set_index = ['%s/%06d' % (x[0], int(x[2])) for x in lines]
                 # self._pattern = [x[0]+'/%06d' for x in lines]
 
