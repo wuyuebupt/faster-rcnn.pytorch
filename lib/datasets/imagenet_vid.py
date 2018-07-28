@@ -149,61 +149,26 @@ class imagenet_vid(imdb):
             if self._det_vid == 'det':
                 image_index = [(x[0], x[0]) for x in lines]
             else:
-                image_index = [('%s/%06d' % (x[0], int(x[2])), '%s/%06d' % (x[0], int(x[2]) + 1)) for x in lines]
+                # image_index = [('%s/%06d' % (x[0], int(x[2])), '%s/%06d' % (x[0], int(x[2]) + 1)) for x in lines]
+                # test if .JPEG and .mat exists, remove these pairs that don't exist
+                # for pair in image_index:
+                image_index = []
+                for x in lines:
+                    print (x)
+                    index = ('%s/%06d' % (x[0], int(x[2])), '%s/%06d' % (x[0], int(x[2]) + 1))
+                    image_path_0    = os.path.join(self._data_path, 'Data', 'VID', index[0] + self._image_ext[0])
+                    image_path_1    = os.path.join(self._data_path, 'Data', 'VID', index[1] + self._image_ext[0])
+                    proposal_path_0 = os.path.join(self._data_path, 'RPNs', 'VID', index[0] + self._proposal_ext[0])
+                    proposal_path_1 = os.path.join(self._data_path, 'RPNs', 'VID', index[1] + self._proposal_ext[0])            
+                    if os.path.exists(image_path_0) and os.path.exists(image_path_1) and os.path.exists(proposal_path_0) and os.path.exists(proposal_path_1):
+                        image_index.append(index)
+
                 # TODO: filter unexist pairs
 
                 # self.image_set_index = ['%s/%06d' % (x[0], int(x[2])) for x in lines]
                 # self._pattern = [x[0]+'/%06d' for x in lines]
-
-
             return image_index
-            # for i in range(1,200):
-            #     print(i)
-            #     image_set_file = os.path.join(self._data_path, 'ImageSets', 'DET', 'train_' + str(i) + '.txt')
-            #     with open(image_set_file) as f:
-            #         tmp_index = [x.strip() for x in f.readlines()]
-            #         # print (tmp_index)
-            #         vtmp_index = []
-            #         for line in tmp_index:
-            #             line = line.split(' ')
-            #             # vtmp_index.append(self._data_path + '/Data/DET/train/' + line[0])
-            #             if int(line[1]) == 1:
-            #                 vtmp_index.append(line[0])
-            #             # image_list = os.popen('ls ' + self._data_path + '/Data/DET/train/' + line[0] + '/*.JPEG').read().split()
-            #             # image_list = os.popen('ls ' + self._data_path + '/Data/DET/train/' + line[0] + '*.JPEG').read().split()
-            #             # tmp_list = []
-            #             # for imgs in image_list:
-            #             #     tmp_list.append(imgs[:-5])
-            #             # vtmp_index = vtmp_index + tmp_list
-            #             # print (len(vtmp_index))
-            #     
-
-            #     num_lines = len(vtmp_index)
-            #     # print (num_lines)
-            #     # exit()
-            #     ids = np.random.permutation(num_lines)
-            #     count = 0
-            #     while count < 2000:
-            #         image_index.append(vtmp_index[ids[count % num_lines]])
-            #         count = count + 1
-            # # for i in range(1,201):
-            # # for i in range(1,201):
-            # #     if self._valid_image_flag[i] == 1:
-            # #         # image_set_file = os.path.join(self._data_path, 'ImageSets', 'train_pos_' + str(i) + '.txt')
-            # #         image_set_file = os.path.join(self._data_path, 'ImageSets', 'train_pos_' + str(i) + '.txt')
-            # #         with open(image_set_file) as f:
-            # #             tmp_index = [x.strip() for x in f.readlines()]
-            # #         num_lines = len(tmp_index)
-            # #         ids = np.random.permutation(num_lines)
-            # #         count = 0
-            # #         while count < 2000:
-            # #             image_index.append(tmp_index[ids[count % num_lines]])
-            # #             count = count + 1
-            # image_set_file = os.path.join(self._data_path, 'ImageSets', 'trainr.txt')
-            # f = open(image_set_file, 'w')
-            # for lines in image_index:
-            #     f.write(lines + '\n')
-            # f.close()
+        
         else:
             if self._det_vid == 'det':
                 print ("sorry, not for det")
