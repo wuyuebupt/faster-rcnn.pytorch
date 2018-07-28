@@ -46,35 +46,61 @@ def get_minibatch(roidb, num_classes):
   # gt boxes: (x1, y1, x2, y2, cls)
   if cfg.TRAIN.USE_ALL_GT:
     # Include all ground truth boxes
-    gt_inds = np.where(roidb[0]['gt_classes'] != 0)[0]
+    # print (roidb[0]['gt_classes'])
+    gt_inds = np.where(roidb[0]['gt_classes'][0] != 0)[0]
+    gt_inds_1 = np.where(roidb[0]['gt_classes'][1] != 0)[0]
   else:
     # For the COCO ground truth boxes, exclude the ones that are ''iscrowd'' 
-    gt_inds = np.where((roidb[0]['gt_classes'] != 0) & np.all(roidb[0]['gt_overlaps'].toarray() > -1.0, axis=1))[0]
-  print (gt_inds)
+    gt_inds = np.where((roidb[0]['gt_classes'][0] != 0) & np.all(roidb[0]['gt_overlaps'][0].toarray() > -1.0, axis=1))[0]
+    gt_inds_1 = np.where((roidb[0]['gt_classes'][1] != 0) & np.all(roidb[0]['gt_overlaps'][1].toarray() > -1.0, axis=1))[0]
+
   gt_boxes = np.empty((len(gt_inds), 5), dtype=np.float32)
 
   # load the offline proposals
   
-  # print (len(im_offline_proposals[0]))
-  offline_proposal_boxes = np.empty((len(im_offline_proposals[0]), 5), dtype=np.float32)
-  offline_proposal_boxes[:, 0:4] = im_offline_proposals[0][:, 0:4] * im_scales[0]
-  offline_proposal_boxes[:, 4] = im_offline_proposals[0][:, 4] 
+  # print (len(im_offline_proposals[0][0]))
+  offline_proposal_boxes = np.empty((len(im_offline_proposals[0][0]), 5), dtype=np.float32)
+  offline_proposal_boxes[:, 0:4] = im_offline_proposals[0][0][:, 0:4] * im_scales[0][0]
+  # offline_proposal_boxes[:, 4] = im_offline_proposals[0][0][:, 4] 
 
   # gt_boxes is 
-  gt_boxes[:, 0:4] = roidb[0]['boxes'][gt_inds, :] * im_scales[0]
+  gt_boxes[:, 0:4] = roidb[0]['boxes'][0][gt_inds, :] * im_scales[0][0]
   # gt_boxes[:, 0:4] = roidb[0]['boxes'][gt_inds, :] * im_scales[0]
-  gt_boxes[:, 4] = roidb[0]['gt_classes'][gt_inds]
+  gt_boxes[:, 4] = roidb[0]['gt_classes'][0][gt_inds]
+
+
+  # the second part
+  gt_boxes_1 = np.empty((len(gt_inds_1), 5), dtype=np.float32)
+  offline_proposal_boxes_1 = np.empty((len(im_offline_proposals[1][0]), 5), dtype=np.float32)
+  offline_proposal_boxes_1[:, 0:4] = im_offline_proposals[1][0][:, 0:4] * im_scales[1][0]
+  # offline_proposal_boxes_1[:, 4] = im_offline_proposals[1][0][:, 4] 
+
+  # gt_boxes is 
+  gt_boxes_1[:, 0:4] = roidb[0]['boxes'][1][gt_inds_1, :] * im_scales[1][0]
+  # gt_boxes[:, 0:4] = roidb[0]['boxes'][gt_inds, :] * im_scales[0]
+  gt_boxes_1[:, 4] = roidb[0]['gt_classes'][1][gt_inds_1]
 
 
 
+  pair_gt_boxes = (gt_boxes, gt_boxes_1)
+  pair_offline_proposal_boxes = (offline_proposal_boxes, offline_proposal_boxes_1)
+  pair_info = (np.array([[im_blob[0].shape[1], im_blob[0].shape[2], im_scales[0][0]]],dtype=np.float32), 
+		np.array([[im_blob[1].shape[1], im_blob[1].shape[2], im_scales[1][0]]],dtype=np.float32))
 
-  blobs['gt_boxes'] = gt_boxes
-  blobs['offline_proposals'] = offline_proposal_boxes
-  blobs['im_info'] = np.array(
-    [[im_blob.shape[1], im_blob.shape[2], im_scales[0]]],
-    dtype=np.float32)
+  blobs['gt_boxes'] = pair_gt_boxes
+  blobs['offline_proposals'] = pair_offline_proposal_boxes
+  blobs['im_info'] = pair_info
 
   blobs['img_id'] = roidb[0]['img_id']
+
+
+  # blobs['gt_boxes'] = gt_boxes
+  # blobs['offline_proposals'] = offline_proposal_boxes
+  # blobs['im_info'] = np.array(
+  #   [[im_blob.shape[1], im_blob.shape[2], im_scales[0]]],
+  #   dtype=np.float32)
+
+  # blobs['img_id'] = roidb[0]['img_id']
 
   return blobs
 
@@ -129,7 +155,7 @@ def _get_image_blob(roidb, scale_inds):
 
 
 
-    print (roidb[i]['image'])
+    # print (roidb[i]['image'])
     im_1 = imread(roidb[i]['image'][1])
 
     if len(im.shape) == 2:

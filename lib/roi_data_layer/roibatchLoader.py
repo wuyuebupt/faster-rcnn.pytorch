@@ -66,15 +66,17 @@ class roibatchLoader(data.Dataset):
     minibatch_db = [self._roidb[index_ratio]]
     blobs = get_minibatch(minibatch_db, self._num_classes)
 
-    data = torch.from_numpy(blobs['data'])
-    im_info = torch.from_numpy(blobs['im_info'])
+    # data = torch.from_numpy(blobs['data'])
+    # im_info = torch.from_numpy(blobs['im_info'])
+    data = torch.from_numpy(blobs['data'][0])
+    im_info = torch.from_numpy(blobs['im_info'][0])
     # we need to random shuffle the bounding box.
     data_height, data_width = data.size(1), data.size(2)
     if self.training:
         # shuffle is used for gt boxes and proposals -> 
-        np.random.shuffle(blobs['gt_boxes'])
-        gt_boxes = torch.from_numpy(blobs['gt_boxes'])
-        proposal_boxes = torch.from_numpy(blobs['offline_proposals'])
+        np.random.shuffle(blobs['gt_boxes'][0])
+        gt_boxes = torch.from_numpy(blobs['gt_boxes'][0])
+        proposal_boxes = torch.from_numpy(blobs['offline_proposals'][0])
 
         ########################################################
         # padding the input image to fixed size for each group #

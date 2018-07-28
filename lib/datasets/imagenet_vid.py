@@ -102,7 +102,7 @@ class imagenet_vid(imdb):
         """
         Construct an image path from the image's "index" identifier.
         """
-        print (index)
+        # print (index)
         # image_path = os.path.join(self._data_path, 'Data', self._image_set, index + self._image_ext[0])
         # image_path = os.path.join(self._data_path, 'Data', 'DET', self._image_set, index + self._image_ext[0])
         if self._det_vid == 'det':
