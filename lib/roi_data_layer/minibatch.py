@@ -158,8 +158,8 @@ def _get_image_blob(roidb, scale_inds):
     # print (roidb[i]['image'])
     im_1 = imread(roidb[i]['image'][1])
 
-    if len(im.shape) == 2:
-      im_1 = im[:,:,np.newaxis]
+    if len(im_1.shape) == 2:
+      im_1 = im_1[:,:,np.newaxis]
       im_1 = np.concatenate((im_1,im_1,im_1), axis=2)
     # flip the channel, since the original one using cv2
     # rgb -> bgr
