@@ -407,7 +407,7 @@ class roibatchLoader(data.Dataset):
         if keep.numel() != 0:
             gt_boxes_1 = gt_boxes_1[keep]
             num_boxes_1 = min(gt_boxes_1.size(0), self.max_num_box)
-            gt_boxes_padding_1[:num_boxes,:] = gt_boxes_1[:num_boxes]
+            gt_boxes_padding_1[:num_boxes_1,:] = gt_boxes_1[:num_boxes_1]
         else:
             num_boxes_1 = 0
  
