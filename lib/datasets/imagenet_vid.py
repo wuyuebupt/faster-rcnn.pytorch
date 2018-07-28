@@ -154,7 +154,7 @@ class imagenet_vid(imdb):
                 # for pair in image_index:
                 image_index = []
                 for x in lines:
-                    print (x)
+                    # print (x)
                     index = ('%s/%06d' % (x[0], int(x[2])), '%s/%06d' % (x[0], int(x[2]) + 1))
                     image_path_0    = os.path.join(self._data_path, 'Data', 'VID', index[0] + self._image_ext[0])
                     image_path_1    = os.path.join(self._data_path, 'Data', 'VID', index[1] + self._image_ext[0])
