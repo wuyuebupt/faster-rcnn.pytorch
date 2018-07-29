@@ -54,7 +54,11 @@ def get_minibatch(roidb, num_classes):
     gt_inds = np.where((roidb[0]['gt_classes'][0] != 0) & np.all(roidb[0]['gt_overlaps'][0].toarray() > -1.0, axis=1))[0]
     gt_inds_1 = np.where((roidb[0]['gt_classes'][1] != 0) & np.all(roidb[0]['gt_overlaps'][1].toarray() > -1.0, axis=1))[0]
 
-  gt_boxes = np.empty((len(gt_inds), 5), dtype=np.float32)
+  # gt_boxes = np.empty((len(gt_inds), 5), dtype=np.float32)
+  # boxes 4*2, cls, flag for tracking
+  # 4*2 + 1 + 1 = 10
+  # format [box_0, box_1, cls, tracking_flag]
+  gt_boxes = np.empty((len(gt_inds), 10), dtype=np.float32)
 
   # load the offline proposals
   
@@ -64,22 +68,24 @@ def get_minibatch(roidb, num_classes):
   # offline_proposal_boxes[:, 4] = im_offline_proposals[0][0][:, 4] 
 
   # gt_boxes is 
-  gt_boxes[:, 0:4] = roidb[0]['boxes'][0][gt_inds, :] * im_scales[0][0]
+  # two boxes have the same im_clale
+  gt_boxes[:, 0:8] = roidb[0]['boxes'][0][gt_inds, 0:8] * im_scales[0][0]
   # gt_boxes[:, 0:4] = roidb[0]['boxes'][gt_inds, :] * im_scales[0]
-  gt_boxes[:, 4] = roidb[0]['gt_classes'][0][gt_inds]
+  gt_boxes[:, 8] = roidb[0]['gt_classes'][0][gt_inds]
+  gt_boxes[:, 9] = roidb[0]['boxes'][0][gt_inds, 8]
 
 
   # the second part
-  gt_boxes_1 = np.empty((len(gt_inds_1), 5), dtype=np.float32)
+  # gt_boxes_1 = np.empty((len(gt_inds_1), 5), dtype=np.float32)
+  gt_boxes_1 = np.empty((len(gt_inds_1), 10), dtype=np.float32)
   offline_proposal_boxes_1 = np.empty((len(im_offline_proposals[1][0]), 5), dtype=np.float32)
   offline_proposal_boxes_1[:, 0:4] = im_offline_proposals[1][0][:, 0:4] * im_scales[1][0]
   # offline_proposal_boxes_1[:, 4] = im_offline_proposals[1][0][:, 4] 
 
   # gt_boxes is 
-  gt_boxes_1[:, 0:4] = roidb[0]['boxes'][1][gt_inds_1, :] * im_scales[1][0]
-  # gt_boxes[:, 0:4] = roidb[0]['boxes'][gt_inds, :] * im_scales[0]
-  gt_boxes_1[:, 4] = roidb[0]['gt_classes'][1][gt_inds_1]
-
+  gt_boxes_1[:, 0:8] = roidb[0]['boxes'][1][gt_inds_1, 0:8] * im_scales[1][0]
+  gt_boxes_1[:, 8] = roidb[0]['gt_classes'][1][gt_inds_1]
+  gt_boxes_1[:, 9] = roidb[0]['boxes'][0][gt_inds_1, 8]
 
 
   pair_gt_boxes = (gt_boxes, gt_boxes_1)
