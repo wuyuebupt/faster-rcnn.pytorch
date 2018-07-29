@@ -140,6 +140,8 @@ class _fasterRCNN(nn.Module):
 
 
         ##### for tracking loss, part 1, need feature from the part 2 base feature using part 1 rois
+        # rois
+        # base_feat_2
         if cfg.POOLING_MODE == 'crop':
             # pdb.set_trace()
             # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
@@ -153,9 +155,9 @@ class _fasterRCNN(nn.Module):
         elif cfg.POOLING_MODE == 'pool':
             pooled_feat_tracking_0_to_1 = self.RCNN_roi_pool(base_feat_2, rois.view(-1,5))
         
-        print (pooled_feat_tracking_0_to_1.shape, pooled_feat.shape)
+        # print (pooled_feat_tracking_0_to_1.shape, pooled_feat.shape)
         tracking_pooled_feat = 0.5 * pooled_feat + 0.5*pooled_feat_tracking_0_to_1
-        print (tracking_pooled_feat.shape)
+        # print (tracking_pooled_feat.shape)
         tracking_pooled_feat_bbox = self._head_to_tail(tracking_pooled_feat)
 
         # compute bbox offset
@@ -188,7 +190,7 @@ class _fasterRCNN(nn.Module):
 
         if self.training:
             roi_data_2 = self.RCNN_proposal_target(rois_2, gt_boxes_2, num_boxes_2)
-            rois_2, rois_label_2, rois_target_2, rois_inside_ws_2, rois_outside_ws_2, roi_tracking_target_2, rois_tracking_inside_ws_2, rois_tracking_outside_ws_2 = roi_data_2
+            rois_2, rois_label_2, rois_target_2, rois_inside_ws_2, rois_outside_ws_2, rois_tracking_target_2, rois_tracking_inside_ws_2, rois_tracking_outside_ws_2 = roi_data_2
             # print (rois.shape)
             # exit()
 
@@ -196,6 +198,10 @@ class _fasterRCNN(nn.Module):
             rois_target_2= Variable(rois_target_2.view(-1, rois_target_2.size(2)))
             rois_inside_ws_2  = Variable(rois_inside_ws_2.view(-1, rois_inside_ws_2.size(2)))
             rois_outside_ws_2 = Variable(rois_outside_ws_2.view(-1, rois_outside_ws_2.size(2)))
+
+            rois_tracking_target_2 = Variable(rois_tracking_target_2.view(-1, rois_tracking_target_2.size(2)))
+            rois_tracking_inside_ws_2 = Variable(rois_tracking_inside_ws_2.view(-1, rois_tracking_inside_ws_2.size(2)))
+            rois_tracking_outside_ws_2 = Variable(rois_tracking_outside_ws_2.view(-1, rois_tracking_outside_ws_2.size(2)))
         else:
             rois_label_2 = None
             rois_target_2 = None
@@ -250,6 +256,51 @@ class _fasterRCNN(nn.Module):
         cls_prob_2 = cls_prob.view(batch_size, rois_2.size(1), -1)
         bbox_pred_2 = bbox_pred.view(batch_size, rois_2.size(1), -1)
 
+
+        ##### for tracking loss, part 2, need feature from the part 1 base feature using part 2 rois
+        # rois_2
+        # base_feat
+        if cfg.POOLING_MODE == 'crop':
+            # pdb.set_trace()
+            # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
+            grid_xy = _affine_grid_gen(rois_2.view(-1, 5), base_feat.size()[2:], self.grid_size)
+            grid_yx = torch.stack([grid_xy.data[:,:,:,1], grid_xy.data[:,:,:,0]], 3).contiguous()
+            pooled_feat_tracking_1_to_0 = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
+            if cfg.CROP_RESIZE_WITH_MAX_POOL:
+                pooled_feat_tracking_1_to_0 = F.max_pool2d(pooled_feat_tracking_1_to_0, 2, 2)
+        elif cfg.POOLING_MODE == 'align':
+            pooled_feat_tracking_1_to_0 = self.RCNN_roi_align(base_feat, rois_2.view(-1, 5))
+        elif cfg.POOLING_MODE == 'pool':
+            pooled_feat_tracking_1_to_0 = self.RCNN_roi_pool(base_feat, rois_2.view(-1,5))
+        
+        tracking_pooled_feat_2 = 0.5 * pooled_feat_2 + 0.5*pooled_feat_tracking_1_to_0
+        tracking_pooled_feat_bbox_2 = self._head_to_tail(tracking_pooled_feat_2)
+
+        # compute bbox offset
+        tracking_bbox_pred_2 = self.RCNN_bbox_pred(tracking_pooled_feat_bbox_2)
+        if self.training and not self.class_agnostic:
+            # select the corresponding columns according to roi labels
+            tracking_bbox_pred_view_2 = tracking_bbox_pred_2.view(tracking_bbox_pred_2.size(0), int(tracking_bbox_pred_2.size(1) / 4), 4)
+            tracking_bbox_pred_select_2 = torch.gather(tracking_bbox_pred_view_2, 1, rois_label_2.view(rois_label_2.size(0), 1, 1).expand(rois_label_2.size(0), 1, 4))
+            tracking_bbox_pred_2 = tracking_bbox_pred_select_2.squeeze(1)
+
+        # compute object classification probability
+        tracking_cls_score_2 = self.RCNN_cls_score(tracking_pooled_feat_bbox_2)
+        tracking_cls_prob_2 = F.softmax(tracking_cls_score_2)
+
+        RCNN_loss_tracking_cls_2 = 0
+        RCNN_loss_tracking_bbox_2 = 0
+
+        if self.training:
+            # classification loss
+            RCNN_loss_tracking_cls_2 = F.cross_entropy(tracking_cls_score_2, rois_label_2)
+
+            # bounding box regression L1 loss
+            RCNN_loss_tracking_bbox_2 = _smooth_l1_loss(tracking_bbox_pred_2, rois_tracking_target_2, rois_tracking_inside_ws_2, rois_tracking_outside_ws_2)
+
+        tracking_cls_prob_2 = tracking_cls_prob_2.view(batch_size, rois_2.size(1), -1)
+        tracking_bbox_pred_2 = tracking_bbox_pred_2.view(batch_size, rois_2.size(1), -1)
+
         # combine two part losses
         # print (RCNN_loss_cls)
         # print (RCNN_loss_bbox)
@@ -265,7 +316,8 @@ class _fasterRCNN(nn.Module):
         # return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label
         # return rois, cls_prob, bbox_pred, RCNN_loss_cls, RCNN_loss_bbox, rois_label
         # return rois, cls_prob, bbox_pred, RCNN_loss_cls_all, RCNN_loss_bbox_all, rois_label, RCNN_loss_cls_2, RCNN_loss_bbox_2
-        return rois, cls_prob, bbox_pred, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_cls_2, RCNN_loss_bbox_2
+        return rois, cls_prob, bbox_pred, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_cls_2, RCNN_loss_bbox_2, \
+                 RCNN_loss_tracking_cls, RCNN_loss_tracking_bbox, RCNN_loss_tracking_cls_2, RCNN_loss_tracking_bbox_2 
 
     def _init_weights(self):
         def normal_init(m, mean, stddev, truncated=False):
