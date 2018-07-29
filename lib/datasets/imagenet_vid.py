@@ -231,6 +231,7 @@ class imagenet_vid(imdb):
         # boxes = np.zeros((num_objs, 4), dtype=np.uint16)
         boxes = np.zeros((num_objs, 4), dtype=np.int32)
         gt_classes = np.zeros((num_objs), dtype=np.int32)
+        trackid = np.zeros((num_objs), dtype=np.int32)
         overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
         valid_objs = np.zeros((num_objs), dtype=np.bool)
 
@@ -248,6 +249,9 @@ class imagenet_vid(imdb):
                 continue
             cls = self._wnid_to_ind[
                     str(get_data_from_tag(obj, "name")).lower().strip()]
+            # get track id for vid
+            if self._det_vid == 'vid':
+                trackid[ix] = int(str(get_data_from_tag(obj, "trackid")))
             boxes[ix, :] = [x1, y1, x2, y2]
             gt_classes[ix] = cls
             overlaps[ix, cls] = 1.0
@@ -265,6 +269,7 @@ class imagenet_vid(imdb):
         # boxes = np.zeros((num_objs, 4), dtype=np.uint16)
         boxes_1 = np.zeros((num_objs_1, 4), dtype=np.int32)
         gt_classes_1 = np.zeros((num_objs_1), dtype=np.int32)
+        trackid_1 = np.zeros((num_objs_1), dtype=np.int32)
         overlaps_1 = np.zeros((num_objs_1, self.num_classes), dtype=np.float32)
         valid_objs_1 = np.zeros((num_objs_1), dtype=np.bool)
 
@@ -282,6 +287,9 @@ class imagenet_vid(imdb):
                 continue
             cls = self._wnid_to_ind[
                     str(get_data_from_tag(obj, "name")).lower().strip()]
+            # get track id for vid
+            if self._det_vid == 'vid':
+                trackid_1[ix] = int(str(get_data_from_tag(obj, "trackid")))
             boxes_1[ix, :] = [x1, y1, x2, y2]
             gt_classes_1[ix] = cls
             overlaps_1[ix, cls] = 1.0
@@ -289,10 +297,86 @@ class imagenet_vid(imdb):
         assert (boxes_1[:, 2] >= boxes_1[:, 0]).all()
         overlaps_1 = scipy.sparse.csr_matrix(overlaps_1)
 
+
+        ## for tracking, have to pair two inputs
+        ## if using DET, the same boxes should be there
+        ## if using VID, it should have the same track id 
+
+        # print (self._det_vid)
+        if self._det_vid == 'det':
+            # det
+            # just copy the same
+            # box_tracking =  
+	    tracking_boxes = np.zeros((len(boxes), 9), dtype=np.int32)
+	    tracking_boxes_1 = np.zeros((len(boxes_1), 9), dtype=np.int32)
+            for ix, box in enumerate(boxes):
+                    tracking_boxes[ix, :4]    = boxes[ix][:]
+                    tracking_boxes[ix, 4:8]   = boxes_1[ix][:]
+                    tracking_boxes[ix, 8]     = 1
+                    tracking_boxes_1[ix, :4]  = boxes_1[ix][:]
+                    tracking_boxes_1[ix, 4:8] = boxes[ix][:]
+                    tracking_boxes_1[ix, 8]   = 1
+            # print (filename_0)
+            # print (boxes)
+            # print (boxes_1)
+        else:
+            # vid
+            # print (boxes)
+            # print (boxes_1)
+            # print (trackid)
+            # print (trackid_1)
+            # from box 0 to box 1
+            # print (len(boxes))
+            ## tracking target, the last unit is for weight, 1, has, 0 no 
+            tracking_boxes = np.zeros((len(boxes), 9), dtype=np.int32)
+            
+            # tracking_weight = np.zeros((len(boxes)), dtype=np.float32)
+            for ix, box in enumerate(boxes):
+		# print (ix, box, trackid[ix])
+                ## find the box from the same id
+                index = np.where(trackid[ix] == trackid_1)[0]
+                #  print (len(index), index)
+                assert(len(index) <= 1)
+                if len(index) == 1:
+                    # print (index)
+                    tracking_boxes[ix, :4] = boxes[ix][:]
+                    tracking_boxes[ix, 4:8] = boxes_1[index[0]][:]
+                    tracking_boxes[ix, 8] = 1
+                else:
+                    tracking_boxes[ix, :4] = boxes[ix][:]
+                    # print (tracking_boxes)
+                    # exit()
+                # print (tracking_boxes)
+             
+            # for box 1 to box 0
+	    tracking_boxes_1 = np.zeros((len(boxes_1), 9), dtype=np.int32)
+            tracking_weight_1 = np.zeros((len(boxes)), dtype=np.float32)
+            for ix, box in enumerate(boxes_1):
+		# print (ix, box, trackid_1[ix])
+                ## find the box from the same id
+                index = np.where(trackid_1[ix] == trackid)[0]
+                # print (len(index))
+                assert(len(index) <= 1)
+                # print (index)
+                if len(index) == 1:
+                    tracking_boxes_1[ix, :4] = boxes_1[ix][:]
+                    tracking_boxes_1[ix, 4:8] = boxes[index[0]][:]
+                    tracking_boxes_1[ix, 8] = 1
+                else:
+                    tracking_boxes_1[ix, :4] = boxes[ix][:]
+                       
+                # print (tracking_boxes_1)
+
+            
+
+
         # boxes returned
-        boxes_pair = (boxes, boxes_1)
+        # boxes_pair = (boxes, boxes_1)
+        boxes_pair = (tracking_boxes, tracking_boxes_1)
         gt_classes_pair = (gt_classes, gt_classes_1)
         overlaps_pair   = (overlaps, overlaps_1)
+
+
         return {'boxes' : boxes_pair,
                 'gt_classes': gt_classes_pair,
                 'gt_overlaps' : overlaps_pair,

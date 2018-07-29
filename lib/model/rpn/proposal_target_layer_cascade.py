@@ -122,6 +122,10 @@ class _ProposalTargetLayer(nn.Module):
         overlaps = bbox_overlaps_batch(all_rois, gt_boxes)
 
         max_overlaps, gt_assignment = torch.max(overlaps, 2)
+        print (overlaps)
+        print (max_overlaps)
+        print (gt_assignment)
+        exit()
 
         batch_size = overlaps.size(0)
         num_proposal = overlaps.size(1)
