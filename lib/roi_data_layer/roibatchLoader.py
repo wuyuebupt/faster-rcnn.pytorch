@@ -100,6 +100,7 @@ class roibatchLoader(data.Dataset):
 
         # if the image need to crop, crop to the target size.
         ratio = self.ratio_list_batch[index]
+        # TODO: seems forget to do the transform for the tracking target --!!!
 
         if self._roidb[index_ratio]['need_crop']:
             if ratio < 1:

@@ -350,7 +350,7 @@ class imagenet_vid(imdb):
              
             # for box 1 to box 0
 	    tracking_boxes_1 = np.zeros((len(boxes_1), 9), dtype=np.int32)
-            tracking_weight_1 = np.zeros((len(boxes)), dtype=np.float32)
+            # tracking_weight_1 = np.zeros((len(boxes)), dtype=np.float32)
             for ix, box in enumerate(boxes_1):
 		# print (ix, box, trackid_1[ix])
                 ## find the box from the same id

@@ -49,13 +49,16 @@ class _ProposalTargetLayer(nn.Module):
         fg_rois_per_image = int(np.round(cfg.TRAIN.FG_FRACTION * rois_per_image))
         fg_rois_per_image = 1 if fg_rois_per_image == 0 else fg_rois_per_image
 
-        labels, rois, bbox_targets, bbox_inside_weights = self._sample_rois_pytorch(
+        labels, rois, bbox_targets, bbox_inside_weights, tracking_bbox_targets, tracking_bbox_inside_weights = self._sample_rois_pytorch(
             all_rois, gt_boxes, fg_rois_per_image,
             rois_per_image, self._num_classes)
 
+        # outside * loss(inside * bbox) 
+        # outside is kind of bool
         bbox_outside_weights = (bbox_inside_weights > 0).float()
+        tracking_bbox_outside_weights = (tracking_bbox_inside_weights > 0).float()
 
-        return rois, labels, bbox_targets, bbox_inside_weights, bbox_outside_weights
+        return rois, labels, bbox_targets, bbox_inside_weights, bbox_outside_weights, tracking_bbox_targets, tracking_bbox_inside_weights, tracking_bbox_outside_weights
 
     def backward(self, top, propagate_down, bottom):
         """This layer does not propagate gradients."""
@@ -64,6 +67,46 @@ class _ProposalTargetLayer(nn.Module):
     def reshape(self, bottom, top):
         """Reshaping happens during the call to forward."""
         pass
+
+    # have to match the label and have tracking target
+    def _get_tracking_bbox_regression_labels_pytorch(self, bbox_target_data, labels_batch, num_classes, tracking_gt_box_flag):
+        """Bounding-box regression targets (bbox_target_data) are stored in a
+        compact form b x N x (class, tx, ty, tw, th)
+
+        This function expands those targets into the 4-of-4*K representation used
+        by the network (i.e. only one class has non-zero targets).
+
+        Returns:
+            bbox_target (ndarray): b x N x 4K blob of regression targets
+            bbox_inside_weights (ndarray): b x N x 4K blob of loss weights
+        """
+        batch_size = labels_batch.size(0)
+        rois_per_image = labels_batch.size(1)
+        clss = labels_batch
+        bbox_targets = bbox_target_data.new(batch_size, rois_per_image, 4).zero_()
+        bbox_inside_weights = bbox_target_data.new(bbox_targets.size()).zero_()
+
+        for b in range(batch_size):
+            # assert clss[b].sum() > 0
+            if clss[b].sum() == 0:
+                continue
+         
+            # inds = torch.nonzero(clss[b] > 0).view(-1)
+            # tracking_inds = torch.nonzero(tracking_gt_box_flag[b] > 0).view(-1)
+            # print (inds, tracking_inds)
+            ## clss[b] = 128 * [[0:30]] for 31 classes
+            ## tracking_gt_box_flag = 128 * [(0 or 1)] for if the tracking target exists
+            both_cls_tracking = clss[b] * tracking_gt_box_flag[b]    
+            inds_cls_tracking = torch.nonzero(both_cls_tracking).view(-1)
+            # print (inds_cls_tracking)
+            # for i in range(inds.numel()):
+            for i in range(inds_cls_tracking.numel()):
+                ind = inds_cls_tracking[i]
+                bbox_targets[b, ind, :] = bbox_target_data[b, ind, :]
+                bbox_inside_weights[b, ind, :] = self.BBOX_INSIDE_WEIGHTS
+
+        return bbox_targets, bbox_inside_weights
+
 
     def _get_bbox_regression_labels_pytorch(self, bbox_target_data, labels_batch, num_classes):
         """Bounding-box regression targets (bbox_target_data) are stored in a
@@ -144,6 +187,7 @@ class _ProposalTargetLayer(nn.Module):
         labels_batch = labels.new(batch_size, rois_per_image).zero_()
         rois_batch  = all_rois.new(batch_size, rois_per_image, 5).zero_()
         gt_rois_batch = all_rois.new(batch_size, rois_per_image, 5).zero_()
+        tracking_gt_rois_batch = all_rois.new(batch_size, rois_per_image, 5).zero_()
         # Guard against the case when an image has fewer than max_fg_rois_per_image
         # foreground RoIs
         for i in range(batch_size):
@@ -215,6 +259,8 @@ class _ProposalTargetLayer(nn.Module):
             # print (gt_boxes[i][gt_assignment[i][keep_inds]].shape)
             # 128*10
             gt_rois_batch[i] = gt_boxes[i][gt_assignment[i][keep_inds]][:,:5]
+            # gt_assign for the next
+            tracking_gt_rois_batch[i] = gt_boxes[i][gt_assignment[i][keep_inds]][:,5:]
 
         # compute target data and bbox tartget
         bbox_target_data = self._compute_targets_pytorch(
@@ -223,6 +269,19 @@ class _ProposalTargetLayer(nn.Module):
         bbox_targets, bbox_inside_weights = \
                 self._get_bbox_regression_labels_pytorch(bbox_target_data, labels_batch, num_classes)
         # similarly, we have to generate the [tracking]_traget, leave it for tomorrow....
+        # 
+        tracking_target_data = self._compute_targets_pytorch(
+                rois_batch[:,:,1:5], tracking_gt_rois_batch[:,:,:4])
+        # print(tracking_target_data.shape)
+        # print(labels_batch)
+        # print(labels_batch.shape)
+
+        # print (gt_rois_batch[:,:,4])
+        # print (tracking_gt_rois_batch[:,:,4])
+        tracking_bbox_targets, tracking_bbox_inside_weights = \
+                self._get_tracking_bbox_regression_labels_pytorch(tracking_target_data, labels_batch, num_classes, tracking_gt_rois_batch[:,:,4])
+        # print (tracking_bbox_inside_weights.shape)
 
 
-        return labels_batch, rois_batch, bbox_targets, bbox_inside_weights
+        return labels_batch, rois_batch, bbox_targets, bbox_inside_weights, tracking_bbox_targets, tracking_bbox_inside_weights
+        # return labels_batch, rois_batch, bbox_targets, bbox_inside_weights
