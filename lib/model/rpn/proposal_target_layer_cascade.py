@@ -36,7 +36,9 @@ class _ProposalTargetLayer(nn.Module):
         self.BBOX_NORMALIZE_STDS = self.BBOX_NORMALIZE_STDS.type_as(gt_boxes)
         self.BBOX_INSIDE_WEIGHTS = self.BBOX_INSIDE_WEIGHTS.type_as(gt_boxes)
 
-        gt_boxes_append = gt_boxes.new(gt_boxes.size()).zero_()
+        # print (gt_boxes.size())
+        gt_boxes_append = gt_boxes[:,:,:5].new(gt_boxes[:,:,:5].size()).zero_()
+        # print (gt_boxes_append.size())
         gt_boxes_append[:,:,1:5] = gt_boxes[:,:,:4]
 
         # Include ground-truth boxes in the set of candidate rois
@@ -122,17 +124,18 @@ class _ProposalTargetLayer(nn.Module):
         overlaps = bbox_overlaps_batch(all_rois, gt_boxes)
 
         max_overlaps, gt_assignment = torch.max(overlaps, 2)
-        print (overlaps)
-        print (max_overlaps)
-        print (gt_assignment)
-        exit()
+        # print (overlaps)
+        # print (max_overlaps)
+        # print (gt_assignment)
+        # exit()
 
         batch_size = overlaps.size(0)
         num_proposal = overlaps.size(1)
         num_boxes_per_img = overlaps.size(2)
         # print (batch_size, num_proposal, num_boxes_per_img)
 
-        offset = torch.arange(0, batch_size)*gt_boxes.size(1)
+        # print (gt_boxes.size(1)) 
+        offset = torch.arange(0, batch_size) * gt_boxes.size(1)
         offset = offset.view(-1, 1).type_as(gt_assignment) + gt_assignment
 
         labels = gt_boxes[:,:,4].contiguous().view(-1).index(offset.view(-1))\
@@ -208,7 +211,10 @@ class _ProposalTargetLayer(nn.Module):
             rois_batch[i] = all_rois[i][keep_inds]
             rois_batch[i,:,0] = i
 
-            gt_rois_batch[i] = gt_boxes[i][gt_assignment[i][keep_inds]]
+            # the first 5 are for the original gt
+            # print (gt_boxes[i][gt_assignment[i][keep_inds]].shape)
+            # 128*10
+            gt_rois_batch[i] = gt_boxes[i][gt_assignment[i][keep_inds]][:,:5]
 
         bbox_target_data = self._compute_targets_pytorch(
                 rois_batch[:,:,1:5], gt_rois_batch[:,:,:4])
