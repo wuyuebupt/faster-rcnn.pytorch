@@ -58,7 +58,7 @@ class _fasterRCNN(nn.Module):
         # if it is training phrase, then use ground trubut bboxes for refining
         if self.training:
             roi_data = self.RCNN_proposal_target(rois, gt_boxes, num_boxes)
-            rois, rois_label, rois_target, rois_inside_ws, rois_outside_ws = roi_data
+            rois, rois_label, rois_target, rois_inside_ws, rois_outside_ws, roi_tracking_target, rois_tracking_inside_ws, rois_tracking_outside_ws = roi_data
             # print (rois.shape)
             # exit()
 
@@ -135,7 +135,7 @@ class _fasterRCNN(nn.Module):
 
         if self.training:
             roi_data_2 = self.RCNN_proposal_target(rois_2, gt_boxes_2, num_boxes_2)
-            rois_2, rois_label_2, rois_target_2, rois_inside_ws_2, rois_outside_ws_2 = roi_data_2
+            rois_2, rois_label_2, rois_target_2, rois_inside_ws_2, rois_outside_ws_2, roi_tracking_target_2, rois_tracking_inside_ws_2, rois_tracking_outside_ws_2 = roi_data_2
             # print (rois.shape)
             # exit()
 
