@@ -216,10 +216,13 @@ class _ProposalTargetLayer(nn.Module):
             # 128*10
             gt_rois_batch[i] = gt_boxes[i][gt_assignment[i][keep_inds]][:,:5]
 
+        # compute target data and bbox tartget
         bbox_target_data = self._compute_targets_pytorch(
                 rois_batch[:,:,1:5], gt_rois_batch[:,:,:4])
 
         bbox_targets, bbox_inside_weights = \
                 self._get_bbox_regression_labels_pytorch(bbox_target_data, labels_batch, num_classes)
+        # similarly, we have to generate the [tracking]_traget, leave it for tomorrow....
+
 
         return labels_batch, rois_batch, bbox_targets, bbox_inside_weights
