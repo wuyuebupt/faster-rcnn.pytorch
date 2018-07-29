@@ -240,6 +240,7 @@ class resnet(_fasterRCNN):
       resnet.maxpool,resnet.layer1,resnet.layer2,resnet.layer3)
 
     self.RCNN_top = nn.Sequential(resnet.layer4)
+    # self.RCNN_top_tracking = nn.Sequential(resnet.layer4.)
 
     self.RCNN_cls_score = nn.Linear(2048, self.n_classes)
     if self.class_agnostic:
