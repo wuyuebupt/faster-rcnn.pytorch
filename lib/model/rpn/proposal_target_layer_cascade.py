@@ -272,6 +272,7 @@ class _ProposalTargetLayer(nn.Module):
         # 
         tracking_target_data = self._compute_targets_pytorch(
                 rois_batch[:,:,1:5], tracking_gt_rois_batch[:,:,:4])
+        # print(tracking_target_data)
         # print(tracking_target_data.shape)
         # print(labels_batch)
         # print(labels_batch.shape)

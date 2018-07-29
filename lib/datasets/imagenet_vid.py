@@ -363,7 +363,7 @@ class imagenet_vid(imdb):
                     tracking_boxes_1[ix, 4:8] = boxes[index[0]][:]
                     tracking_boxes_1[ix, 8] = 1
                 else:
-                    tracking_boxes_1[ix, :4] = boxes[ix][:]
+                    tracking_boxes_1[ix, :4] = boxes_1[ix][:]
                        
                 # print (tracking_boxes_1)
 

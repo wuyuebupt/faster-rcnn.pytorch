@@ -375,10 +375,13 @@ if __name__ == '__main__':
       # rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
 
       # loss = rpn_loss_cls.mean() + rpn_loss_box.mean() \
-      #      + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
 
-      loss = RCNN_loss_cls.mean() + RCNN_loss_bbox.mean() + RCNN_loss_cls_2.mean() + RCNN_loss_bbox_2.mean() + \
-                RCNN_loss_tracking_cls.mean() + RCNN_loss_tracking_bbox.mean() + RCNN_loss_tracking_cls_2.mean() + RCNN_loss_tracking_bbox_2.mean()
+
+      loss = RCNN_loss_cls.mean() + RCNN_loss_bbox.mean() + \
+             RCNN_loss_cls_2.mean() + RCNN_loss_bbox_2.mean() + \
+             RCNN_loss_tracking_cls.mean() + RCNN_loss_tracking_bbox.mean() + \
+             RCNN_loss_tracking_cls_2.mean() + RCNN_loss_tracking_bbox_2.mean()
+
       loss_temp += loss.data[0]
 
       # backward
@@ -400,6 +403,14 @@ if __name__ == '__main__':
           loss_rpn_box = 0
           loss_rcnn_cls = RCNN_loss_cls.mean().data[0]
           loss_rcnn_box = RCNN_loss_bbox.mean().data[0]
+          loss_rcnn_cls_2 = RCNN_loss_cls_2.mean().data[0]
+          loss_rcnn_box_2 = RCNN_loss_bbox_2.mean().data[0]
+          loss_tracking_cls = RCNN_loss_tracking_cls.mean().data[0]
+          loss_tracking_box = RCNN_loss_tracking_bbox.mean().data[0]
+          loss_tracking_cls_2 = RCNN_loss_tracking_cls_2.mean().data[0]
+          loss_tracking_box_2 = RCNN_loss_tracking_bbox_2.mean().data[0]
+
+
           fg_cnt = torch.sum(rois_label.data.ne(0))
           bg_cnt = rois_label.data.numel() - fg_cnt
         else:
@@ -409,14 +420,24 @@ if __name__ == '__main__':
           loss_rpn_box = 0
           loss_rcnn_cls = RCNN_loss_cls.data[0]
           loss_rcnn_box = RCNN_loss_bbox.data[0]
+          loss_rcnn_cls_2 = RCNN_loss_cls_2.data[0]
+          loss_rcnn_box_2 = RCNN_loss_bbox_2.data[0]
+          loss_tracking_cls = RCNN_loss_tracking_cls.data[0]
+          loss_tracking_box = RCNN_loss_tracking_bbox.data[0]
+          loss_tracking_cls_2 = RCNN_loss_tracking_cls_2.data[0]
+          loss_tracking_box_2 = RCNN_loss_tracking_bbox_2.data[0]
+
           fg_cnt = torch.sum(rois_label.data.ne(0))
           bg_cnt = rois_label.data.numel() - fg_cnt
 
         print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e" \
                                 % (args.session, epoch, step, iters_per_epoch, loss_temp, lr))
         print("\t\t\tfg/bg=(%d/%d), time cost: %f" % (fg_cnt, bg_cnt, end-start))
-        print("\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f" \
-                      % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box))
+        print("\t\t\trcnn_cls: %.4f, rcnn_box %.4f, rcnn_cls_2: %.4f, rcnn_box_2: %.4f" \
+                      % (loss_rcnn_cls, loss_rcnn_box, loss_rcnn_cls_2, loss_rcnn_box_2))
+        print("\t\t\ttracking_cls: %.4f, tracking_box %.4f, tracking_cls_2: %.4f, tracking_box_2: %.4f" \
+                      % (loss_tracking_cls, loss_tracking_box, loss_tracking_cls_2, loss_tracking_box_2))
+
         if args.use_tfboard:
           info = {
             'loss': loss_temp,
