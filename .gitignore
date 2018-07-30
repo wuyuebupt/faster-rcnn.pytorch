@@ -1,4 +1,5 @@
 data/*
+tmp/*
 save_dir/*
 
 # READ THIS BEFORE YOU REFACTOR ME
