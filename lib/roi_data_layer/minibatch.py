@@ -87,7 +87,7 @@ def get_minibatch(roidb, num_classes):
   gt_boxes_1[:, 0:4] = roidb[0]['boxes'][1][gt_inds_1, 0:4] * im_scales[1][0]
   gt_boxes_1[:, 4] = roidb[0]['gt_classes'][1][gt_inds_1]
   gt_boxes_1[:, 5:9] = roidb[0]['boxes'][1][gt_inds_1, 4:8] * im_scales[0][0]
-  gt_boxes_1[:, 9] = roidb[0]['boxes'][0][gt_inds_1, 8]
+  gt_boxes_1[:, 9] = roidb[0]['boxes'][1][gt_inds_1, 8]
 
 
   pair_gt_boxes = (gt_boxes, gt_boxes_1)
