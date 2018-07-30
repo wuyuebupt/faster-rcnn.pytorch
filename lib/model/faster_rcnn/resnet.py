@@ -12,6 +12,7 @@ from torch.autograd import Variable
 import math
 import torch.utils.model_zoo as model_zoo
 import pdb
+import copy
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
        'resnet152']
@@ -240,7 +241,19 @@ class resnet(_fasterRCNN):
       resnet.maxpool,resnet.layer1,resnet.layer2,resnet.layer3)
 
     self.RCNN_top = nn.Sequential(resnet.layer4)
-    # self.RCNN_top_tracking = nn.Sequential(resnet.layer4)
+    # print (resnet.layer4)
+    # print (self.RCNN_top)
+    # self.RCNN_top_tracking = nn.Sequential(copy.deepcopy(resnet.layer4))
+    self.RCNN_tracking =copy.deepcopy(self.RCNN_top)
+    self.RCNN_cls_tracking_score = nn.Linear(2048, self.n_classes)
+    if self.class_agnostic:
+      self.RCNN_bbox_tracking_pred = nn.Linear(2048, 4)
+    else:
+      self.RCNN_bbox_tracking_pred = nn.Linear(2048, 4 * self.n_classes)
+
+    # print (self.RCNN_tracking)
+    # exit()
+
 
     self.RCNN_cls_score = nn.Linear(2048, self.n_classes)
     if self.class_agnostic:
@@ -267,6 +280,7 @@ class resnet(_fasterRCNN):
 
     self.RCNN_base.apply(set_bn_fix)
     self.RCNN_top.apply(set_bn_fix)
+    self.RCNN_tracking.apply(set_bn_fix)
 
   def train(self, mode=True):
     # Override train so that the training mode is set as we want
@@ -284,7 +298,12 @@ class resnet(_fasterRCNN):
 
       self.RCNN_base.apply(set_bn_eval)
       self.RCNN_top.apply(set_bn_eval)
+      self.RCNN_tracking.apply(set_bn_eval)
 
   def _head_to_tail(self, pool5):
     fc7 = self.RCNN_top(pool5).mean(3).mean(2)
+    return fc7
+
+  def _head_to_tail_tracking(self, pool5):
+    fc7 = self.RCNN_tracking(pool5).mean(3).mean(2)
     return fc7
