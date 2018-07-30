@@ -158,10 +158,11 @@ class _fasterRCNN(nn.Module):
         # print (pooled_feat_tracking_0_to_1.shape, pooled_feat.shape)
         tracking_pooled_feat = 0.5 * pooled_feat + 0.5*pooled_feat_tracking_0_to_1
         # print (tracking_pooled_feat.shape)
-        tracking_pooled_feat_bbox = self._head_to_tail(tracking_pooled_feat)
+        # tracking_pooled_feat_bbox = self._head_to_tail(tracking_pooled_feat)
+        tracking_pooled_feat_bbox = self._head_to_tail_tracking(tracking_pooled_feat)
 
         # compute bbox offset
-        tracking_bbox_pred = self.RCNN_bbox_pred(tracking_pooled_feat_bbox)
+        tracking_bbox_pred = self.RCNN_bbox_tracking_pred(tracking_pooled_feat_bbox)
         if self.training and not self.class_agnostic:
             # select the corresponding columns according to roi labels
             tracking_bbox_pred_view = tracking_bbox_pred.view(tracking_bbox_pred.size(0), int(tracking_bbox_pred.size(1) / 4), 4)
@@ -169,7 +170,7 @@ class _fasterRCNN(nn.Module):
             tracking_bbox_pred = tracking_bbox_pred_select.squeeze(1)
 
         # compute object classification probability
-        tracking_cls_score = self.RCNN_cls_score(tracking_pooled_feat_bbox)
+        tracking_cls_score = self.RCNN_cls_tracking_score(tracking_pooled_feat_bbox)
         tracking_cls_prob = F.softmax(tracking_cls_score)
 
         RCNN_loss_tracking_cls = 0
@@ -274,10 +275,10 @@ class _fasterRCNN(nn.Module):
             pooled_feat_tracking_1_to_0 = self.RCNN_roi_pool(base_feat, rois_2.view(-1,5))
         
         tracking_pooled_feat_2 = 0.5 * pooled_feat_2 + 0.5*pooled_feat_tracking_1_to_0
-        tracking_pooled_feat_bbox_2 = self._head_to_tail(tracking_pooled_feat_2)
+        tracking_pooled_feat_bbox_2 = self._head_to_tail_tracking(tracking_pooled_feat_2)
 
         # compute bbox offset
-        tracking_bbox_pred_2 = self.RCNN_bbox_pred(tracking_pooled_feat_bbox_2)
+        tracking_bbox_pred_2 = self.RCNN_bbox_tracking_pred(tracking_pooled_feat_bbox_2)
         if self.training and not self.class_agnostic:
             # select the corresponding columns according to roi labels
             tracking_bbox_pred_view_2 = tracking_bbox_pred_2.view(tracking_bbox_pred_2.size(0), int(tracking_bbox_pred_2.size(1) / 4), 4)
@@ -285,7 +286,7 @@ class _fasterRCNN(nn.Module):
             tracking_bbox_pred_2 = tracking_bbox_pred_select_2.squeeze(1)
 
         # compute object classification probability
-        tracking_cls_score_2 = self.RCNN_cls_score(tracking_pooled_feat_bbox_2)
+        tracking_cls_score_2 = self.RCNN_cls_tracking_score(tracking_pooled_feat_bbox_2)
         tracking_cls_prob_2 = F.softmax(tracking_cls_score_2)
 
         RCNN_loss_tracking_cls_2 = 0
