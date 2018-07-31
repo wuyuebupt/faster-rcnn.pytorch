@@ -248,12 +248,9 @@ class resnet(_fasterRCNN):
       state_dict = torch.load(self.rcnn_model_path)['model']
       # print (len(self.RCNN_base.state_dict()))
       # print (len(state_dict.items()))
-      print (len(state_dict['model'].keys()))
-      print (state_dict['model'].keys())
-      print (self.RCNN_base.state_dict().keys())
-      exit()
-      self.RCNN_base.load_state_dict({k:v for k,v in state_dict['model'].items() if k in self.RCNN_base.state_dict()})
-      self.RCNN_top.load_state_dict({k:v for k,v in state_dict['model'].items() if k in self.RCNN_top.state_dict()})
+      # print (self.RCNN_base.state_dict().keys())
+      self.RCNN_base.load_state_dict({k.replace('RCNN_base.', ''):v for k,v in state_dict.items() if k.replace('RCNN_base.', '') in self.RCNN_base.state_dict()})
+      self.RCNN_top.load_state_dict({k.replace('RCNN_top.', ''):v for k,v in state_dict.items() if k.replace('RCNN_top.', '') in self.RCNN_top.state_dict()})
       # resnet.load_state_dict({k:v for k,v in state_dict.items() if k in resnet.state_dict()})
 
 

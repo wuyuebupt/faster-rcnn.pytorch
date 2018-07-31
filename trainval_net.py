@@ -286,7 +286,6 @@ if __name__ == '__main__':
     pdb.set_trace()
 
   fasterRCNN.create_architecture()
-  exit()
 
   lr = cfg.TRAIN.LEARNING_RATE
   lr = args.lr
