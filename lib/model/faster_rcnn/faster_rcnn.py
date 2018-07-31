@@ -254,8 +254,8 @@ class _fasterRCNN(nn.Module):
             RCNN_loss_bbox_2 = _smooth_l1_loss(bbox_pred_2, rois_target_2, rois_inside_ws_2, rois_outside_ws_2)
 
 
-        cls_prob_2 = cls_prob.view(batch_size, rois_2.size(1), -1)
-        bbox_pred_2 = bbox_pred.view(batch_size, rois_2.size(1), -1)
+        cls_prob_2 = cls_prob_2.view(batch_size, rois_2.size(1), -1)
+        bbox_pred_2 = bbox_pred_2.view(batch_size, rois_2.size(1), -1)
 
 
         ##### for tracking loss, part 2, need feature from the part 1 base feature using part 2 rois
