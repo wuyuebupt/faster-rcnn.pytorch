@@ -242,27 +242,36 @@ class resnet(_fasterRCNN):
       resnet.maxpool,resnet.layer1,resnet.layer2,resnet.layer3)
 
     self.RCNN_top = nn.Sequential(resnet.layer4)
+
+    self.RCNN_cls_score = nn.Linear(2048, self.n_classes)
+    # self.RCNN_cls_score = nn.Sequential(nn.Linear(2048, self.n_classes))
+    if self.class_agnostic:
+      self.RCNN_bbox_pred = nn.Linear(2048, 4)
+    else:
+      self.RCNN_bbox_pred = nn.Linear(2048, 4 * self.n_classes)
+
+    # print (self.RCNN_cls_score.state_dict().keys())
+    # print (self.RCNN_cls_score.state_dict())
     ## load after build
     if self.pretrained == True:
       print("Loading rcnn pre-train weights from %s" %(self.rcnn_model_path))
       state_dict = torch.load(self.rcnn_model_path)['model']
       # print (len(self.RCNN_base.state_dict()))
       # print (len(state_dict.items()))
+      # print (state_dict.keys())
       # print (self.RCNN_base.state_dict().keys())
       self.RCNN_base.load_state_dict({k.replace('RCNN_base.', ''):v for k,v in state_dict.items() if k.replace('RCNN_base.', '') in self.RCNN_base.state_dict()})
       self.RCNN_top.load_state_dict({k.replace('RCNN_top.', ''):v for k,v in state_dict.items() if k.replace('RCNN_top.', '') in self.RCNN_top.state_dict()})
-      # resnet.load_state_dict({k:v for k,v in state_dict.items() if k in resnet.state_dict()})
+      self.RCNN_cls_score.load_state_dict({k.replace('RCNN_cls_score.', ''):v for k,v in state_dict.items() if k.replace('RCNN_cls_score.', '') in self.RCNN_cls_score.state_dict()})
+      self.RCNN_bbox_pred.load_state_dict({k.replace('RCNN_bbox_pred.', ''):v for k,v in state_dict.items() if k.replace('RCNN_bbox_pred.', '') in self.RCNN_bbox_pred.state_dict()})
 
+    # print (self.RCNN_cls_score)
+    # print (self.RCNN_cls_score.state_dict())
+    # exit()
+      # resnet.load_state_dict({k:v for k,v in state_dict.items() if k in resnet.state_dict()})
 
     # print (self.RCNN_tracking)
     # exit()
-
-    self.RCNN_cls_score = nn.Linear(2048, self.n_classes)
-    if self.class_agnostic:
-      self.RCNN_bbox_pred = nn.Linear(2048, 4)
-    else:
-      self.RCNN_bbox_pred = nn.Linear(2048, 4 * self.n_classes)
-
     # Fix blocks
     for p in self.RCNN_base[0].parameters(): p.requires_grad=False
     for p in self.RCNN_base[1].parameters(): p.requires_grad=False
@@ -287,11 +296,16 @@ class resnet(_fasterRCNN):
     # print (self.RCNN_top)
     # self.RCNN_top_tracking = nn.Sequential(copy.deepcopy(resnet.layer4))
     self.RCNN_tracking =copy.deepcopy(self.RCNN_top)
-    self.RCNN_cls_tracking_score = nn.Linear(2048, self.n_classes)
+    self.RCNN_cls_tracking_score = copy.deepcopy(self.RCNN_cls_score)
+
+    # print (self.RCNN_cls_score.state_dict())
+    # print (self.RCNN_cls_tracking_score.state_dict())
+
     if self.class_agnostic:
-      self.RCNN_bbox_tracking_pred = nn.Linear(2048, 4)
+      self.RCNN_bbox_tracking_pred = copy.deepcopy(self.RCNN_bbox_pred)
     else:
-      self.RCNN_bbox_tracking_pred = nn.Linear(2048, 4 * self.n_classes)
+      # self.RCNN_bbox_tracking_pred = nn.Linear(2048, 4 * self.n_classes)
+      self.RCNN_bbox_tracking_pred = copy.deepcopy(self.RCNN_bbox_pred)
 
     self.RCNN_tracking.apply(set_bn_fix)
 
