@@ -156,7 +156,18 @@ class _fasterRCNN(nn.Module):
             pooled_feat_tracking_0_to_1 = self.RCNN_roi_pool(base_feat_2, rois.view(-1,5))
         
         # print (pooled_feat_tracking_0_to_1.shape, pooled_feat.shape)
-        tracking_pooled_feat = 0.5 * pooled_feat + 0.5*pooled_feat_tracking_0_to_1
+        # tracking_pooled_feat = 0.5 * pooled_feat + 0.5*pooled_feat_tracking_0_to_1
+        # print (pooled_feat.shape)
+        # print (pooled_feat_tracking_0_to_1.shape)
+        tracking_pooled_feat_pre = torch.cat((pooled_feat, pooled_feat_tracking_0_to_1), 1)
+        # print (tracking_pooled_feat_pre.shape)
+        tracking_pooled_feat = self.tracking_concat_feat(tracking_pooled_feat_pre)
+        # print (tracking_pooled_feat.shape)
+        
+        # exit()
+        # tracking_pooled_feat = 0.5 * pooled_feat + 0.5*pooled_feat_tracking_0_to_1
+
+
         # print (tracking_pooled_feat.shape)
         # tracking_pooled_feat_bbox = self._head_to_tail(tracking_pooled_feat)
         tracking_pooled_feat_bbox = self._head_to_tail_tracking(tracking_pooled_feat)
