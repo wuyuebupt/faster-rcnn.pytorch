@@ -288,7 +288,7 @@ class _fasterRCNN(nn.Module):
         # tracking_pooled_feat_2 = 0.5 * pooled_feat_2 + 0.5*pooled_feat_tracking_1_to_0
         tracking_pooled_feat_pre_2 = torch.cat((pooled_feat_2, pooled_feat_tracking_1_to_0), 1)
         # print (tracking_pooled_feat_pre.shape)
-        tracking_pooled_feat = self.tracking_concat_feat(tracking_pooled_feat_pre_2)
+        tracking_pooled_feat_2 = self.tracking_concat_feat(tracking_pooled_feat_pre_2)
         tracking_pooled_feat_bbox_2 = self._head_to_tail_tracking(tracking_pooled_feat_2)
 
         # compute bbox offset
