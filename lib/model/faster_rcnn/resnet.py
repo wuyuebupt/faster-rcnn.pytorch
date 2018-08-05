@@ -241,6 +241,16 @@ class resnet(_fasterRCNN):
     self.RCNN_base = nn.Sequential(resnet.conv1, resnet.bn1,resnet.relu,
       resnet.maxpool,resnet.layer1,resnet.layer2,resnet.layer3)
 
+
+    self.FLOW_base_avg = nn.Sequential(nn.AvgPool2d(7, stride=2, padding=3), 
+                                   nn.AvgPool2d(3, stride=2, padding=0),
+                                   nn.AvgPool2d(3, stride=2, padding=1),
+                                   nn.AvgPool2d(3, stride=2, padding=1))
+    # self.FLOW_base_max = nn.Sequential(nn.MaxPool2d(7, stride=2, padding=3), 
+    #                                nn.MaxPool2d(3, stride=2, padding=0),
+    #                                nn.MaxPool2d(3, stride=2, padding=1),
+    #                                nn.MaxPool2d(3, stride=2, padding=1))
+
     self.RCNN_top = nn.Sequential(resnet.layer4)
 
     self.RCNN_cls_score = nn.Linear(2048, self.n_classes)
@@ -300,7 +310,8 @@ class resnet(_fasterRCNN):
     # print (resnet.layer4)
     # print (self.RCNN_top)
     # self.RCNN_tracking = nn.Sequential(resnet.layer4)
-    self.tracking_concat_feat = nn.Conv2d(2 * self.dout_base_model, self.dout_base_model , kernel_size=1, stride=1, bias=False)
+    dimension_flow = 2
+    self.tracking_concat_feat = nn.Conv2d(2 * self.dout_base_model + dimension_flow, self.dout_base_model , kernel_size=1, stride=1, bias=False)
     self.RCNN_tracking =copy.deepcopy(self.RCNN_top)
     # self.RCNN_cls_tracking_score = nn.Linear(2048, self.n_classes)
     self.RCNN_cls_tracking_score = copy.deepcopy(self.RCNN_cls_score)

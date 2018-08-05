@@ -37,7 +37,7 @@ class _fasterRCNN(nn.Module):
         self.RCNN_roi_crop = _RoICrop()
 
     # def forward(self, im_data, im_info, gt_boxes, num_boxes):
-    def forward(self, im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals, im_data_2, im_info_2, gt_boxes_2, num_boxes_2, proposal_boxes_2, num_proposals_2):
+    def forward(self, im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals, flow_data, im_data_2, im_info_2, gt_boxes_2, num_boxes_2, proposal_boxes_2, num_proposals_2, flow_data_2):
            
         # part 1 base
         batch_size = im_data.size(0)
@@ -49,6 +49,15 @@ class _fasterRCNN(nn.Module):
         num_proposals = num_proposals.data
 
         base_feat = self.RCNN_base(im_data)
+        # print (flow_data.shape)
+        # print (im_data.shape)
+        # print (base_feat.shape)
+        flow_feat = self.FLOW_base_avg(flow_data)
+        # print (flow_feat_avg)
+        # print (flow_feat.shape)
+        # exit()
+
+        # flow_feat = 
 
         # part 2 base 
         batch_size_2 = im_data_2.size(0)
@@ -60,6 +69,7 @@ class _fasterRCNN(nn.Module):
         num_proposals_2 = num_proposals_2.data
 
         base_feat_2 = self.RCNN_base(im_data_2)
+        flow_feat_2 = self.FLOW_base_avg(flow_data_2)
 
         # part 1 top
         # feed base feature map tp RPN to obtain rois
@@ -99,12 +109,18 @@ class _fasterRCNN(nn.Module):
             grid_xy = _affine_grid_gen(rois.view(-1, 5), base_feat.size()[2:], self.grid_size)
             grid_yx = torch.stack([grid_xy.data[:,:,:,1], grid_xy.data[:,:,:,0]], 3).contiguous()
             pooled_feat = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
+
+            pooled_feat_flow = self.RCNN_roi_crop(flow_feat, Variable(grid_yx).detach())
+
             if cfg.CROP_RESIZE_WITH_MAX_POOL:
                 pooled_feat = F.max_pool2d(pooled_feat, 2, 2)
+                pooled_feat_flow = F.max_pool2d(pooled_feat_flow, 2, 2)
         elif cfg.POOLING_MODE == 'align':
             pooled_feat = self.RCNN_roi_align(base_feat, rois.view(-1, 5))
+            pooled_feat_flow = self.RCNN_roi_align(flow_feat, rois.view(-1, 5))
         elif cfg.POOLING_MODE == 'pool':
             pooled_feat = self.RCNN_roi_pool(base_feat, rois.view(-1,5))
+            pooled_feat_flow = self.RCNN_roi_pool(flow_feat, rois.view(-1,5))
 
         # feed pooled features to top model
         # print (pooled_feat.shape)
@@ -159,7 +175,8 @@ class _fasterRCNN(nn.Module):
         # tracking_pooled_feat = 0.5 * pooled_feat + 0.5*pooled_feat_tracking_0_to_1
         # print (pooled_feat.shape)
         # print (pooled_feat_tracking_0_to_1.shape)
-        tracking_pooled_feat_pre = torch.cat((pooled_feat, pooled_feat_tracking_0_to_1), 1)
+        # tracking_pooled_feat_pre = torch.cat((pooled_feat, pooled_feat_tracking_0_to_1), 1)
+        tracking_pooled_feat_pre = torch.cat((pooled_feat, pooled_feat_tracking_0_to_1, pooled_feat_flow), 1)
         # print (tracking_pooled_feat_pre.shape)
         tracking_pooled_feat = self.tracking_concat_feat(tracking_pooled_feat_pre)
         # print (tracking_pooled_feat.shape)
@@ -231,12 +248,17 @@ class _fasterRCNN(nn.Module):
             grid_xy_2 = _affine_grid_gen(rois_2.view(-1, 5), base_feat_2.size()[2:], self.grid_size)
             grid_yx_2 = torch.stack([grid_xy_2.data[:,:,:,1], grid_xy_2.data[:,:,:,0]], 3).contiguous()
             pooled_feat_2 = self.RCNN_roi_crop(base_feat_2, Variable(grid_yx_2).detach())
+
+            pooled_feat_flow_2 = self.RCNN_roi_crop(flow_feat_2, Variable(grid_yx_2).detach())
             if cfg.CROP_RESIZE_WITH_MAX_POOL:
                 pooled_feat_2 = F.max_pool2d(pooled_feat_2, 2, 2)
+                pooled_feat_flow_2 = F.max_pool2d(pooled_feat_flow_2, 2, 2)
         elif cfg.POOLING_MODE == 'align':
             pooled_feat_2 = self.RCNN_roi_align(base_feat_2, rois_2.view(-1, 5))
+            pooled_feat_flow_2 = self.RCNN_roi_align(flow_feat_2, rois_2.view(-1, 5))
         elif cfg.POOLING_MODE == 'pool':
             pooled_feat_2 = self.RCNN_roi_pool(base_feat_2, rois_2.view(-1,5))
+            pooled_feat_flow_2 = self.RCNN_roi_pool(flow_feat_2, rois_2.view(-1,5))
 
         # feed pooled features to top model
         
@@ -286,7 +308,7 @@ class _fasterRCNN(nn.Module):
             pooled_feat_tracking_1_to_0 = self.RCNN_roi_pool(base_feat, rois_2.view(-1,5))
         
         # tracking_pooled_feat_2 = 0.5 * pooled_feat_2 + 0.5*pooled_feat_tracking_1_to_0
-        tracking_pooled_feat_pre_2 = torch.cat((pooled_feat_2, pooled_feat_tracking_1_to_0), 1)
+        tracking_pooled_feat_pre_2 = torch.cat((pooled_feat_2, pooled_feat_tracking_1_to_0, pooled_feat_flow_2), 1)
         # print (tracking_pooled_feat_pre.shape)
         tracking_pooled_feat_2 = self.tracking_concat_feat(tracking_pooled_feat_pre_2)
         tracking_pooled_feat_bbox_2 = self._head_to_tail_tracking(tracking_pooled_feat_2)
