@@ -99,9 +99,8 @@ class imagenet_vid(imdb):
         # image_path = os.path.join(self._data_path, 'Data', self._image_set, index + self._image_ext[0])
         # image_path = os.path.join(self._data_path, 'Data', 'DET', self._image_set, index + self._image_ext[0])
         if self._det_vid == 'det':
-            det_default_flow = 'default.JPG'
-            flow_path = os.path.join(self._data_path, 'FLOWs', 'DET', det_default_flow)
-            flow_path_1 = flow_path 
+            flow_path = os.path.join(self._data_path, 'FLOWs', 'DET', index[0] + self._image_ext[0])
+            flow_path_1 = os.path.join(self._data_path, 'FLOWs', 'DET', index[1] + self._image_ext[0])
         else:
             flow_path = os.path.join(self._data_path, 'FLOWs', 'VID', index[0] + self._image_ext[0])
             flow_path_1 = os.path.join(self._data_path, 'FLOWs', 'VID', index[1] + self._image_ext[0])
