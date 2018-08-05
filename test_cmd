@@ -1,0 +1,1 @@
+time python test_net.py --dataset imagenet_vid --net res101 --cuda --load_dir save_dir/ --checksession 1 --checkepoch 8 --checkpoint 13623 --cfg cfgs/res101.yml

@@ -175,9 +175,27 @@ class imagenet_vid(imdb):
             elif self._det_vid == 'vid':
                 image_set_file = os.path.join(self._data_path, 'ImageSets', 'DET_VID', 'val.txt')
 
-            # image_set_file = os.path.join(self._data_path, 'ImageSets', 'val.txt')
-            with open(image_set_file) as f:
-                image_index = [x.strip().split()[0] for x in f.readlines()]
+                # image_set_file = os.path.join(self._data_path, 'ImageSets', 'val.txt')
+                with open(image_set_file) as f:
+                    lines = [x.strip().split(' ') for x in f.readlines()]
+                # image_index = [x.strip().split()[0] for x in f.readlines()]
+                image_index = []
+                for x in lines:
+                    print (x)
+                    path = x[0]
+                    folder_x = os.path.dirname(path)
+                    basename_x = os.path.basename(path)
+                    basename_next = '%06d' % (int(basename_x) + 1)
+                    print (folder_x, basename_x, basename_next) 
+                    
+                    # index = ('%s/%06d' % (x[0], int(x[2])), '%s/%06d' % (x[0], int(x[2]) + 1))
+                    index = ('%s/%s' % (folder_x, basename_x), '%s/%s' % (folder_x, basename_next))
+                    image_path_0    = os.path.join(self._data_path, 'Data', 'VID', index[0] + self._image_ext[0])
+                    image_path_1    = os.path.join(self._data_path, 'Data', 'VID', index[1] + self._image_ext[0])
+                    proposal_path_0 = os.path.join(self._data_path, 'RPNs', 'VID', index[0] + self._proposal_ext[0])
+                    proposal_path_1 = os.path.join(self._data_path, 'RPNs', 'VID', index[1] + self._proposal_ext[0])            
+                    if os.path.exists(image_path_0) and os.path.exists(image_path_1) and os.path.exists(proposal_path_0) and os.path.exists(proposal_path_1):
+                        image_index.append(index)
         return image_index
 
     def gt_roidb(self):
@@ -208,6 +226,7 @@ class imagenet_vid(imdb):
         """
         # filename = os.path.join(self._data_path, 'Annotations', self._image_set, index + '.xml')
         # filename = os.path.join(self._data_path, 'Annotations', 'DET', self._image_set, index + '.xml')
+        print (index)
         if self._det_vid == 'det':
             filename_0 = os.path.join(self._data_path, 'Annotations', 'DET', index[0] + '.xml')
             filename_1 = os.path.join(self._data_path, 'Annotations', 'DET', index[1] + '.xml')
