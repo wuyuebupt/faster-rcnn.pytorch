@@ -446,12 +446,19 @@ class roibatchLoader(data.Dataset):
                 padding_data_1, im_info_1, gt_boxes_padding_1, num_boxes_1, proposal_boxes_padding_1, num_proposals_1
 
     else:
+        # image 1
         data = data.permute(0, 3, 1, 2).contiguous().view(3, data_height, data_width)
         im_info = im_info.view(3)
-        proposal_boxes = torch.from_numpy(blobs['offline_proposals'])
+        proposal_boxes = torch.from_numpy(blobs['offline_proposals'][0])
+        # image 2
+        data_1 = data_1.permute(0, 3, 1, 2).contiguous().view(3, data_height, data_width)
+        im_info_1 = im_info_1.view(3)
+        proposal_boxes_1 = torch.from_numpy(blobs['offline_proposals'][1])
 
         gt_boxes = torch.FloatTensor([1,1,1,1,1])
         num_boxes = 0
+        gt_boxes_1 = torch.FloatTensor([1,1,1,1,1])
+        num_boxes_1 = 0
 
         not_keep_proposal = (proposal_boxes[:,0] == proposal_boxes[:,2]) | (proposal_boxes[:,1] == proposal_boxes[:,3])
         keep_proposal = torch.nonzero(not_keep_proposal == 0).view(-1)
@@ -468,8 +475,24 @@ class roibatchLoader(data.Dataset):
         else:
             num_proposals = 0
  
+        not_keep_proposal_1 = (proposal_boxes_1[:,0] == proposal_boxes_1[:,2]) | (proposal_boxes_1[:,1] == proposal_boxes_1[:,3])
+        keep_proposal_1 = torch.nonzero(not_keep_proposal_1 == 0).view(-1)
+
+        # proposal_boxes_padding = torch.FloatTensor(self.max_num_box, gt_boxes.size(1)).zero_()
+        # mannual set the number of proposals to 300
+        proposal_boxes_padding_1 = torch.FloatTensor( 300, proposal_boxes_1.size(1)).zero_()
+        if keep_proposal_1.numel() != 0:
+            proposal_boxes_1 = proposal_boxes_1[keep_proposal_1]
+            num_proposals_1 = min(proposal_boxes_1.size(0), 300)
+            # proposal_boxes_padding[:num_proposals,:] = proposal_boxes[:num_proposals]
+            proposal_boxes_padding_1[:num_proposals,1:5] = proposal_boxes_1[:num_proposals,:4]
+            proposal_boxes_padding_1[:num_proposals, 0] = proposal_boxes_1[:num_proposals, 4]
+        else:
+            num_proposals_1 = 0
  
-        return data, im_info, gt_boxes, num_boxes, proposal_boxes_padding, num_proposals
+ 
+        return data, im_info, gt_boxes, num_boxes, proposal_boxes_padding, num_proposals, \
+               data_1, im_info_1, gt_boxes_1, num_boxes_1, proposal_boxes_padding_1, num_proposals_1 \
 
   def __len__(self):
     return len(self._roidb)

@@ -166,9 +166,14 @@ if __name__ == '__main__':
 
   fasterRCNN.create_architecture()
 
-  print("load checkpoint %s" % (load_name))
+    print("load checkpoint %s" % (load_name))
   checkpoint = torch.load(load_name)
   fasterRCNN.load_state_dict(checkpoint['model'])
+  # print (checkpoint['model'].keys())
+  # print (checkpoint['model']['RCNN_bbox_pred.weight'])
+  # print (checkpoint['model']['RCNN_bbox_pred.bias'])
+  # print (fasterRCNN.RCNN_bbox_pred.weight)
+  # print (fasterRCNN.RCNN_bbox_pred.bias)
   if 'pooling_mode' in checkpoint.keys():
     cfg.POOLING_MODE = checkpoint['pooling_mode']
 
@@ -179,6 +184,15 @@ if __name__ == '__main__':
   im_info = torch.FloatTensor(1)
   num_boxes = torch.LongTensor(1)
   gt_boxes = torch.FloatTensor(1)
+  num_proposals = torch.LongTensor(1)
+  proposal_boxes = torch.FloatTensor(1)
+
+  im_data_2 = torch.FloatTensor(1)
+  im_info_2 = torch.FloatTensor(1)
+  num_boxes_2 = torch.LongTensor(1)
+  gt_boxes_2 = torch.FloatTensor(1)
+  num_proposals_2 = torch.LongTensor(1)
+  proposal_boxes_2 = torch.FloatTensor(1)
 
   # ship to cuda
   if args.cuda:
@@ -186,12 +200,31 @@ if __name__ == '__main__':
     im_info = im_info.cuda()
     num_boxes = num_boxes.cuda()
     gt_boxes = gt_boxes.cuda()
+    num_proposals = num_proposals.cuda()
+    proposal_boxes = proposal_boxes.cuda()
+
+    im_data_2 = im_data_2.cuda()
+    im_info_2 = im_info_2.cuda()
+    num_boxes_2 = num_boxes_2.cuda()
+    gt_boxes_2 = gt_boxes_2.cuda()
+    num_proposals_2 = num_proposals_2.cuda()
+    proposal_boxes_2 = proposal_boxes_2.cuda()
 
   # make variable
   im_data = Variable(im_data, volatile=True)
   im_info = Variable(im_info, volatile=True)
   num_boxes = Variable(num_boxes, volatile=True)
   gt_boxes = Variable(gt_boxes, volatile=True)
+  num_proposals = Variable(num_proposals, volatile=True)
+  proposal_boxes = Variable(proposal_boxes, volatile=True)
+
+  im_data_2 = Variable(im_data_2, volatile=True)
+  im_info_2 = Variable(im_info_2, volatile=True)
+  num_boxes_2 = Variable(num_boxes_2, volatile=True)
+  gt_boxes_2 = Variable(gt_boxes_2, volatile=True)
+  num_proposals_2 = Variable(num_proposals_2, volatile=True)
+  proposal_boxes_2 = Variable(proposal_boxes_2, volatile=True)
+
 
   if args.cuda:
     cfg.CUDA = True
@@ -218,7 +251,7 @@ if __name__ == '__main__':
   dataset = roibatchLoader(roidb, ratio_list, ratio_index, 1, \
                         imdb.num_classes, training=False, normalize = False)
   dataloader = torch.utils.data.DataLoader(dataset, batch_size=1,
-                            shuffle=False, num_workers=0,
+                            shuffle=False, num_workers=1,
                             pin_memory=True)
 
   data_iter = iter(dataloader)
@@ -235,12 +268,33 @@ if __name__ == '__main__':
       im_info.data.resize_(data[1].size()).copy_(data[1])
       gt_boxes.data.resize_(data[2].size()).copy_(data[2])
       num_boxes.data.resize_(data[3].size()).copy_(data[3])
+      proposal_boxes.data.resize_(data[4].size()).copy_(data[4])
+      num_proposals.data.resize_(data[5].size()).copy_(data[5])
+
+      # the second part
+      im_data_2.data.resize_(data[6].size()).copy_(data[6])
+      im_info_2.data.resize_(data[7].size()).copy_(data[7])
+      gt_boxes_2.data.resize_(data[8].size()).copy_(data[8])
+      num_boxes_2.data.resize_(data[9].size()).copy_(data[9])
+      proposal_boxes_2.data.resize_(data[10].size()).copy_(data[10])
+      num_proposals_2.data.resize_(data[11].size()).copy_(data[11])
+
 
       det_tic = time.time()
       rois, cls_prob, bbox_pred, \
-      rpn_loss_cls, rpn_loss_box, \
       RCNN_loss_cls, RCNN_loss_bbox, \
-      rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+      rois_label, \
+      RCNN_loss_cls_2, RCNN_loss_bbox_2, \
+      RCNN_loss_tracking_cls, RCNN_loss_tracking_bbox, \
+      RCNN_loss_tracking_cls_2, RCNN_loss_tracking_bbox_2 = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals,
+                                im_data_2, im_info_2, gt_boxes_2, num_boxes_2, proposal_boxes_2, num_proposals_2)
+
+
+      # rois, cls_prob, bbox_pred, \
+      # rpn_loss_cls, rpn_loss_box, \
+      # RCNN_loss_cls, RCNN_loss_bbox, \
+      # rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals,
+      #                           im_data_2, im_info_2, gt_boxes_2, num_boxes_2, proposal_boxes_2, num_proposals_2)
 
       scores = cls_prob.data
       boxes = rois.data[:, :, 1:5]

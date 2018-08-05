@@ -109,11 +109,13 @@ class _fasterRCNN(nn.Module):
         # feed pooled features to top model
         # print (pooled_feat.shape)
         pooled_feat_bbox = self._head_to_tail(pooled_feat)
-        # print (pooled_feat_bbox.shape)
+        print (pooled_feat_bbox.shape)
         # print (pooled_feat.shape)
 
         # compute bbox offset
+        print (self.RCNN_bbox_pred)
         bbox_pred = self.RCNN_bbox_pred(pooled_feat_bbox)
+        print (bbox_pred)
         if self.training and not self.class_agnostic:
             # select the corresponding columns according to roi labels
             bbox_pred_view = bbox_pred.view(bbox_pred.size(0), int(bbox_pred.size(1) / 4), 4)
