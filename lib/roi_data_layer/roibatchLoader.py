@@ -208,7 +208,7 @@ class roibatchLoader(data.Dataset):
             padding_flow = torch.FloatTensor(int(np.ceil(data_width / ratio)), \
                                              data_width, 2).zero_()
 
-            padding_fkiw[:data_height, :, :] = flow[0]
+            padding_flow[:data_height, :, :] = flow[0]
             # update im_info
             im_info[0, 0] = padding_data.size(0)
             # print("height %d %d \n" %(index, anchor_idx))
