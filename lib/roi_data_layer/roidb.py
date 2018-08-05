@@ -27,6 +27,7 @@ def prepare_roidb(imdb):
   for i in range(len(imdb.image_index)):
     roidb[i]['img_id'] = imdb.image_id_at(i)
     roidb[i]['image'] = imdb.image_path_at(i)
+    roidb[i]['flow'] = imdb.image_offline_flow_at(i)
     roidb[i]['offline_proposal'] = imdb.image_offline_proposal_at(i)
 
     if not (imdb.name.startswith('coco')):

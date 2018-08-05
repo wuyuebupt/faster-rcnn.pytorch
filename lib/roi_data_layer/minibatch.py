@@ -14,7 +14,7 @@ import numpy as np
 import numpy.random as npr
 from scipy.misc import imread
 from model.utils.config import cfg
-from model.utils.blob import prep_im_for_blob, im_list_to_blob
+from model.utils.blob import prep_im_for_blob, im_list_to_blob, flow_list_to_blob
 import pdb
 import scipy.io as sio
 
@@ -31,9 +31,10 @@ def get_minibatch(roidb, num_classes):
     format(num_images, cfg.TRAIN.BATCH_SIZE)
 
   # Get the input image blob, formatted for caffe
-  im_blob, im_scales, im_offline_proposals = _get_image_blob(roidb, random_scale_inds)
+  im_blob, im_scales, im_offline_proposals, im_flows = _get_image_blob(roidb, random_scale_inds)
 
   blobs = {'data': im_blob}
+  blobs['flow'] = im_flows
 
   # print (im_scales)
   # print (len(im_scales))
@@ -123,10 +124,12 @@ def _get_image_blob(roidb, scale_inds):
   processed_ims = []
   im_scales = []
   offline_proposals = []
+  processed_flows = []
 
   processed_ims_1 = []
   im_scales_1 = []
   offline_proposals_1 = []
+  processed_flows_1 = []
 
   for i in range(num_images):
     #im = cv2.imread(roidb[i]['image'])
@@ -145,7 +148,22 @@ def _get_image_blob(roidb, scale_inds):
     # print (offline_proposal_bbox.shape)
     # print (im.shape)
     
-    
+    # load flow
+    # print (roidb[i]['flow'][0])
+
+    flow_x  = imread(roidb[i]['flow'][0] + '.x.png')
+    flow_y  = imread(roidb[i]['flow'][0] + '.y.png')
+    flow_x  = flow_x.astype(np.float32)
+    flow_x  = flow_x / 255 * 80 - 40
+    flow_y  = flow_y.astype(np.float32)
+    flow_y  = flow_y / 255 * 80 - 40
+    flow    = np.stack((flow_x, flow_y), axis=2)
+
+    # print (im.shape)
+    # print (flow_x.shape, flow_y.shape, flow.shape)
+    # print (flow_x[0:10, 0:10])
+    # exit()    
+
     if roidb[i]['flipped']:
       im = im[:, ::-1, :]
       im_width = im.shape[1]
@@ -160,6 +178,12 @@ def _get_image_blob(roidb, scale_inds):
     im_scales.append(im_scale)
     processed_ims.append(im)
     offline_proposals.append(offline_proposal_bbox)
+    # print (flow.shape)
+    flow, flow_scale = prep_im_for_blob(flow, np.array([[[0., 0.]]]), target_size,
+                    cfg.TRAIN.MAX_SIZE)
+    # print (flow.shape)
+    processed_flows.append(flow)
+    # exit()
 
 
 
@@ -178,7 +202,15 @@ def _get_image_blob(roidb, scale_inds):
     offline_proposal_bbox_1 = sio.loadmat(roidb[i]['offline_proposal'][1])['boxes']
     # print (offline_proposal_bbox.shape)
     # print (im.shape)
-    
+    flow_x_2  = imread(roidb[i]['flow'][1] + '.x.png')
+    flow_y_2  = imread(roidb[i]['flow'][1] + '.y.png')
+    flow_x_2  = flow_x_2.astype(np.float32)
+    flow_x_2  = flow_x_2 / 255 * 80 - 40
+    flow_y_2  = flow_y_2.astype(np.float32)
+    flow_y_2  = flow_y_2 / 255 * 80 - 40
+    flow_2    = np.stack((flow_x_2, flow_y_2), axis=2)
+
+ 
     
     if roidb[i]['flipped']:
       im_1 = im_1[:, ::-1, :]
@@ -195,14 +227,24 @@ def _get_image_blob(roidb, scale_inds):
     processed_ims_1.append(im_1)
     offline_proposals_1.append(offline_proposal_bbox_1)
 
+    flow_2, flow_scale_2 = prep_im_for_blob(flow_2, np.array([[[0., 0.]]]), target_size,
+                    cfg.TRAIN.MAX_SIZE)
+    # print (flow.shape)
+    processed_flows_1.append(flow_2)
 
   # Create a blob to hold the input images
   blob = im_list_to_blob(processed_ims)
   blob_1 = im_list_to_blob(processed_ims_1)
+  
+  # 
+  flow_blob   = flow_list_to_blob(processed_flows)
+  flow_blob_1 = flow_list_to_blob(processed_flows_1)
+  # exit()
 
   # paired return
   blob_pair = (blob, blob_1)
   im_scales_pair = (im_scales, im_scales_1)
   offline_proposals_pair = (offline_proposals, offline_proposals_1)
-  return blob_pair, im_scales_pair, offline_proposals_pair
+  flow_pair = (flow_blob, flow_blob_1)
+  return blob_pair, im_scales_pair, offline_proposals_pair, flow_pair
   # return blob, im_scales, offline_proposals

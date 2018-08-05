@@ -175,7 +175,8 @@ if __name__ == '__main__':
       args.imdbval_name = "imagenet_val"
       args.set_cfgs = ['ANCHOR_SCALES', '[4, 8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '30']
   elif args.dataset == "imagenet_vid":
-      args.imdb_name = "imagenet_vid_train+imagenet_det_train"
+      # args.imdb_name = "imagenet_vid_train+imagenet_det_train"
+      args.imdb_name = "imagenet_vid_train"
       args.imdbval_name = "imagenet_vid_val"
       args.set_cfgs = ['ANCHOR_SCALES', '[4, 8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '30']
   elif args.dataset == "vg":
@@ -224,6 +225,7 @@ if __name__ == '__main__':
 
   # initilize the tensor holder here.
   im_data = torch.FloatTensor(1)
+  flow_data = torch.FloatTensor(1)
   im_info = torch.FloatTensor(1)
   num_boxes = torch.LongTensor(1)
   gt_boxes = torch.FloatTensor(1)
@@ -231,6 +233,7 @@ if __name__ == '__main__':
   proposal_boxes = torch.FloatTensor(1)
 
   im_data_2 = torch.FloatTensor(1)
+  flow_data_2 = torch.FloatTensor(1)
   im_info_2 = torch.FloatTensor(1)
   num_boxes_2 = torch.LongTensor(1)
   gt_boxes_2 = torch.FloatTensor(1)
@@ -241,6 +244,7 @@ if __name__ == '__main__':
   # ship to cuda
   if args.cuda:
     im_data = im_data.cuda()
+    flow_data = flow_data.cuda()
     im_info = im_info.cuda()
     num_boxes = num_boxes.cuda()
     gt_boxes = gt_boxes.cuda()
@@ -248,6 +252,7 @@ if __name__ == '__main__':
     proposal_boxes = proposal_boxes.cuda()
 
     im_data_2 = im_data_2.cuda()
+    flow_data_2 = flow_data_2.cuda()
     im_info_2 = im_info_2.cuda()
     num_boxes_2 = num_boxes_2.cuda()
     gt_boxes_2 = gt_boxes_2.cuda()
@@ -256,6 +261,7 @@ if __name__ == '__main__':
 
   # make variable
   im_data = Variable(im_data)
+  flow_data = Variable(flow_data)
   im_info = Variable(im_info)
   num_boxes = Variable(num_boxes)
   gt_boxes = Variable(gt_boxes)
@@ -263,6 +269,7 @@ if __name__ == '__main__':
   proposal_boxes = Variable(proposal_boxes)
 
   im_data_2 = Variable(im_data_2)
+  flow_data_2 = Variable(flow_data_2)
   im_info_2 = Variable(im_info_2)
   num_boxes_2 = Variable(num_boxes_2)
   gt_boxes_2 = Variable(gt_boxes_2)
@@ -351,14 +358,16 @@ if __name__ == '__main__':
       num_boxes.data.resize_(data[3].size()).copy_(data[3])
       proposal_boxes.data.resize_(data[4].size()).copy_(data[4])
       num_proposals.data.resize_(data[5].size()).copy_(data[5])
+      flow_data.data.resize_(data[6].size()).copy_(data[6])
 
       # the second part
-      im_data_2.data.resize_(data[6].size()).copy_(data[6])
-      im_info_2.data.resize_(data[7].size()).copy_(data[7])
-      gt_boxes_2.data.resize_(data[8].size()).copy_(data[8])
-      num_boxes_2.data.resize_(data[9].size()).copy_(data[9])
-      proposal_boxes_2.data.resize_(data[10].size()).copy_(data[10])
-      num_proposals_2.data.resize_(data[11].size()).copy_(data[11])
+      im_data_2.data.resize_(data[7].size()).copy_(data[7])
+      im_info_2.data.resize_(data[8].size()).copy_(data[8])
+      gt_boxes_2.data.resize_(data[9].size()).copy_(data[9])
+      num_boxes_2.data.resize_(data[10].size()).copy_(data[10])
+      proposal_boxes_2.data.resize_(data[11].size()).copy_(data[11])
+      num_proposals_2.data.resize_(data[12].size()).copy_(data[12])
+      flow_data_2.data.resize_(data[13].size()).copy_(data[13])
 
       fasterRCNN.zero_grad()
       rois, cls_prob, bbox_pred, \
@@ -366,8 +375,8 @@ if __name__ == '__main__':
       rois_label, \
       RCNN_loss_cls_2, RCNN_loss_bbox_2, \
       RCNN_loss_tracking_cls, RCNN_loss_tracking_bbox, \
-      RCNN_loss_tracking_cls_2, RCNN_loss_tracking_bbox_2 = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals,
-				im_data_2, im_info_2, gt_boxes_2, num_boxes_2, proposal_boxes_2, num_proposals_2)
+      RCNN_loss_tracking_cls_2, RCNN_loss_tracking_bbox_2 = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals, flow_data,
+				im_data_2, im_info_2, gt_boxes_2, num_boxes_2, proposal_boxes_2, num_proposals_2, flow_data_2)
 
       # rois, cls_prob, bbox_pred, \
       # rpn_loss_cls, rpn_loss_box, \

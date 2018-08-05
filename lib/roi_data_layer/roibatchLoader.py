@@ -72,6 +72,7 @@ class roibatchLoader(data.Dataset):
 
     # image 1
     data = torch.from_numpy(blobs['data'][0])
+    flow = torch.from_numpy(blobs['flow'][0])
     im_info = torch.from_numpy(blobs['im_info'][0])
     # we need to random shuffle the bounding box.
     data_height, data_width = data.size(1), data.size(2)
@@ -79,9 +80,11 @@ class roibatchLoader(data.Dataset):
 
     # image 2
     data_1 = torch.from_numpy(blobs['data'][1])
+    flow_1 = torch.from_numpy(blobs['flow'][1])
     im_info_1 = torch.from_numpy(blobs['im_info'][1])
     data_height_1, data_width_1 = data_1.size(1), data_1.size(2)
     assert (data_height == data_height_1 and data_width == data_width_1)
+
     if self.training:
         # image 1 
         # shuffle is used for gt boxes and proposals -> 
@@ -134,6 +137,7 @@ class roibatchLoader(data.Dataset):
                             y_s = np.random.choice(range(min_y, min_y+y_s_add))
                 # crop the image
                 data = data[:, y_s:(y_s + trim_size), :, :]
+                flow = flow[:, y_s:(y_s + trim_size), :, :]
 
                 # shift y coordiante of gt_boxes
                 gt_boxes[:, 1] = gt_boxes[:, 1] - float(y_s)
@@ -176,6 +180,7 @@ class roibatchLoader(data.Dataset):
                             x_s = np.random.choice(range(min_x, min_x+x_s_add))
                 # crop the image
                 data = data[:, :, x_s:(x_s + trim_size), :]
+                flow = flow[:, :, x_s:(x_s + trim_size), :]
 
                 # shift x coordiante of gt_boxes
                 gt_boxes[:, 0] = gt_boxes[:, 0] - float(x_s)
@@ -199,6 +204,11 @@ class roibatchLoader(data.Dataset):
                                              data_width, 3).zero_()
 
             padding_data[:data_height, :, :] = data[0]
+
+            padding_flow = torch.FloatTensor(int(np.ceil(data_width / ratio)), \
+                                             data_width, 2).zero_()
+
+            padding_fkiw[:data_height, :, :] = flow[0]
             # update im_info
             im_info[0, 0] = padding_data.size(0)
             # print("height %d %d \n" %(index, anchor_idx))
@@ -208,17 +218,21 @@ class roibatchLoader(data.Dataset):
             padding_data = torch.FloatTensor(data_height, \
                                              int(np.ceil(data_height * ratio)), 3).zero_()
             padding_data[:, :data_width, :] = data[0]
+            padding_flow = torch.FloatTensor(data_height, \
+                                             int(np.ceil(data_height * ratio)), 2).zero_()
+            padding_flow[:, :data_width, :] = flow[0]
             im_info[0, 1] = padding_data.size(1)
         else:
             trim_size = min(data_height, data_width)
             padding_data = torch.FloatTensor(trim_size, trim_size, 3).zero_()
             padding_data = data[0][:trim_size, :trim_size, :]
+            padding_flow = torch.FloatTensor(trim_size, trim_size, 2).zero_()
+            padding_flow = flow[0][:trim_size, :trim_size, :]
             # gt_boxes.clamp_(0, trim_size)
             gt_boxes[:, :4].clamp_(0, trim_size)
             proposal_boxes[:, :4].clamp_(0, trim_size)
             im_info[0, 0] = trim_size
             im_info[0, 1] = trim_size
-
 
         # check the bounding box:
         not_keep = (gt_boxes[:,0] == gt_boxes[:,2]) | (gt_boxes[:,1] == gt_boxes[:,3])
@@ -252,6 +266,7 @@ class roibatchLoader(data.Dataset):
  
            # permute trim_data to adapt to downstream processing
         padding_data = padding_data.permute(2, 0, 1).contiguous()
+        padding_flow = padding_flow.permute(2, 0, 1).contiguous()
         im_info = im_info.view(3)
 
 
@@ -314,6 +329,7 @@ class roibatchLoader(data.Dataset):
                             y_s = np.random.choice(range(min_y, min_y+y_s_add))
                 # crop the image
                 data_1 = data_1[:, y_s:(y_s + trim_size), :, :]
+                flow_1 = flow_1[:, y_s:(y_s + trim_size), :, :]
 
                 # shift y coordiante of gt_boxes
                 gt_boxes_1[:, 1] = gt_boxes_1[:, 1] - float(y_s)
@@ -356,6 +372,7 @@ class roibatchLoader(data.Dataset):
                             x_s = np.random.choice(range(min_x, min_x+x_s_add))
                 # crop the image
                 data_1 = data_1[:, :, x_s:(x_s + trim_size), :]
+                flow_1 = flow_1[:, :, x_s:(x_s + trim_size), :]
 
                 # shift x coordiante of gt_boxes
                 gt_boxes_1[:, 0] = gt_boxes_1[:, 0] - float(x_s)
@@ -377,8 +394,10 @@ class roibatchLoader(data.Dataset):
 
             padding_data_1 = torch.FloatTensor(int(np.ceil(data_width / ratio)), \
                                              data_width, 3).zero_()
-
             padding_data_1[:data_height, :, :] = data_1[0]
+            padding_flow_1 = torch.FloatTensor(int(np.ceil(data_width / ratio)), \
+                                             data_width, 2).zero_()
+            padding_flow_1[:data_height, :, :] = flow_1[0]
             # update im_info
             im_info_1[0, 0] = padding_data_1.size(0)
             # print("height %d %d \n" %(index, anchor_idx))
@@ -388,11 +407,16 @@ class roibatchLoader(data.Dataset):
             padding_data_1 = torch.FloatTensor(data_height, \
                                              int(np.ceil(data_height * ratio)), 3).zero_()
             padding_data_1[:, :data_width, :] = data_1[0]
+            padding_flow_1 = torch.FloatTensor(data_height, \
+                                             int(np.ceil(data_height * ratio)), 2).zero_()
+            padding_flow_1[:, :data_width, :] = flow_1[0]
             im_info_1[0, 1] = padding_data_1.size(1)
         else:
             trim_size = min(data_height, data_width)
             padding_data_1 = torch.FloatTensor(trim_size, trim_size, 3).zero_()
             padding_data_1 = data_1[0][:trim_size, :trim_size, :]
+            padding_flow_1 = torch.FloatTensor(trim_size, trim_size, 2).zero_()
+            padding_flow_1 = flow_1[0][:trim_size, :trim_size, :]
             # gt_boxes.clamp_(0, trim_size)
             gt_boxes_1[:, :4].clamp_(0, trim_size)
             proposal_boxes_1[:, :4].clamp_(0, trim_size)
@@ -432,6 +456,7 @@ class roibatchLoader(data.Dataset):
  
            # permute trim_data to adapt to downstream processing
         padding_data_1 = padding_data_1.permute(2, 0, 1).contiguous()
+        padding_flow_1 = padding_flow_1.permute(2, 0, 1).contiguous()
         im_info_1 = im_info_1.view(3)
 
 
@@ -442,8 +467,8 @@ class roibatchLoader(data.Dataset):
         # proposal_boxes_padding_2 = proposal_boxes_padding
         # num_proposals_2 = num_proposals
  
-        return padding_data, im_info, gt_boxes_padding, num_boxes, proposal_boxes_padding, num_proposals, \
-                padding_data_1, im_info_1, gt_boxes_padding_1, num_boxes_1, proposal_boxes_padding_1, num_proposals_1
+        return padding_data, im_info, gt_boxes_padding, num_boxes, proposal_boxes_padding, num_proposals, padding_flow, \
+                padding_data_1, im_info_1, gt_boxes_padding_1, num_boxes_1, proposal_boxes_padding_1, num_proposals_1, padding_flow_1
 
     else:
         data = data.permute(0, 3, 1, 2).contiguous().view(3, data_height, data_width)

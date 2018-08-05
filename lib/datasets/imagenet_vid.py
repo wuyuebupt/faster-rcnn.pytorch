@@ -57,7 +57,6 @@ class imagenet_vid(imdb):
         assert os.path.exists(self._devkit_path), 'Devkit path does not exist: {}'.format(self._devkit_path)
         assert os.path.exists(self._data_path), 'Path does not exist: {}'.format(self._data_path)
 
-
     def image_offline_proposal_at(self, i):
         """
         Return the absolute path to image i in the image sequence.
@@ -84,6 +83,39 @@ class imagenet_vid(imdb):
         # assert os.path.exists(proposal_path), 'path does not exist: {}'.format(proposal_path)
         # return proposal_path
         return (proposal_path, proposal_path_1)
+
+
+    ### for flow input
+    def image_offline_flow_at(self, i):
+        """
+        Return the absolute path to image i in the image sequence.
+        """
+        return self.image_offline_flow_from_index(self._image_index[i])
+
+    def image_offline_flow_from_index(self, index):
+        """
+        Construct an image path from the image's "index" identifier.
+        """
+        # image_path = os.path.join(self._data_path, 'Data', self._image_set, index + self._image_ext[0])
+        # image_path = os.path.join(self._data_path, 'Data', 'DET', self._image_set, index + self._image_ext[0])
+        if self._det_vid == 'det':
+            det_default_flow = 'default.JPG'
+            flow_path = os.path.join(self._data_path, 'FLOWs', 'DET', det_default_flow)
+            flow_path_1 = flow_path 
+        else:
+            flow_path = os.path.join(self._data_path, 'FLOWs', 'VID', index[0] + self._image_ext[0])
+            flow_path_1 = os.path.join(self._data_path, 'FLOWs', 'VID', index[1] + self._image_ext[0])
+
+        # flow will be + .x.png and + .y.png
+            
+        # image_path = os.path.join(self._data_path, 'Data', 'DET', self._image_set, index + self._image_ext[0])
+        # NOTE: the proposal file might not exit in training 
+        # 1084113 .mat  in offline proposals files
+        # 1122397 .JPEG in all training images
+        # assert os.path.exists(proposal_path), 'path does not exist: {}'.format(proposal_path)
+        # return proposal_path
+        # return (proposal_path, proposal_path_1)
+        return (flow_path, flow_path_1)
 
 
     def image_path_at(self, i):
