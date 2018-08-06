@@ -471,7 +471,7 @@ class roibatchLoader(data.Dataset):
             num_proposals = min(proposal_boxes.size(0), 300)
             # proposal_boxes_padding[:num_proposals,:] = proposal_boxes[:num_proposals]
             proposal_boxes_padding[:num_proposals,1:5] = proposal_boxes[:num_proposals,:4]
-            proposal_boxes_padding[:num_proposals, 0] = proposal_boxes[:num_proposals, 4]
+            # proposal_boxes_padding[:num_proposals, 0] = proposal_boxes[:num_proposals, 4]
         else:
             num_proposals = 0
  
@@ -485,14 +485,14 @@ class roibatchLoader(data.Dataset):
             proposal_boxes_1 = proposal_boxes_1[keep_proposal_1]
             num_proposals_1 = min(proposal_boxes_1.size(0), 300)
             # proposal_boxes_padding[:num_proposals,:] = proposal_boxes[:num_proposals]
-            proposal_boxes_padding_1[:num_proposals,1:5] = proposal_boxes_1[:num_proposals,:4]
-            proposal_boxes_padding_1[:num_proposals, 0] = proposal_boxes_1[:num_proposals, 4]
+            proposal_boxes_padding_1[:num_proposals_1,1:5] = proposal_boxes_1[:num_proposals_1,:4]
+            # proposal_boxes_padding_1[:num_proposals_1, 0] = proposal_boxes_1[:num_proposals_1, 4]
         else:
             num_proposals_1 = 0
  
  
         return data, im_info, gt_boxes, num_boxes, proposal_boxes_padding, num_proposals, \
-               data_1, im_info_1, gt_boxes_1, num_boxes_1, proposal_boxes_padding_1, num_proposals_1 \
+              data_1, im_info_1, gt_boxes_1, num_boxes_1, proposal_boxes_padding_1, num_proposals_1 
 
   def __len__(self):
     return len(self._roidb)

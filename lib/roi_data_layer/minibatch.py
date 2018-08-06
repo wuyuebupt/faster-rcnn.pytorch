@@ -101,7 +101,6 @@ def get_minibatch(roidb, num_classes):
 
   blobs['img_id'] = roidb[0]['img_id']
 
-
   # blobs['gt_boxes'] = gt_boxes
   # blobs['offline_proposals'] = offline_proposal_boxes
   # blobs['im_info'] = np.array(

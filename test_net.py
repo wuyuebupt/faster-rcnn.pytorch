@@ -166,9 +166,10 @@ if __name__ == '__main__':
 
   fasterRCNN.create_architecture()
 
-    print("load checkpoint %s" % (load_name))
+  print("load checkpoint %s" % (load_name))
   checkpoint = torch.load(load_name)
-  fasterRCNN.load_state_dict(checkpoint['model'])
+  # fasterRCNN.load_state_dict(checkpoint['model'])
+  fasterRCNN.load_state_dict({k:v for k,v in checkpoint['model'].items() if k in fasterRCNN.state_dict()})
   # print (checkpoint['model'].keys())
   # print (checkpoint['model']['RCNN_bbox_pred.weight'])
   # print (checkpoint['model']['RCNN_bbox_pred.bias'])
@@ -246,6 +247,8 @@ if __name__ == '__main__':
   num_images = len(imdb.image_index)
   all_boxes = [[[] for _ in xrange(num_images)]
                for _ in xrange(imdb.num_classes)]
+  all_tracking_boxes = [[[] for _ in xrange(num_images)]
+               for _ in xrange(imdb.num_classes)]
 
   output_dir = get_output_dir(imdb, save_name)
   dataset = roibatchLoader(roidb, ratio_list, ratio_index, 1, \
@@ -278,30 +281,58 @@ if __name__ == '__main__':
       num_boxes_2.data.resize_(data[9].size()).copy_(data[9])
       proposal_boxes_2.data.resize_(data[10].size()).copy_(data[10])
       num_proposals_2.data.resize_(data[11].size()).copy_(data[11])
+      # print (im_data.shape)
+      # # print (im_data_2.shape)
+      # print (gt_boxes.shape)
+      # print (proposal_boxes.shape)
+      # print (proposal_boxes)
+      # exit()
 
 
       det_tic = time.time()
-      rois, cls_prob, bbox_pred, \
-      RCNN_loss_cls, RCNN_loss_bbox, \
-      rois_label, \
-      RCNN_loss_cls_2, RCNN_loss_bbox_2, \
-      RCNN_loss_tracking_cls, RCNN_loss_tracking_bbox, \
-      RCNN_loss_tracking_cls_2, RCNN_loss_tracking_bbox_2 = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals,
-                                im_data_2, im_info_2, gt_boxes_2, num_boxes_2, proposal_boxes_2, num_proposals_2)
+      rois, cls_prob, bbox_pred, tracking_cls_prob, tracking_bbox_pred, \
+      rois_2, cls_prob_2, bbox_pred_2, tracking_cls_prob_2, tracking_bbox_pred_2 = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals, im_data_2, im_info_2, gt_boxes_2, num_boxes_2, proposal_boxes_2, num_proposals_2)
+      # print (rois.shape)
+      # print (cls_prob.shape, bbox_pred.shape)
+      # print (tracking_cls_prob.shape, tracking_bbox_pred.shape)
+
+
+
+      # rois, cls_prob, bbox_pred, \
+      # RCNN_loss_cls, RCNN_loss_bbox, \
+      # rois_label, \
+      # RCNN_loss_cls_2, RCNN_loss_bbox_2, \
+      # RCNN_loss_tracking_cls, RCNN_loss_tracking_bbox, \
+      # RCNN_loss_tracking_cls_2, RCNN_loss_tracking_bbox_2 = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals, im_data_2, im_info_2, gt_boxes_2, num_boxes_2, proposal_boxes_2, num_proposals_2)
 
 
       # rois, cls_prob, bbox_pred, \
       # rpn_loss_cls, rpn_loss_box, \
       # RCNN_loss_cls, RCNN_loss_bbox, \
-      # rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals,
-      #                           im_data_2, im_info_2, gt_boxes_2, num_boxes_2, proposal_boxes_2, num_proposals_2)
+      # rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals)
 
       scores = cls_prob.data
       boxes = rois.data[:, :, 1:5]
+      
+      tracking_scores = tracking_cls_prob.data
+      tracking_boxes  = rois.data[:, :, 1:5]
+
+      scores_2 = cls_prob_2.data
+      boxes_2 = rois_2.data[:, :, 1:5]
+      
+      tracking_scores_2 = tracking_cls_prob_2.data
+      tracking_boxes_2  = rois_2.data[:, :, 1:5]
+
+
 
       if cfg.TEST.BBOX_REG:
           # Apply bounding-box regression deltas
           box_deltas = bbox_pred.data
+          tracking_box_deltas = tracking_bbox_pred.data
+
+          box_deltas_2 = bbox_pred_2.data
+          tracking_box_deltas_2 = tracking_bbox_pred_2.data
+
           if cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
           # Optionally normalize targets by a precomputed mean and stdev
             if args.class_agnostic:
@@ -313,22 +344,65 @@ if __name__ == '__main__':
                            + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
                 box_deltas = box_deltas.view(1, -1, 4 * len(imdb.classes))
 
+                tracking_box_deltas = tracking_box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
+                           + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
+                tracking_box_deltas = tracking_box_deltas.view(1, -1, 4 * len(imdb.classes))
+
+                box_deltas_2 = box_deltas_2.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
+                           + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
+                box_deltas_2 = box_deltas_2.view(1, -1, 4 * len(imdb.classes))
+
+                tracking_box_deltas_2 = tracking_box_deltas_2.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
+                           + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
+                tracking_box_deltas_2 = tracking_box_deltas_2.view(1, -1, 4 * len(imdb.classes))
+
+
+
+
           pred_boxes = bbox_transform_inv(boxes, box_deltas, 1)
           pred_boxes = clip_boxes(pred_boxes, im_info.data, 1)
+
+          pred_tracking_boxes = bbox_transform_inv(tracking_boxes, tracking_box_deltas, 1)
+          pred_tracking_boxes = clip_boxes(pred_tracking_boxes, im_info.data, 1)
+
+
+
+
+          pred_boxes_2 = bbox_transform_inv(boxes_2, box_deltas_2, 1)
+          pred_boxes = clip_boxes(pred_boxes, im_info.data, 1)
+
+          pred_tracking_boxes_2 = bbox_transform_inv(tracking_boxes_2, tracking_box_deltas_2, 1)
+          pred_tracking_boxes_2 = clip_boxes(pred_tracking_boxes_2, im_info.data, 1)
       else:
           # Simply repeat the boxes, once for each class
           pred_boxes = np.tile(boxes, (1, scores.shape[1]))
 
+      # the scale
       pred_boxes /= data[1][0][2]
+      pred_tracking_boxes /= data[1][0][2]
+      pred_boxes_2 /= data[1][0][2]
+      pred_tracking_boxes_2 /= data[1][0][2]
 
       scores = scores.squeeze()
       pred_boxes = pred_boxes.squeeze()
+      tracking_scores = tracking_scores.squeeze()
+      pred_tracking_boxes = pred_tracking_boxes.squeeze()
+      scores_2 = scores_2.squeeze()
+      pred_boxes_2 = pred_boxes_2.squeeze()
+      tracking_scores_2 = tracking_scores_2.squeeze()
+      pred_tracking_boxes_2 = pred_tracking_boxes_2.squeeze()
+
       det_toc = time.time()
       detect_time = det_toc - det_tic
       misc_tic = time.time()
       if vis:
-          im = cv2.imread(imdb.image_path_at(i))
+          # im = cv2.imread(imdb.image_path_at(i))
+          im = cv2.imread(imdb.image_path_at(i)[0])
+          im_2 = cv2.imread(imdb.image_path_at(i)[1])
           im2show = np.copy(im)
+          tracking_im2show = np.copy(im_2)
+          im2show_2 = np.copy(im_2)
+          tracking_im2show_2 = np.copy(im)
       for j in xrange(1, imdb.num_classes):
           inds = torch.nonzero(scores[:,j]>thresh).view(-1)
           # if there is det
@@ -351,6 +425,76 @@ if __name__ == '__main__':
           else:
             all_boxes[j][i] = empty_array
 
+          ## tracking res
+          tracking_inds = torch.nonzero(tracking_scores[:,j]>thresh).view(-1)
+          # if there is det
+          if tracking_inds.numel() > 0:
+            tracking_cls_scores = tracking_scores[:,j][tracking_inds]
+            _, tracking_order = torch.sort(tracking_cls_scores, 0, True)
+            if args.class_agnostic:
+              cls_tracking_boxes = pred_tracking_boxes[tracking_inds, :]
+            else:
+              cls_tracking_boxes = pred_tracking_boxes[tracking_inds][:, j * 4:(j + 1) * 4]
+            
+            cls_tracking_dets = torch.cat((cls_tracking_boxes, tracking_cls_scores.unsqueeze(1)), 1)
+            # cls_dets = torch.cat((cls_boxes, cls_scores), 1)
+            cls_tracking_dets = cls_tracking_dets[tracking_order]
+            tracking_keep = nms(cls_tracking_dets, cfg.TEST.NMS)
+            cls_tracking_dets = cls_tracking_dets[tracking_keep.view(-1).long()]
+            if vis:
+              tracking_im2show = vis_detections(tracking_im2show, imdb.classes[j], cls_tracking_dets.cpu().numpy(), 0.3)
+            all_tracking_boxes[j][i] = cls_tracking_dets.cpu().numpy()
+          else:
+            all_tracking_boxes[j][i] = empty_array
+
+
+
+          ## for the second image
+          inds_2 = torch.nonzero(scores_2[:,j]>thresh).view(-1)
+          # if there is det
+          if inds_2.numel() > 0:
+            cls_scores_2 = scores_2[:,j][inds_2]
+            _, order_2 = torch.sort(cls_scores_2, 0, True)
+            if args.class_agnostic:
+              cls_boxes_2 = pred_boxes_2[inds_2, :]
+            else:
+              cls_boxes_2 = pred_boxes_2[inds_2][:, j * 4:(j + 1) * 4]
+            
+            cls_dets_2 = torch.cat((cls_boxes_2, cls_scores_2.unsqueeze(1)), 1)
+            # cls_dets = torch.cat((cls_boxes, cls_scores), 1)
+            cls_dets_2 = cls_dets_2[order_2]
+            keep_2 = nms(cls_dets_2, cfg.TEST.NMS)
+            cls_dets_2 = cls_dets_2[keep_2.view(-1).long()]
+            if vis:
+              im2show_2 = vis_detections(im2show_2, imdb.classes[j], cls_dets_2.cpu().numpy(), 0.3)
+            all_boxes[j][i] = cls_dets.cpu().numpy()
+          else:
+            all_boxes[j][i] = empty_array
+
+          ## tracking res
+          tracking_inds_2 = torch.nonzero(tracking_scores_2[:,j]>thresh).view(-1)
+          # if there is det
+          if tracking_inds_2.numel() > 0:
+            tracking_cls_scores_2 = tracking_scores_2[:,j][tracking_inds_2]
+            _, tracking_order_2 = torch.sort(tracking_cls_scores_2, 0, True)
+            if args.class_agnostic:
+              cls_tracking_boxes_2 = pred_tracking_boxes_2[tracking_inds_2, :]
+            else:
+              cls_tracking_boxes_2 = pred_tracking_boxes_2[tracking_inds_2][:, j * 4:(j + 1) * 4]
+            
+            cls_tracking_dets_2 = torch.cat((cls_tracking_boxes_2, tracking_cls_scores_2.unsqueeze(1)), 1)
+            # cls_dets = torch.cat((cls_boxes, cls_scores), 1)
+            cls_tracking_dets_2 = cls_tracking_dets_2[tracking_order_2]
+            tracking_keep_2 = nms(cls_tracking_dets_2, cfg.TEST.NMS)
+            cls_tracking_dets_2 = cls_tracking_dets_2[tracking_keep_2.view(-1).long()]
+            if vis:
+              tracking_im2show_2 = vis_detections(tracking_im2show_2, imdb.classes[j], cls_tracking_dets_2.cpu().numpy(), 0.3)
+            all_tracking_boxes[j][i] = cls_tracking_dets.cpu().numpy()
+          else:
+            all_tracking_boxes[j][i] = empty_array
+
+
+
       # Limit to max_per_image detections *over all classes*
       if max_per_image > 0:
           image_scores = np.hstack([all_boxes[j][i][:, -1]
@@ -367,10 +511,21 @@ if __name__ == '__main__':
       sys.stdout.write('im_detect: {:d}/{:d} {:.3f}s {:.3f}s   \r' \
           .format(i + 1, num_images, detect_time, nms_time))
       sys.stdout.flush()
+      frame1 = 'outImages/frame1'
+      frame2 = 'outImages/frame2'
+      frame1to2 = 'outImages/frame1to2'
+      frame2to1 = 'outImages/frame2to1'
 
       if vis:
-          cv2.imwrite('result.png', im2show)
-          pdb.set_trace()
+          path1 = os.path.join(frame1, '{:06d}'.format(i))
+          path2 = os.path.join(frame2, '{:06d}'.format(i+1))
+          path1to2 = os.path.join(frame1to2, '{:06d}'.format(i+1))
+          path2to1 = os.path.join(frame2to1, '{:06d}'.format(i))
+          cv2.imwrite(path1 +'.png', im2show)
+          cv2.imwrite(path2 +'.png', im2show_2)
+          cv2.imwrite(path1to2 + '.png', tracking_im2show)
+          cv2.imwrite(path2to1 + '.png', tracking_im2show_2)
+          # pdb.set_trace()
           #cv2.imshow('test', im2show)
           #cv2.waitKey(0)
 

@@ -1,6 +1,8 @@
 data/*
+output/*
 tmp/*
 save_dir/*
+outImages/*
 *.o
 *.so
 # READ THIS BEFORE YOU REFACTOR ME

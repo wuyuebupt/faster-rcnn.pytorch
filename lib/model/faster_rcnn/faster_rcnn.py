@@ -109,13 +109,13 @@ class _fasterRCNN(nn.Module):
         # feed pooled features to top model
         # print (pooled_feat.shape)
         pooled_feat_bbox = self._head_to_tail(pooled_feat)
-        print (pooled_feat_bbox.shape)
+        # print (pooled_feat_bbox.shape)
         # print (pooled_feat.shape)
 
         # compute bbox offset
-        print (self.RCNN_bbox_pred)
+        # print (self.RCNN_bbox_pred)
         bbox_pred = self.RCNN_bbox_pred(pooled_feat_bbox)
-        print (bbox_pred)
+        # print (bbox_pred)
         if self.training and not self.class_agnostic:
             # select the corresponding columns according to roi labels
             bbox_pred_view = bbox_pred.view(bbox_pred.size(0), int(bbox_pred.size(1) / 4), 4)
@@ -333,8 +333,12 @@ class _fasterRCNN(nn.Module):
         # return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label
         # return rois, cls_prob, bbox_pred, RCNN_loss_cls, RCNN_loss_bbox, rois_label
         # return rois, cls_prob, bbox_pred, RCNN_loss_cls_all, RCNN_loss_bbox_all, rois_label, RCNN_loss_cls_2, RCNN_loss_bbox_2
-        return rois, cls_prob, bbox_pred, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_cls_2, RCNN_loss_bbox_2, \
+        if self.training:
+            return rois, cls_prob, bbox_pred, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_cls_2, RCNN_loss_bbox_2, \
                  RCNN_loss_tracking_cls, RCNN_loss_tracking_bbox, RCNN_loss_tracking_cls_2, RCNN_loss_tracking_bbox_2 
+        else:
+            return rois, cls_prob, bbox_pred, tracking_cls_prob, tracking_bbox_pred, \
+                   rois_2, cls_prob_2, bbox_pred_2, tracking_cls_prob_2, tracking_bbox_pred_2 
 
     def _init_weights(self):
         def normal_init(m, mean, stddev, truncated=False):

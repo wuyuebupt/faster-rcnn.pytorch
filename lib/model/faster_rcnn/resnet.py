@@ -301,7 +301,8 @@ class resnet(_fasterRCNN):
     # print (self.RCNN_top)
     # self.RCNN_tracking = nn.Sequential(resnet.layer4)
     self.tracking_concat_feat = nn.Conv2d(2 * self.dout_base_model, self.dout_base_model , kernel_size=1, stride=1, bias=False)
-    self.RCNN_tracking =copy.deepcopy(self.RCNN_top)
+    # self.RCNN_tracking =copy.deepcopy(self.RCNN_top)
+    self.RCNN_tracking = nn.Sequential(resnet.layer4)
     # self.RCNN_cls_tracking_score = nn.Linear(2048, self.n_classes)
     self.RCNN_cls_tracking_score = copy.deepcopy(self.RCNN_cls_score)
 
@@ -309,11 +310,11 @@ class resnet(_fasterRCNN):
     # print (self.RCNN_cls_tracking_score.state_dict())
 
     if self.class_agnostic:
-      self.RCNN_bbox_tracking_pred = copy.deepcopy(self.RCNN_bbox_pred)
-      # self.RCNN_bbox_tracking_pred = nn.Linear(2048, 4)
+      # self.RCNN_bbox_tracking_pred = copy.deepcopy(self.RCNN_bbox_pred)
+      self.RCNN_bbox_tracking_pred = nn.Linear(2048, 4)
     else:
-      # self.RCNN_bbox_tracking_pred = nn.Linear(2048, 4 * self.n_classes)
-      self.RCNN_bbox_tracking_pred = copy.deepcopy(self.RCNN_bbox_pred)
+      self.RCNN_bbox_tracking_pred = nn.Linear(2048, 4 * self.n_classes)
+      # self.RCNN_bbox_tracking_pred = copy.deepcopy(self.RCNN_bbox_pred)
 
     self.RCNN_tracking.apply(set_bn_fix)
 

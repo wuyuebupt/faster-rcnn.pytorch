@@ -181,12 +181,12 @@ class imagenet_vid(imdb):
                 # image_index = [x.strip().split()[0] for x in f.readlines()]
                 image_index = []
                 for x in lines:
-                    print (x)
+                    # print (x)
                     path = x[0]
                     folder_x = os.path.dirname(path)
                     basename_x = os.path.basename(path)
                     basename_next = '%06d' % (int(basename_x) + 1)
-                    print (folder_x, basename_x, basename_next) 
+                    # print (folder_x, basename_x, basename_next) 
                     
                     # index = ('%s/%06d' % (x[0], int(x[2])), '%s/%06d' % (x[0], int(x[2]) + 1))
                     index = ('%s/%s' % (folder_x, basename_x), '%s/%s' % (folder_x, basename_next))
