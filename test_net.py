@@ -245,9 +245,14 @@ if __name__ == '__main__':
 
   save_name = 'faster_rcnn_10'
   num_images = len(imdb.image_index)
+
   all_boxes = [[[] for _ in xrange(num_images)]
                for _ in xrange(imdb.num_classes)]
-  all_tracking_boxes = [[[] for _ in xrange(num_images)]
+  all_boxes_2 = [[[] for _ in xrange(num_images+1)]
+               for _ in xrange(imdb.num_classes)]
+  all_tracking_boxes = [[[] for _ in xrange(num_images+1)]
+               for _ in xrange(imdb.num_classes)]
+  all_tracking_boxes_2 = [[[] for _ in xrange(num_images)]
                for _ in xrange(imdb.num_classes)]
 
   output_dir = get_output_dir(imdb, save_name)
@@ -261,6 +266,9 @@ if __name__ == '__main__':
 
   _t = {'im_detect': time.time(), 'misc': time.time()}
   det_file = os.path.join(output_dir, 'detections.pkl')
+  det_file_2 = os.path.join(output_dir, 'detections_2.pkl')
+  det_file_tracking = os.path.join(output_dir, 'detections_tracking.pkl')
+  det_file_tracking_2 = os.path.join(output_dir, 'detections_tracking_2.pkl')
 
   fasterRCNN.eval()
   empty_array = np.transpose(np.array([[],[],[],[],[]]), (1,0))
@@ -443,10 +451,9 @@ if __name__ == '__main__':
             cls_tracking_dets = cls_tracking_dets[tracking_keep.view(-1).long()]
             if vis:
               tracking_im2show = vis_detections(tracking_im2show, imdb.classes[j], cls_tracking_dets.cpu().numpy(), 0.3)
-            all_tracking_boxes[j][i] = cls_tracking_dets.cpu().numpy()
+            all_tracking_boxes[j][i+1] = cls_tracking_dets.cpu().numpy()
           else:
-            all_tracking_boxes[j][i] = empty_array
-
+            all_tracking_boxes[j][i+1] = empty_array
 
 
           ## for the second image
@@ -467,9 +474,9 @@ if __name__ == '__main__':
             cls_dets_2 = cls_dets_2[keep_2.view(-1).long()]
             if vis:
               im2show_2 = vis_detections(im2show_2, imdb.classes[j], cls_dets_2.cpu().numpy(), 0.3)
-            all_boxes[j][i] = cls_dets.cpu().numpy()
+            all_boxes_2[j][i+1] = cls_dets_2.cpu().numpy()
           else:
-            all_boxes[j][i] = empty_array
+            all_boxes_2[j][i+1] = empty_array
 
           ## tracking res
           tracking_inds_2 = torch.nonzero(tracking_scores_2[:,j]>thresh).view(-1)
@@ -489,9 +496,9 @@ if __name__ == '__main__':
             cls_tracking_dets_2 = cls_tracking_dets_2[tracking_keep_2.view(-1).long()]
             if vis:
               tracking_im2show_2 = vis_detections(tracking_im2show_2, imdb.classes[j], cls_tracking_dets_2.cpu().numpy(), 0.3)
-            all_tracking_boxes[j][i] = cls_tracking_dets.cpu().numpy()
+            all_tracking_boxes_2[j][i] = cls_tracking_dets_2.cpu().numpy()
           else:
-            all_tracking_boxes[j][i] = empty_array
+            all_tracking_boxes_2[j][i] = empty_array
 
 
 
@@ -504,6 +511,31 @@ if __name__ == '__main__':
               for j in xrange(1, imdb.num_classes):
                   keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
                   all_boxes[j][i] = all_boxes[j][i][keep, :]
+ 
+          image_scores = np.hstack([all_boxes_2[j][i+1][:, -1]
+                                    for j in xrange(1, imdb.num_classes)])
+          if len(image_scores) > max_per_image:
+              image_thresh = np.sort(image_scores)[-max_per_image]
+              for j in xrange(1, imdb.num_classes):
+                  keep = np.where(all_boxes_2[j][i+1][:, -1] >= image_thresh)[0]
+                  all_boxes_2[j][i+1] = all_boxes_2[j][i+1][keep, :]
+
+
+          image_scores = np.hstack([all_tracking_boxes[j][i+1][:, -1]
+                                    for j in xrange(1, imdb.num_classes)])
+          if len(image_scores) > max_per_image:
+              image_thresh = np.sort(image_scores)[-max_per_image]
+              for j in xrange(1, imdb.num_classes):
+                  keep = np.where(all_tracking_boxes[j][i+1][:, -1] >= image_thresh)[0]
+                  all_tracking_boxes[j][i+1] = all_tracking_boxes[j][i+1][keep, :]
+
+          image_scores = np.hstack([all_tracking_boxes_2[j][i][:, -1]
+                                    for j in xrange(1, imdb.num_classes)])
+          if len(image_scores) > max_per_image:
+              image_thresh = np.sort(image_scores)[-max_per_image]
+              for j in xrange(1, imdb.num_classes):
+                  keep = np.where(all_tracking_boxes_2[j][i][:, -1] >= image_thresh)[0]
+                  all_tracking_boxes_2[j][i] = all_tracking_boxes_2[j][i][keep, :]
 
       misc_toc = time.time()
       nms_time = misc_toc - misc_tic
@@ -529,8 +561,62 @@ if __name__ == '__main__':
           #cv2.imshow('test', im2show)
           #cv2.waitKey(0)
 
+  ## all nms
+  # print ('start')
+  # all_boxes_with_tracking = [[[] for _ in xrange(num_images)]
+  #              for _ in xrange(imdb.num_classes)]
+
+  # for i in range(num_images):
+  #     for j in xrange(1, imdb.num_classes):
+  #       ## one more nms with max per image over all classes
+  #         print (len(all_boxes[j][i]))
+  #         print ((all_boxes[j][i]))
+  #         print (len(all_boxes_2[j][i]))
+  #         print (len(all_tracking_boxes[j][i]))
+  #         print (len(all_tracking_boxes_2[j][i]))
+  #         print (i,j)
+  #         # current_boxes = all_boxes[j][i] + all_boxes_2[j][i] + all_tracking_boxes[j][i] +all_tracking_boxes_2[j][i]
+  #         current_boxes = []
+  #         current_boxes.extend(all_boxes[j][i])
+  #         current_boxes.extend(all_boxes_2[j][i])
+  #         current_boxes.extend(all_tracking_boxes[j][i])
+  #         current_boxes.extend(all_tracking_boxes_2[j][i])
+  #         # if len(all_boxes[j][i])>0:
+  #         #     current_boxes.extend(all_boxes[j][i])
+  #         # if len(all_boxes_2[j][i])>0:
+  #         #     current_boxes = current_boxes + all_boxes_2[j][i]
+  #         # if len(all_tracking_boxes[j][i])>0:
+  #         #     current_boxes = current_boxes + all_tracking_boxes[j][i]
+  #         # if len(all_tracking_boxes_2[j][i])>0:
+  #         #     current_boxes = current_boxes + all_tracking_boxes_2[j][i]
+  #         print (len(current_boxes))
+  #         # all
+  #         scores = np.asarray(current_boxes)[:,4]
+  #         print (scores)
+  #         # if there is det
+  #         if len(current_boxes) >  0:
+  #           cls_scores = torch.from_numpy(scores)
+  #           _, order = torch.sort(cls_scores, 0, True)
+  #           cls_dets = torch.from_numpy(np.asarray(current_boxes))
+  #           cls_dets = cls_dets[order]
+  #           print (cls_dets)
+  #           keep = nms(cls_dets, cfg.TEST.NMS)
+  #           cls_dets = cls_dets[keep.view(-1).long()]
+  #           all_boxes_with_tracking[j][i] = cls_dets.cpu().numpy()
+  #         else:
+  #           all_boxes_with_tracking[j][i] = empty_array
+  #         print (len(all_boxes_with_tracking[j][i]))
+
+
+
   with open(det_file, 'wb') as f:
       pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
+  with open(det_file_2, 'wb') as f:
+      pickle.dump(all_boxes_2, f, pickle.HIGHEST_PROTOCOL)
+  with open(det_file_tracking, 'wb') as f:
+      pickle.dump(all_tracking_boxes, f, pickle.HIGHEST_PROTOCOL)
+  with open(det_file_tracking_2, 'wb') as f:
+      pickle.dump(all_tracking_boxes_2, f, pickle.HIGHEST_PROTOCOL)
 
   # print('Evaluating detections')
   # imdb.evaluate_detections(all_boxes, output_dir)
