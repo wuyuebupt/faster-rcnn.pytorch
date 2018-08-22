@@ -167,6 +167,7 @@ def _get_image_blob(roidb, scale_inds):
     if roidb[i]['flipped']:
       im = im[:, ::-1, :]
       im_width = im.shape[1]
+      flow    = flow[:,::-1, :]
       oldx1 = offline_proposal_bbox[:, 0].copy()
       oldx2 = offline_proposal_bbox[:, 2].copy()
       offline_proposal_bbox[:, 0] = im_width - oldx2 - 1
@@ -214,6 +215,7 @@ def _get_image_blob(roidb, scale_inds):
     
     if roidb[i]['flipped']:
       im_1 = im_1[:, ::-1, :]
+      flow_2    = flow_2[:,::-1, :]
       im_width = im_1.shape[1]
       oldx1 = offline_proposal_bbox_1[:, 0].copy()
       oldx2 = offline_proposal_bbox_1[:, 2].copy()
