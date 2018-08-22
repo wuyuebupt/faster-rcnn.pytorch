@@ -119,11 +119,13 @@ class imdb(object):
     num_images = self.num_images
     widths = self._get_widths()
     for i in range(num_images):
-      boxes = self.roidb[i]['boxes'].copy()
-      oldx1 = boxes[:, 0].copy()
-      oldx2 = boxes[:, 2].copy()
-      boxes[:, 0] = widths[i] - oldx2 - 1
-      boxes[:, 2] = widths[i] - oldx1 - 1
+      ## have to do with a pair
+      # print (self.roidb[i]['boxes'])
+      boxes_1 = self.roidb[i]['boxes'][0].copy()
+      oldx1 = boxes_1[:, 0].copy()
+      oldx2 = boxes_1[:, 2].copy()
+      boxes_1[:, 0] = widths[i] - oldx2 - 1
+      boxes_1[:, 2] = widths[i] - oldx1 - 1
       # boxes[:, 0] = widths[i] - oldx2 
       # boxes[:, 2] = widths[i] - oldx1
       # an potential error, 0-1=65535 -> 
@@ -136,8 +138,16 @@ class imdb(object):
       #     print (i)
       #     print ("this would never happen :)")
       #     exit()
-      assert ((boxes[:, 2] >= boxes[:, 0]).all())
-      entry = {'boxes': boxes,
+      assert ((boxes_1[:, 2] >= boxes_1[:, 0]).all())
+      # the second image
+      boxes_2 = self.roidb[i]['boxes'][1].copy()
+      oldx1 = boxes_2[:, 0].copy()
+      oldx2 = boxes_2[:, 2].copy()
+      boxes_2[:, 0] = widths[i] - oldx2 - 1
+      boxes_2[:, 2] = widths[i] - oldx1 - 1
+      assert ((boxes_2[:, 2] >= boxes_2[:, 0]).all())
+
+      entry = {'boxes': (boxes_1, boxes_2),
                'gt_overlaps': self.roidb[i]['gt_overlaps'],
                'gt_classes': self.roidb[i]['gt_classes'],
                'flipped': True}
