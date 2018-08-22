@@ -1,7 +1,10 @@
 data/*
 tmp/*
 save_dir/*
-
+*.o
+*.so
+*/*/*/*/*.o
+*/*/*/*/*.so
 # READ THIS BEFORE YOU REFACTOR ME
 #
 # setup.py uses the list of patterns in this file to decide

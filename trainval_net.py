@@ -175,8 +175,8 @@ if __name__ == '__main__':
       args.imdbval_name = "imagenet_val"
       args.set_cfgs = ['ANCHOR_SCALES', '[4, 8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '30']
   elif args.dataset == "imagenet_vid":
-      # args.imdb_name = "imagenet_vid_train+imagenet_det_train"
-      args.imdb_name = "imagenet_vid_train"
+      args.imdb_name = "imagenet_vid_train+imagenet_det_train"
+      # args.imdb_name = "imagenet_vid_train"
       args.imdbval_name = "imagenet_vid_val"
       args.set_cfgs = ['ANCHOR_SCALES', '[4, 8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '30']
   elif args.dataset == "vg":
@@ -204,7 +204,7 @@ if __name__ == '__main__':
   # train set
   # -- Note: Use validation set and disable the flipped to enable faster loading.
   # cfg.TRAIN.USE_FLIPPED = True
-  cfg.TRAIN.USE_FLIPPED = False
+  # cfg.TRAIN.USE_FLIPPED = False
   cfg.USE_GPU_NMS = args.cuda
   imdb, roidb, ratio_list, ratio_index = combined_roidb(args.imdb_name)
   train_size = len(roidb)
