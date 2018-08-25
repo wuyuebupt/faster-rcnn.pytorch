@@ -157,7 +157,6 @@ def _get_image_blob(roidb, scale_inds):
     flow_x  = flow_x / 255 * 80 - 40
     flow_y  = flow_y.astype(np.float32)
     flow_y  = flow_y / 255 * 80 - 40
-    flow    = np.stack((flow_x, flow_y), axis=2)
 
     # print (im.shape)
     # print (flow_x.shape, flow_y.shape, flow.shape)
@@ -167,12 +166,15 @@ def _get_image_blob(roidb, scale_inds):
     if roidb[i]['flipped']:
       im = im[:, ::-1, :]
       im_width = im.shape[1]
-      flow    = flow[:,::-1, :]
+      # flow has to reverse the directions
+      flow_x   = -1.0 * flow_x[:,::-1]
+      flow_y   = flow_y[:,::-1]
       oldx1 = offline_proposal_bbox[:, 0].copy()
       oldx2 = offline_proposal_bbox[:, 2].copy()
       offline_proposal_bbox[:, 0] = im_width - oldx2 - 1
       offline_proposal_bbox[:, 2] = im_width - oldx1 - 1
 
+    flow    = np.stack((flow_x, flow_y), axis=2)
     target_size = cfg.TRAIN.SCALES[scale_inds[i]]
     im, im_scale = prep_im_for_blob(im, cfg.PIXEL_MEANS, target_size,
                     cfg.TRAIN.MAX_SIZE)
@@ -209,18 +211,24 @@ def _get_image_blob(roidb, scale_inds):
     flow_x_2  = flow_x_2 / 255 * 80 - 40
     flow_y_2  = flow_y_2.astype(np.float32)
     flow_y_2  = flow_y_2 / 255 * 80 - 40
-    flow_2    = np.stack((flow_x_2, flow_y_2), axis=2)
 
  
     
     if roidb[i]['flipped']:
       im_1 = im_1[:, ::-1, :]
-      flow_2    = flow_2[:,::-1, :]
+      flow_x_2   = -1.0 * flow_x_2[:,::-1]
+      flow_y_2   = flow_y_2[:,::-1]
       im_width = im_1.shape[1]
+      # print (offline_proposal_bbox_1[0,:])
+      # print (im_width, im_1.shape)
+      # print (roidb[i]['image'][1])
       oldx1 = offline_proposal_bbox_1[:, 0].copy()
       oldx2 = offline_proposal_bbox_1[:, 2].copy()
       offline_proposal_bbox_1[:, 0] = im_width - oldx2 - 1
       offline_proposal_bbox_1[:, 2] = im_width - oldx1 - 1
+      # print (offline_proposal_bbox_1[0,:])
+
+    flow_2    = np.stack((flow_x_2, flow_y_2), axis=2)
 
     target_size = cfg.TRAIN.SCALES[scale_inds[i]]
     im_1, im_scale_1 = prep_im_for_blob(im_1, cfg.PIXEL_MEANS, target_size,
