@@ -317,9 +317,7 @@ class resnet(_fasterRCNN):
 
 
     self.tracking_concat_feat = nn.Sequential(
-             nn.Conv2d(2 * self.dout_base_model + dimension_flow, self.dout_base_model , kernel_size=3, stride=1,padding=1, bias=False),
-             nn.ReLU(inplace=True),
-             nn.Conv2d(self.dout_base_model, self.dout_base_model , kernel_size=1, stride=1, bias=False),
+             nn.Conv2d(2 * self.dout_base_model + dimension_flow, self.dout_base_model , kernel_size=1, stride=1,bias=False),
              nn.ReLU(inplace=True) )
     self.RCNN_tracking =copy.deepcopy(self.RCNN_top)
     # self.RCNN_cls_tracking_score = nn.Linear(2048, self.n_classes)
