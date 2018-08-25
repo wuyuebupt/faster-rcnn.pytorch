@@ -126,6 +126,11 @@ class imdb(object):
       oldx2 = boxes_1[:, 2].copy()
       boxes_1[:, 0] = widths[i] - oldx2 - 1
       boxes_1[:, 2] = widths[i] - oldx1 - 1
+      # tracking boxes 
+      oldx1 = boxes_1[:, 0+4].copy()
+      oldx2 = boxes_1[:, 2+4].copy()
+      boxes_1[:, 0+4] = widths[i] - oldx2 - 1
+      boxes_1[:, 2+4] = widths[i] - oldx1 - 1
       # boxes[:, 0] = widths[i] - oldx2 
       # boxes[:, 2] = widths[i] - oldx1
       # an potential error, 0-1=65535 -> 
@@ -139,13 +144,19 @@ class imdb(object):
       #     print ("this would never happen :)")
       #     exit()
       assert ((boxes_1[:, 2] >= boxes_1[:, 0]).all())
+      assert ((boxes_1[:, 2+4] >= boxes_1[:, 0+4]).all())
       # the second image
       boxes_2 = self.roidb[i]['boxes'][1].copy()
       oldx1 = boxes_2[:, 0].copy()
       oldx2 = boxes_2[:, 2].copy()
       boxes_2[:, 0] = widths[i] - oldx2 - 1
       boxes_2[:, 2] = widths[i] - oldx1 - 1
+      oldx1 = boxes_2[:, 0+4].copy()
+      oldx2 = boxes_2[:, 2+4].copy()
+      boxes_2[:, 0+4] = widths[i] - oldx2 - 1
+      boxes_2[:, 2+4] = widths[i] - oldx1 - 1
       assert ((boxes_2[:, 2] >= boxes_2[:, 0]).all())
+      assert ((boxes_2[:, 2+4] >= boxes_2[:, 0+4]).all())
 
       entry = {'boxes': (boxes_1, boxes_2),
                'gt_overlaps': self.roidb[i]['gt_overlaps'],
