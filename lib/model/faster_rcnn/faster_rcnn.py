@@ -11,6 +11,7 @@ from model.rpn.rpn import _RPN
 from model.roi_pooling.modules.roi_pool import _RoIPooling
 from model.roi_crop.modules.roi_crop import _RoICrop
 from model.roi_align.modules.roi_align import RoIAlignAvg
+from model.psroi_pooling.modules.psroi_pool import PSRoIPool
 from model.rpn.proposal_target_layer_cascade import _ProposalTargetLayer
 import time
 import pdb
@@ -32,6 +33,10 @@ class _fasterRCNN(nn.Module):
         self.RCNN_proposal_target = _ProposalTargetLayer(self.n_classes)
         self.RCNN_roi_pool = _RoIPooling(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
         self.RCNN_roi_align = RoIAlignAvg(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
+        self.RCNN_psroi_pool_cls = PSRoIPool(7, 7, 1.0/32.0, 7, self.n_classes)
+        self.RCNN_psroi_pool_loc = PSRoIPool(7, 7, 1.0/32.0, 7, 4 )
+        self.pooling = nn.AvgPool2d((7, 7), stride=(7,7))
+        self.relu = nn.ReLU(inplace=True)
 
         self.grid_size = cfg.POOLING_SIZE * 2 if cfg.CROP_RESIZE_WITH_MAX_POOL else cfg.POOLING_SIZE
         self.RCNN_roi_crop = _RoICrop()
@@ -69,40 +74,77 @@ class _fasterRCNN(nn.Module):
         rois = Variable(rois)
         # do roi pooling based on predicted rois
 
-        if cfg.POOLING_MODE == 'crop':
-            # pdb.set_trace()
-            # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
-            grid_xy = _affine_grid_gen(rois.view(-1, 5), base_feat.size()[2:], self.grid_size)
-            grid_yx = torch.stack([grid_xy.data[:,:,:,1], grid_xy.data[:,:,:,0]], 3).contiguous()
-            pooled_feat = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
-            if cfg.CROP_RESIZE_WITH_MAX_POOL:
-                pooled_feat = F.max_pool2d(pooled_feat, 2, 2)
-        elif cfg.POOLING_MODE == 'align':
-            pooled_feat = self.RCNN_roi_align(base_feat, rois.view(-1, 5))
-        elif cfg.POOLING_MODE == 'pool':
-            pooled_feat = self.RCNN_roi_pool(base_feat, rois.view(-1,5))
+        ## resnet conv 5  
+        top_feat = self.RCNN_top(base_feat)
 
-        # feed pooled features to top model
-        pooled_feat = self._head_to_tail(pooled_feat)
+        ## rfcn parts
+        conv_new_1 = self.conv_new_1(top_feat)
+        conv_new_1 = self.relu(conv_new_1)
+        rfcn_cls = self.rfcn_cls(conv_new_1)
+        rfcn_bbox = self.rfcn_bbox(conv_new_1)
+        # print (rfcn_cls.shape)
+        # print (rois.shape)
+        ##---cls
+        psroipooled_cls_rois =  self.RCNN_psroi_pool_cls(rfcn_cls, rois.view(-1, 5))
+        # print (psroipooled_cls_rois.shape)
+        ave_cls_score_rois = self.pooling(psroipooled_cls_rois).mean(3).mean(2)
+        # print (ave_cls_score_rois.shape)
 
-        # compute bbox offset
-        bbox_pred = self.RCNN_bbox_pred(pooled_feat)
-        if self.training and not self.class_agnostic:
-            # select the corresponding columns according to roi labels
-            bbox_pred_view = bbox_pred.view(bbox_pred.size(0), int(bbox_pred.size(1) / 4), 4)
-            bbox_pred_select = torch.gather(bbox_pred_view, 1, rois_label.view(rois_label.size(0), 1, 1).expand(rois_label.size(0), 1, 4))
-            bbox_pred = bbox_pred_select.squeeze(1)
+        ##---bbox
+        psroipooled_loc_rois = self.RCNN_psroi_pool_loc(rfcn_bbox, rois.view(-1, 5))
+        # print (psroipooled_loc_rois.shape)
+        ave_bbox_pred_rois = self.pooling(psroipooled_loc_rois).mean(3).mean(2)
+        # print (ave_bbox_pred_rois.shape)
+        # exit()
+        
+        # print (ave_cls_score_rois.shape)
+        # print (ave_bbox_pred_rois.shape)
+        cls_score = ave_cls_score_rois.squeeze(1)
+        bbox_pred = ave_bbox_pred_rois.squeeze(1)
+        # print (cls_score.shape)
+        # print (bbox_pred.shape)
+        # exit()
+
+        ## faster rcnn
+        # if cfg.POOLING_MODE == 'crop':
+        #     # pdb.set_trace()
+        #     # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
+        #     grid_xy = _affine_grid_gen(rois.view(-1, 5), base_feat.size()[2:], self.grid_size)
+        #     grid_yx = torch.stack([grid_xy.data[:,:,:,1], grid_xy.data[:,:,:,0]], 3).contiguous()
+        #     pooled_feat = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
+        #     if cfg.CROP_RESIZE_WITH_MAX_POOL:
+        #         pooled_feat = F.max_pool2d(pooled_feat, 2, 2)
+        # elif cfg.POOLING_MODE == 'align':
+        #     pooled_feat = self.RCNN_roi_align(base_feat, rois.view(-1, 5))
+        # elif cfg.POOLING_MODE == 'pool':
+        #     pooled_feat = self.RCNN_roi_pool(base_feat, rois.view(-1,5))
+
+        # # feed pooled features to top model
+        # pooled_feat = self._head_to_tail(pooled_feat)
+
+        # # compute bbox offset
+        # bbox_pred = self.RCNN_bbox_pred(pooled_feat)
+        # if self.training and not self.class_agnostic:
+        #     # select the corresponding columns according to roi labels
+        #     bbox_pred_view = bbox_pred.view(bbox_pred.size(0), int(bbox_pred.size(1) / 4), 4)
+        #     bbox_pred_select = torch.gather(bbox_pred_view, 1, rois_label.view(rois_label.size(0), 1, 1).expand(rois_label.size(0), 1, 4))
+        #     bbox_pred = bbox_pred_select.squeeze(1)
 
         # compute object classification probability
-        cls_score = self.RCNN_cls_score(pooled_feat)
+        # cls_score = self.RCNN_cls_score(pooled_feat)
         cls_prob = F.softmax(cls_score)
 
         RCNN_loss_cls = 0
         RCNN_loss_bbox = 0
 
+        # print (cls_prob.shape)
         if self.training:
             # classification loss
+            # print (cls_score.shape)
+            # print (rois_label.shape)
+            # exit()
             RCNN_loss_cls = F.cross_entropy(cls_score, rois_label)
+           
 
             # bounding box regression L1 loss
             RCNN_loss_bbox = _smooth_l1_loss(bbox_pred, rois_target, rois_inside_ws, rois_outside_ws)
@@ -128,8 +170,11 @@ class _fasterRCNN(nn.Module):
         normal_init(self.RCNN_rpn.RPN_Conv, 0, 0.01, cfg.TRAIN.TRUNCATED)
         normal_init(self.RCNN_rpn.RPN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
         normal_init(self.RCNN_rpn.RPN_bbox_pred, 0, 0.01, cfg.TRAIN.TRUNCATED)
-        normal_init(self.RCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
-        normal_init(self.RCNN_bbox_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)
+        normal_init(self.conv_new_1, 0, 0.01, cfg.TRAIN.TRUNCATED)
+        normal_init(self.rfcn_cls, 0, 0.01, cfg.TRAIN.TRUNCATED)
+        normal_init(self.rfcn_bbox, 0, 0.001, cfg.TRAIN.TRUNCATED)
+        # normal_init(self.RCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
+        # normal_init(self.RCNN_bbox_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)
 
     def create_architecture(self):
         self._init_modules()

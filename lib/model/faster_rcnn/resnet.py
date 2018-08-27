@@ -117,6 +117,7 @@ class ResNet(nn.Module):
     self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
     # it is slightly better whereas slower to set stride = 1
     # self.layer4 = self._make_layer(block, 512, layers[3], stride=1)
+    # self.layer4 = self._make_layer(block, 512, layers[3], stride=1)
     self.avgpool = nn.AvgPool2d(7)
     self.fc = nn.Linear(512 * block.expansion, num_classes)
 
@@ -235,16 +236,29 @@ class resnet(_fasterRCNN):
       resnet.load_state_dict({k:v for k,v in state_dict.items() if k in resnet.state_dict()})
 
     # Build resnet.
+    # self.RCNN_base = nn.Sequential(resnet.conv1, resnet.bn1,resnet.relu,
+    #   resnet.maxpool,resnet.layer1,resnet.layer2,resnet.layer3, resnet.layer4)
     self.RCNN_base = nn.Sequential(resnet.conv1, resnet.bn1,resnet.relu,
       resnet.maxpool,resnet.layer1,resnet.layer2,resnet.layer3)
 
     self.RCNN_top = nn.Sequential(resnet.layer4)
+    self.conv_new_1 = nn.Conv2d(2048, 1024, 1, stride=1, padding=0)
+    # self.conv_new_1 = nn.Sequential(nn.Conv2d(2048, 1024, 1, stride=1, padding=0), 
+    #                                 nn.ReLU(inplace=True))
 
-    self.RCNN_cls_score = nn.Linear(2048, self.n_classes)
-    if self.class_agnostic:
-      self.RCNN_bbox_pred = nn.Linear(2048, 4)
-    else:
-      self.RCNN_bbox_pred = nn.Linear(2048, 4 * self.n_classes)
+    # self.new_conv_relu = nn.ReLU(inplace=True)
+    # 1519 # 31*7^2
+    self.rfcn_cls = nn.Conv2d(1024, 7 * 7 * self.n_classes, 1, stride=1, padding=0)
+    self.rfcn_bbox = nn.Conv2d(1024, 7  *7 * 8, 1, stride=1, padding=0) # --class-agnostic
+
+    # self.pooling = nn.AvgPool2d(7, 7)
+    # self.RCNN_top = nn.Sequential(resnet.layer4)
+
+    # self.RCNN_cls_score = nn.Linear(2048, self.n_classes)
+    # if self.class_agnostic:
+    #   self.RCNN_bbox_pred = nn.Linear(2048, 4)
+    # else:
+    #   self.RCNN_bbox_pred = nn.Linear(2048, 4 * self.n_classes)
 
     # Fix blocks
     for p in self.RCNN_base[0].parameters(): p.requires_grad=False
