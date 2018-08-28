@@ -35,6 +35,8 @@ class _fasterRCNN(nn.Module):
         self.RCNN_roi_align = RoIAlignAvg(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
         self.RCNN_psroi_pool_cls = PSRoIPool(7, 7, 1.0/32.0, 7, self.n_classes)
         self.RCNN_psroi_pool_loc = PSRoIPool(7, 7, 1.0/32.0, 7, 4 )
+        # self.RCNN_psroi_pool_cls = PSRoIPool(7, 7, 1.0/16.0, 7, self.n_classes)
+        # self.RCNN_psroi_pool_loc = PSRoIPool(7, 7, 1.0/16.0, 7, 4 )
         self.pooling = nn.AvgPool2d((7, 7), stride=(7,7))
         self.relu = nn.ReLU(inplace=True)
 
@@ -172,7 +174,7 @@ class _fasterRCNN(nn.Module):
         normal_init(self.RCNN_rpn.RPN_bbox_pred, 0, 0.01, cfg.TRAIN.TRUNCATED)
         normal_init(self.conv_new_1, 0, 0.01, cfg.TRAIN.TRUNCATED)
         normal_init(self.rfcn_cls, 0, 0.01, cfg.TRAIN.TRUNCATED)
-        normal_init(self.rfcn_bbox, 0, 0.001, cfg.TRAIN.TRUNCATED)
+        normal_init(self.rfcn_bbox, 0, 0.01, cfg.TRAIN.TRUNCATED)
         # normal_init(self.RCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
         # normal_init(self.RCNN_bbox_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)
 
