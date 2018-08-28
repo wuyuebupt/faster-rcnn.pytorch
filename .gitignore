@@ -1,4 +1,7 @@
 data/*
+log*
+output/*
+save_dir/*
 cmd
 
 # READ THIS BEFORE YOU REFACTOR ME
