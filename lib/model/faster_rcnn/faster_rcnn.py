@@ -36,7 +36,11 @@ class _fasterRCNN(nn.Module):
         # self.RCNN_psroi_pool_cls = PSRoIPool(7, 7, 1.0/32.0, 7, self.n_classes)
         # self.RCNN_psroi_pool_loc = PSRoIPool(7, 7, 1.0/32.0, 7, 4 )
         self.RCNN_psroi_pool_cls = PSRoIPool(7, 7, 1.0/16.0, 7, self.n_classes)
-        self.RCNN_psroi_pool_loc = PSRoIPool(7, 7, 1.0/16.0, 7, 4 )
+        if self.class_agnostic:
+          # self.RCNN_psroi_pool_loc = PSRoIPool(7, 7, 1.0/16.0, 7, 4 * 2 )
+          self.RCNN_psroi_pool_loc = PSRoIPool(7, 7, 1.0/16.0, 7, 4)
+        else:
+          self.RCNN_psroi_pool_loc = PSRoIPool(7, 7, 1.0/16.0, 7, 4 * self.n_classes)
         self.pooling = nn.AvgPool2d((7, 7), stride=(7,7))
         self.relu = nn.ReLU(inplace=True)
 
@@ -60,6 +64,8 @@ class _fasterRCNN(nn.Module):
         if self.training:
             roi_data = self.RCNN_proposal_target(rois, gt_boxes, num_boxes)
             rois, rois_label, rois_target, rois_inside_ws, rois_outside_ws = roi_data
+            # print (rois_label)
+            # print (rois_target)
 
             rois_label = Variable(rois_label.view(-1).long())
             rois_target = Variable(rois_target.view(-1, rois_target.size(2)))
@@ -126,14 +132,16 @@ class _fasterRCNN(nn.Module):
 
         # # compute bbox offset
         # bbox_pred = self.RCNN_bbox_pred(pooled_feat)
-        # if self.training and not self.class_agnostic:
-        #     # select the corresponding columns according to roi labels
-        #     bbox_pred_view = bbox_pred.view(bbox_pred.size(0), int(bbox_pred.size(1) / 4), 4)
-        #     bbox_pred_select = torch.gather(bbox_pred_view, 1, rois_label.view(rois_label.size(0), 1, 1).expand(rois_label.size(0), 1, 4))
-        #     bbox_pred = bbox_pred_select.squeeze(1)
+        if self.training and not self.class_agnostic:
+            # select the corresponding columns according to roi labels
+            bbox_pred_view = bbox_pred.view(bbox_pred.size(0), int(bbox_pred.size(1) / 4), 4)
+            bbox_pred_select = torch.gather(bbox_pred_view, 1, rois_label.view(rois_label.size(0), 1, 1).expand(rois_label.size(0), 1, 4))
+            bbox_pred = bbox_pred_select.squeeze(1)
 
         # compute object classification probability
         # cls_score = self.RCNN_cls_score(pooled_feat)
+
+
         cls_prob = F.softmax(cls_score)
 
         RCNN_loss_cls = 0

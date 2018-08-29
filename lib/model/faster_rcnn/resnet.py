@@ -248,8 +248,11 @@ class resnet(_fasterRCNN):
     # self.new_conv_relu = nn.ReLU(inplace=True)
     # 1519 # 31*7^2
     self.rfcn_cls = nn.Conv2d(1024, 7 * 7 * self.n_classes, 1, stride=1, padding=0)
-    self.rfcn_bbox = nn.Conv2d(1024, 7  * 7 * 4, 1, stride=1, padding=0) # --class-agnostic
-    # self.rfcn_bbox = nn.Conv2d(1024, 7  * 7 * 8, 1, stride=1, padding=0) # --class-agnostic
+    # self.rfcn_bbox = nn.Conv2d(1024, 7  * 7 * 4, 1, stride=1, padding=0) # --class-agnostic
+    if self.class_agnostic:
+      self.rfcn_bbox = nn.Conv2d(1024, 7  * 7 * 4 * 2, 1, stride=1, padding=0) # --class-agnostic
+    else:
+      self.rfcn_bbox = nn.Conv2d(1024, 7  * 7 * 4 * self.n_classes, 1, stride=1, padding=0) # --class-agnostic
 
     # self.pooling = nn.AvgPool2d(7, 7)
     # self.RCNN_top = nn.Sequential(resnet.layer4)
