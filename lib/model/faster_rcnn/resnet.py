@@ -70,8 +70,14 @@ class Bottleneck(nn.Module):
     super(Bottleneck, self).__init__()
     self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, stride=stride, bias=False) # change
     self.bn1 = nn.BatchNorm2d(planes)
-    self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, dilation=dilation, # change
-                 padding=1, bias=False)
+    if dilation == 2:
+      self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, dilation=dilation, # change
+                   padding=2, bias=False)
+    else:
+      assert(dilation == 1)
+      self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, dilation=dilation, # change
+                   padding=1, bias=False)
+
     self.bn2 = nn.BatchNorm2d(planes)
     self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
     self.bn3 = nn.BatchNorm2d(planes * 4)
