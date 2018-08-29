@@ -33,14 +33,15 @@ class _fasterRCNN(nn.Module):
         self.RCNN_proposal_target = _ProposalTargetLayer(self.n_classes)
         self.RCNN_roi_pool = _RoIPooling(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
         self.RCNN_roi_align = RoIAlignAvg(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
+        effective_stride = 32.0
         # self.RCNN_psroi_pool_cls = PSRoIPool(7, 7, 1.0/32.0, 7, self.n_classes)
         # self.RCNN_psroi_pool_loc = PSRoIPool(7, 7, 1.0/32.0, 7, 4 )
-        self.RCNN_psroi_pool_cls = PSRoIPool(7, 7, 1.0/16.0, 7, self.n_classes)
+        self.RCNN_psroi_pool_cls = PSRoIPool(7, 7, 1.0/effective_stride, 7, self.n_classes)
         if self.class_agnostic:
           # self.RCNN_psroi_pool_loc = PSRoIPool(7, 7, 1.0/16.0, 7, 4 * 2 )
-          self.RCNN_psroi_pool_loc = PSRoIPool(7, 7, 1.0/16.0, 7, 4)
+          self.RCNN_psroi_pool_loc = PSRoIPool(7, 7, 1.0/effective_stride, 7, 4)
         else:
-          self.RCNN_psroi_pool_loc = PSRoIPool(7, 7, 1.0/16.0, 7, 4 * self.n_classes)
+          self.RCNN_psroi_pool_loc = PSRoIPool(7, 7, 1.0/effective_stride, 7, 4 * self.n_classes)
         self.pooling = nn.AvgPool2d((7, 7), stride=(7,7))
         self.relu = nn.ReLU(inplace=True)
 

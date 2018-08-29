@@ -111,12 +111,13 @@ class ResNet(nn.Module):
     self.bn1 = nn.BatchNorm2d(64)
     self.relu = nn.ReLU(inplace=True)
     self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=0, ceil_mode=True) # change
-    self.layer1 = self._make_layer(block, 64, layers[0])
-    self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
-    self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
-    # self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
+    self.layer1 = self._make_layer(block, 64, layers[0], dilation=1, stride=1)
+    self.layer2 = self._make_layer(block, 128, layers[1], dilation=1, stride=2)
+    self.layer3 = self._make_layer(block, 256, layers[2], dilation=1, stride=2)
+    # self.layer4 = self._make_layer(block, 512, layers[3], dilation=2, stride=1)
+    self.layer4 = self._make_layer(block, 512, layers[3], dilation=1, stride=2)
     # it is slightly better whereas slower to set stride = 1
-    self.layer4 = self._make_layer(block, 512, layers[3], stride=1)
+    # self.layer4 = self._make_layer(block, 512, layers[3], dilation=1, stride=1)
     self.avgpool = nn.AvgPool2d(7)
     self.fc = nn.Linear(512 * block.expansion, num_classes)
 
@@ -128,7 +129,7 @@ class ResNet(nn.Module):
         m.weight.data.fill_(1)
         m.bias.data.zero_()
 
-  def _make_layer(self, block, planes, blocks, stride=1):
+  def _make_layer(self, block, planes, blocks,  dilation=1, stride=1):
     downsample = None
     if stride != 1 or self.inplanes != planes * block.expansion:
       downsample = nn.Sequential(
