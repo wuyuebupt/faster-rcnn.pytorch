@@ -66,11 +66,11 @@ class BasicBlock(nn.Module):
 class Bottleneck(nn.Module):
   expansion = 4
 
-  def __init__(self, inplanes, planes, stride=1, downsample=None):
+  def __init__(self, inplanes, planes, dilation=1, stride=1, downsample=None):
     super(Bottleneck, self).__init__()
     self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, stride=stride, bias=False) # change
     self.bn1 = nn.BatchNorm2d(planes)
-    self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, # change
+    self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, dilation=dilation, # change
                  padding=1, bias=False)
     self.bn2 = nn.BatchNorm2d(planes)
     self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
@@ -114,8 +114,8 @@ class ResNet(nn.Module):
     self.layer1 = self._make_layer(block, 64, layers[0], dilation=1, stride=1)
     self.layer2 = self._make_layer(block, 128, layers[1], dilation=1, stride=2)
     self.layer3 = self._make_layer(block, 256, layers[2], dilation=1, stride=2)
-    # self.layer4 = self._make_layer(block, 512, layers[3], dilation=2, stride=1)
-    self.layer4 = self._make_layer(block, 512, layers[3], dilation=1, stride=2)
+    self.layer4 = self._make_layer(block, 512, layers[3], dilation=2, stride=1)
+    # self.layer4 = self._make_layer(block, 512, layers[3], dilation=1, stride=2)
     # it is slightly better whereas slower to set stride = 1
     # self.layer4 = self._make_layer(block, 512, layers[3], dilation=1, stride=1)
     self.avgpool = nn.AvgPool2d(7)
@@ -139,10 +139,10 @@ class ResNet(nn.Module):
       )
 
     layers = []
-    layers.append(block(self.inplanes, planes, stride, downsample))
+    layers.append(block(self.inplanes, planes, dilation, stride, downsample))
     self.inplanes = planes * block.expansion
     for i in range(1, blocks):
-      layers.append(block(self.inplanes, planes))
+      layers.append(block(self.inplanes, planes, dilation))
 
     return nn.Sequential(*layers)
 
