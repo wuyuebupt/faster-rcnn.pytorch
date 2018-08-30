@@ -49,25 +49,35 @@ class _fasterRCNN(nn.Module):
         self.grid_size = cfg.POOLING_SIZE * 2 if cfg.CROP_RESIZE_WITH_MAX_POOL else cfg.POOLING_SIZE
         self.RCNN_roi_crop = _RoICrop()
 
-    def forward(self, im_data, im_info, gt_boxes, num_boxes):
+    # def forward(self, im_data, im_info, gt_boxes, num_boxes):
+    def forward(self, im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals):
         batch_size = im_data.size(0)
 
         im_info = im_info.data
         gt_boxes = gt_boxes.data
         num_boxes = num_boxes.data
+        proposal_boxes = proposal_boxes.data
+        num_proposals = num_proposals.data
+
 
         # feed image data to base model to obtain base feature map
         base_feat = self.RCNN_base(im_data)
 
         # feed base feature map tp RPN to obtain rois
-        rois, rpn_loss_cls, rpn_loss_bbox = self.RCNN_rpn(base_feat, im_info, gt_boxes, num_boxes)
+        rois, rpn_loss_cls, rpn_loss_bbox = self.RCNN_rpn(base_feat, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals)
+        # print (im_info)
+        # print (rois.shape)
 
         # if it is training phrase, then use ground trubut bboxes for refining
         if self.training:
             roi_data = self.RCNN_proposal_target(rois, gt_boxes, num_boxes)
             rois, rois_label, rois_target, rois_inside_ws, rois_outside_ws = roi_data
+
             # print (rois_label)
             # print (rois_target)
+
+            # print (rois.shape)
+            # exit()
 
             rois_label = Variable(rois_label.view(-1).long())
             rois_target = Variable(rois_target.view(-1, rois_target.size(2)))
@@ -83,6 +93,7 @@ class _fasterRCNN(nn.Module):
 
         rois = Variable(rois)
         # do roi pooling based on predicted rois
+
 
         ## resnet conv 5  
         top_feat = self.RCNN_top(base_feat)
@@ -134,6 +145,7 @@ class _fasterRCNN(nn.Module):
 
         # # compute bbox offset
         # bbox_pred = self.RCNN_bbox_pred(pooled_feat)
+
         if self.training and not self.class_agnostic:
             # select the corresponding columns according to roi labels
             bbox_pred_view = bbox_pred.view(bbox_pred.size(0), int(bbox_pred.size(1) / 4), 4)
@@ -165,7 +177,8 @@ class _fasterRCNN(nn.Module):
         cls_prob = cls_prob.view(batch_size, rois.size(1), -1)
         bbox_pred = bbox_pred.view(batch_size, rois.size(1), -1)
 
-        return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label
+        # return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label
+        return rois, cls_prob, bbox_pred, RCNN_loss_cls, RCNN_loss_bbox, rois_label
 
     def _init_weights(self):
         def normal_init(m, mean, stddev, truncated=False):

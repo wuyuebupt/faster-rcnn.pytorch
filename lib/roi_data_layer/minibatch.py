@@ -16,9 +16,13 @@ from scipy.misc import imread
 from model.utils.config import cfg
 from model.utils.blob import prep_im_for_blob, im_list_to_blob
 import pdb
+import scipy.io as sio
+
+
 def get_minibatch(roidb, num_classes):
   """Given a roidb, construct a minibatch sampled from it."""
   num_images = len(roidb)
+  # print (num_images)
   # Sample random scales to use for each image in this batch
   random_scale_inds = npr.randint(0, high=len(cfg.TRAIN.SCALES),
                   size=num_images)
@@ -27,7 +31,7 @@ def get_minibatch(roidb, num_classes):
     format(num_images, cfg.TRAIN.BATCH_SIZE)
 
   # Get the input image blob, formatted for caffe
-  im_blob, im_scales = _get_image_blob(roidb, random_scale_inds)
+  im_blob, im_scales, im_offline_proposals = _get_image_blob(roidb, random_scale_inds)
 
   blobs = {'data': im_blob}
 
@@ -42,9 +46,20 @@ def get_minibatch(roidb, num_classes):
     # For the COCO ground truth boxes, exclude the ones that are ''iscrowd'' 
     gt_inds = np.where((roidb[0]['gt_classes'] != 0) & np.all(roidb[0]['gt_overlaps'].toarray() > -1.0, axis=1))[0]
   gt_boxes = np.empty((len(gt_inds), 5), dtype=np.float32)
+
+  # load the offline proposals
+  
+  # print (len(im_offline_proposals[0]))
+  offline_proposal_boxes = np.empty((len(im_offline_proposals[0]), 5), dtype=np.float32)
+  offline_proposal_boxes[:, 0:4] = im_offline_proposals[0][:, 0:4] * im_scales[0]
+  offline_proposal_boxes[:, 4] = im_offline_proposals[0][:, 4] 
+
+  # gt_boxes is 
   gt_boxes[:, 0:4] = roidb[0]['boxes'][gt_inds, :] * im_scales[0]
+  # gt_boxes[:, 0:4] = roidb[0]['boxes'][gt_inds, :] * im_scales[0]
   gt_boxes[:, 4] = roidb[0]['gt_classes'][gt_inds]
   blobs['gt_boxes'] = gt_boxes
+  blobs['offline_proposals'] = offline_proposal_boxes
   blobs['im_info'] = np.array(
     [[im_blob.shape[1], im_blob.shape[2], im_scales[0]]],
     dtype=np.float32)
@@ -58,9 +73,14 @@ def _get_image_blob(roidb, scale_inds):
   scales.
   """
   num_images = len(roidb)
+  # print (num_images)
+  # exit()
 
   processed_ims = []
   im_scales = []
+
+  offline_proposals = []
+
   for i in range(num_images):
     #im = cv2.imread(roidb[i]['image'])
     im = imread(roidb[i]['image'])
@@ -72,15 +92,29 @@ def _get_image_blob(roidb, scale_inds):
     # rgb -> bgr
     im = im[:,:,::-1]
 
+    # load the boxes
+    # boxes = np.zeros((num_objs, 4), dtype=np.float)
+    offline_proposal_bbox = sio.loadmat(roidb[i]['offline_proposal'])['boxes']
+    # print (offline_proposal_bbox.shape)
+    # print (im.shape)
+    
+    
     if roidb[i]['flipped']:
       im = im[:, ::-1, :]
+      im_width = im.shape[1]
+      oldx1 = offline_proposal_bbox[:, 0].copy()
+      oldx2 = offline_proposal_bbox[:, 2].copy()
+      offline_proposal_bbox[:, 0] = im_width - oldx2 - 1
+      offline_proposal_bbox[:, 2] = im_width - oldx1 - 1
+
     target_size = cfg.TRAIN.SCALES[scale_inds[i]]
     im, im_scale = prep_im_for_blob(im, cfg.PIXEL_MEANS, target_size,
                     cfg.TRAIN.MAX_SIZE)
     im_scales.append(im_scale)
     processed_ims.append(im)
+    offline_proposals.append(offline_proposal_bbox)
 
   # Create a blob to hold the input images
   blob = im_list_to_blob(processed_ims)
 
-  return blob, im_scales
+  return blob, im_scales, offline_proposals

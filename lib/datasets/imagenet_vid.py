@@ -60,6 +60,7 @@ class imagenet_vid(imdb):
         #         self._valid_image_flag[i] = 1
 
         self._image_ext = ['.JPEG']
+        self._proposal_ext = ['.mat']
 
         self._image_index = self._load_image_set_index()
         # Default to roidb handler
@@ -72,6 +73,32 @@ class imagenet_vid(imdb):
 
         assert os.path.exists(self._devkit_path), 'Devkit path does not exist: {}'.format(self._devkit_path)
         assert os.path.exists(self._data_path), 'Path does not exist: {}'.format(self._data_path)
+
+
+    def image_offline_proposal_at(self, i):
+        """
+        Return the absolute path to image i in the image sequence.
+        """
+        return self.image_offline_proposal_from_index(self._image_index[i])
+
+    def image_offline_proposal_from_index(self, index):
+        """
+        Construct an image path from the image's "index" identifier.
+        """
+        # image_path = os.path.join(self._data_path, 'Data', self._image_set, index + self._image_ext[0])
+        # image_path = os.path.join(self._data_path, 'Data', 'DET', self._image_set, index + self._image_ext[0])
+        if self._det_vid == 'det':
+            proposal_path = os.path.join(self._data_path, 'RPNs', 'DET', index + self._proposal_ext[0])
+        else:
+            proposal_path = os.path.join(self._data_path, 'RPNs', 'VID', index + self._proposal_ext[0])
+            
+        # image_path = os.path.join(self._data_path, 'Data', 'DET', self._image_set, index + self._image_ext[0])
+        # NOTE: the proposal file might not exit in training 
+        # 1084113 .mat  in offline proposals files
+        # 1122397 .JPEG in all training images
+        # assert os.path.exists(proposal_path), 'path does not exist: {}'.format(proposal_path)
+        return proposal_path
+
 
     def image_path_at(self, i):
         """
@@ -111,7 +138,9 @@ class imagenet_vid(imdb):
 
         if self._image_set == 'train':
             if self._det_vid == 'det':
-                image_set_index_file = os.path.join(self._data_path, 'ImageSets', 'DET_VID', 'DET_train_30classes.txt')
+                # image_set_index_file = os.path.join(self._data_path, 'ImageSets', 'DET_VID', 'DET_train_30classes.txt')
+                image_set_index_file = os.path.join(self._data_path, 'ImageSets', 'DET_VID', 'DET_train_rpn.txt')
+
             elif self._det_vid == 'vid':
                 image_set_index_file = os.path.join(self._data_path, 'ImageSets', 'DET_VID', 'VID_train_15frames.txt')
             else:

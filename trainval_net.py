@@ -226,6 +226,8 @@ if __name__ == '__main__':
   im_info = torch.FloatTensor(1)
   num_boxes = torch.LongTensor(1)
   gt_boxes = torch.FloatTensor(1)
+  num_proposals = torch.LongTensor(1)
+  proposal_boxes = torch.FloatTensor(1)
 
 
   # ship to cuda
@@ -234,12 +236,16 @@ if __name__ == '__main__':
     im_info = im_info.cuda()
     num_boxes = num_boxes.cuda()
     gt_boxes = gt_boxes.cuda()
+    num_proposals = num_proposals.cuda()
+    proposal_boxes = proposal_boxes.cuda()
 
   # make variable
   im_data = Variable(im_data)
   im_info = Variable(im_info)
   num_boxes = Variable(num_boxes)
   gt_boxes = Variable(gt_boxes)
+  num_proposals = Variable(num_proposals)
+  proposal_boxes = Variable(proposal_boxes)
 
   if args.cuda:
     cfg.CUDA = True
@@ -319,15 +325,23 @@ if __name__ == '__main__':
       im_info.data.resize_(data[1].size()).copy_(data[1])
       gt_boxes.data.resize_(data[2].size()).copy_(data[2])
       num_boxes.data.resize_(data[3].size()).copy_(data[3])
+      proposal_boxes.data.resize_(data[4].size()).copy_(data[4])
+      num_proposals.data.resize_(data[5].size()).copy_(data[5])
 
       fasterRCNN.zero_grad()
       rois, cls_prob, bbox_pred, \
-      rpn_loss_cls, rpn_loss_box, \
       RCNN_loss_cls, RCNN_loss_bbox, \
-      rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+      rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals)
 
-      loss = rpn_loss_cls.mean() + rpn_loss_box.mean() \
-           + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
+      # rois, cls_prob, bbox_pred, \
+      # rpn_loss_cls, rpn_loss_box, \
+      # RCNN_loss_cls, RCNN_loss_bbox, \
+      # rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+
+      # loss = rpn_loss_cls.mean() + rpn_loss_box.mean() \
+      #      + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
+
+      loss = RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
       loss_temp += loss.data[0]
 
       # backward
@@ -343,15 +357,19 @@ if __name__ == '__main__':
           loss_temp /= args.disp_interval
 
         if args.mGPUs:
-          loss_rpn_cls = rpn_loss_cls.mean().data[0]
-          loss_rpn_box = rpn_loss_box.mean().data[0]
+          # loss_rpn_cls = rpn_loss_cls.mean().data[0]
+          # loss_rpn_box = rpn_loss_box.mean().data[0]
+          loss_rpn_cls = 0
+          loss_rpn_box = 0
           loss_rcnn_cls = RCNN_loss_cls.mean().data[0]
           loss_rcnn_box = RCNN_loss_bbox.mean().data[0]
           fg_cnt = torch.sum(rois_label.data.ne(0))
           bg_cnt = rois_label.data.numel() - fg_cnt
         else:
-          loss_rpn_cls = rpn_loss_cls.data[0]
-          loss_rpn_box = rpn_loss_box.data[0]
+          # loss_rpn_cls = rpn_loss_cls.data[0]
+          # loss_rpn_box = rpn_loss_box.data[0]
+          loss_rpn_cls = 0
+          loss_rpn_box = 0
           loss_rcnn_cls = RCNN_loss_cls.data[0]
           loss_rcnn_box = RCNN_loss_bbox.data[0]
           fg_cnt = torch.sum(rois_label.data.ne(0))

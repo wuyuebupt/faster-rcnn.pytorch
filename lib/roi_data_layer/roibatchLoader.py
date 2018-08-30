@@ -38,7 +38,7 @@ class roibatchLoader(data.Dataset):
     self.ratio_list_batch = torch.Tensor(self.data_size).zero_()
     num_batch = int(np.ceil(len(ratio_index) / batch_size))
     for i in range(num_batch):
-        left_idx = i*batch_size
+        left_idx = i * batch_size
         right_idx = min((i+1)*batch_size-1, self.data_size-1)
 
         if ratio_list[right_idx] < 1:
@@ -65,6 +65,7 @@ class roibatchLoader(data.Dataset):
     # sample in this group
     minibatch_db = [self._roidb[index_ratio]]
     blobs = get_minibatch(minibatch_db, self._num_classes)
+
     data = torch.from_numpy(blobs['data'])
     im_info = torch.from_numpy(blobs['im_info'])
     # we need to random shuffle the bounding box.
@@ -72,6 +73,7 @@ class roibatchLoader(data.Dataset):
     if self.training:
         np.random.shuffle(blobs['gt_boxes'])
         gt_boxes = torch.from_numpy(blobs['gt_boxes'])
+        proposal_boxes = torch.from_numpy(blobs['offline_proposals'])
 
         ########################################################
         # padding the input image to fixed size for each group #
@@ -91,10 +93,14 @@ class roibatchLoader(data.Dataset):
                 # data_height
                 min_y = int(torch.min(gt_boxes[:,1]))
                 max_y = int(torch.max(gt_boxes[:,3]))
+
+
                 trim_size = int(np.floor(data_width / ratio))
                 if trim_size > data_height:
                     trim_size = data_height                
+
                 box_region = max_y - min_y + 1
+
                 if min_y == 0:
                     y_s = 0
                 else:
@@ -118,9 +124,15 @@ class roibatchLoader(data.Dataset):
                 gt_boxes[:, 1] = gt_boxes[:, 1] - float(y_s)
                 gt_boxes[:, 3] = gt_boxes[:, 3] - float(y_s)
 
+                proposal_boxes[:, 1] = proposal_boxes[:, 1] - float(y_s)
+                proposal_boxes[:, 3] = proposal_boxes[:, 3] - float(y_s)
+
                 # update gt bounding box according the trip
                 gt_boxes[:, 1].clamp_(0, trim_size - 1)
                 gt_boxes[:, 3].clamp_(0, trim_size - 1)
+
+                proposal_boxes[:, 1].clamp_(0, trim_size - 1)
+                proposal_boxes[:, 3].clamp_(0, trim_size - 1)
 
             else:
                 # this means that data_width >> data_height, we need to crop the
@@ -153,9 +165,15 @@ class roibatchLoader(data.Dataset):
                 # shift x coordiante of gt_boxes
                 gt_boxes[:, 0] = gt_boxes[:, 0] - float(x_s)
                 gt_boxes[:, 2] = gt_boxes[:, 2] - float(x_s)
+
+                proposal_boxes[:, 0] = proposal_boxes[:, 0] - float(x_s)
+                proposal_boxes[:, 2] = proposal_boxes[:, 2] - float(x_s)
                 # update gt bounding box according the trip
                 gt_boxes[:, 0].clamp_(0, trim_size - 1)
                 gt_boxes[:, 2].clamp_(0, trim_size - 1)
+
+                proposal_boxes[:, 0].clamp_(0, trim_size - 1)
+                proposal_boxes[:, 2].clamp_(0, trim_size - 1)
 
         # based on the ratio, padding the image.
         if ratio < 1:
@@ -182,6 +200,7 @@ class roibatchLoader(data.Dataset):
             padding_data = data[0][:trim_size, :trim_size, :]
             # gt_boxes.clamp_(0, trim_size)
             gt_boxes[:, :4].clamp_(0, trim_size)
+            proposal_boxes[:, :4].clamp_(0, trim_size)
             im_info[0, 0] = trim_size
             im_info[0, 1] = trim_size
 
@@ -197,20 +216,56 @@ class roibatchLoader(data.Dataset):
             gt_boxes_padding[:num_boxes,:] = gt_boxes[:num_boxes]
         else:
             num_boxes = 0
+ 
+        # check the bounding box - proposal:
+        not_keep_proposal = (proposal_boxes[:,0] == proposal_boxes[:,2]) | (proposal_boxes[:,1] == proposal_boxes[:,3])
+        keep_proposal = torch.nonzero(not_keep_proposal == 0).view(-1)
 
-            # permute trim_data to adapt to downstream processing
+        # proposal_boxes_padding = torch.FloatTensor(self.max_num_box, gt_boxes.size(1)).zero_()
+        # mannual set the number of proposals to 2000
+        proposal_boxes_padding = torch.FloatTensor( 2000, proposal_boxes.size(1)).zero_()
+        if keep_proposal.numel() != 0:
+            proposal_boxes = proposal_boxes[keep_proposal]
+            num_proposals = min(proposal_boxes.size(0), 2000)
+            # print (proposal_boxes.size(), proposal_boxes.size(0), num_proposals)
+            # swith the [bbox, score] to [~, bbox] to follow the rpn output format
+            proposal_boxes_padding[:num_proposals,1:5] = proposal_boxes[:num_proposals,:4]
+            proposal_boxes_padding[:num_proposals, 0] = proposal_boxes[:num_proposals, 4]
+        else:
+            num_proposals = 0
+ 
+ 
+           # permute trim_data to adapt to downstream processing
         padding_data = padding_data.permute(2, 0, 1).contiguous()
         im_info = im_info.view(3)
 
-        return padding_data, im_info, gt_boxes_padding, num_boxes
+        return padding_data, im_info, gt_boxes_padding, num_boxes, proposal_boxes_padding, num_proposals
     else:
         data = data.permute(0, 3, 1, 2).contiguous().view(3, data_height, data_width)
         im_info = im_info.view(3)
+        proposal_boxes = torch.from_numpy(blobs['offline_proposals'])
 
         gt_boxes = torch.FloatTensor([1,1,1,1,1])
         num_boxes = 0
 
-        return data, im_info, gt_boxes, num_boxes
+        not_keep_proposal = (proposal_boxes[:,0] == proposal_boxes[:,2]) | (proposal_boxes[:,1] == proposal_boxes[:,3])
+        keep_proposal = torch.nonzero(not_keep_proposal == 0).view(-1)
+
+        # proposal_boxes_padding = torch.FloatTensor(self.max_num_box, gt_boxes.size(1)).zero_()
+        # mannual set the number of proposals to 300
+        proposal_boxes_padding = torch.FloatTensor( 300, proposal_boxes.size(1)).zero_()
+        if keep_proposal.numel() != 0:
+            proposal_boxes = proposal_boxes[keep_proposal]
+            num_proposals = min(proposal_boxes.size(0), 300) 
+            # proposal_boxes_padding[:num_proposals,:] = proposal_boxes[:num_proposals]
+            proposal_boxes_padding[:num_proposals,1:5] = proposal_boxes[:num_proposals,:4]
+            # proposal_boxes_padding[:num_proposals, 0] = proposal_boxes[:num_proposals, 4]
+        else:
+            num_proposals = 0
+ 
+        # print (num_proposals)
+ 
+        return data, im_info, gt_boxes, num_boxes, proposal_boxes_padding, num_proposals
 
   def __len__(self):
     return len(self._roidb)

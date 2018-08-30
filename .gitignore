@@ -1,8 +1,14 @@
 data/*
+
 log*
 output/*
 save_dir/*
 cmd
+
+save_dir/
+output/
+*.o
+*.so
 
 # READ THIS BEFORE YOU REFACTOR ME
 #

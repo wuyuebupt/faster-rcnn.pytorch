@@ -9,6 +9,7 @@ from model.utils.config import cfg
 from datasets.factory import get_imdb
 import PIL
 import pdb
+import os
 
 def prepare_roidb(imdb):
   """Enrich the imdb's roidb by adding some derived quantities that
@@ -26,6 +27,7 @@ def prepare_roidb(imdb):
   for i in range(len(imdb.image_index)):
     roidb[i]['img_id'] = imdb.image_id_at(i)
     roidb[i]['image'] = imdb.image_path_at(i)
+    roidb[i]['offline_proposal'] = imdb.image_offline_proposal_at(i)
     if not (imdb.name.startswith('coco')):
       roidb[i]['width'] = sizes[i][0]
       roidb[i]['height'] = sizes[i][1]
@@ -77,7 +79,7 @@ def filter_roidb(roidb):
     print('before filtering, there are %d images...' % (len(roidb)))
     i = 0
     while i < len(roidb):
-      if len(roidb[i]['boxes']) == 0:
+      if len(roidb[i]['boxes']) == 0 or not os.path.exists(roidb[i]['offline_proposal']):
         del roidb[i]
         i -= 1
       i += 1

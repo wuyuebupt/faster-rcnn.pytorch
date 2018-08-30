@@ -126,6 +126,7 @@ class _ProposalTargetLayer(nn.Module):
         batch_size = overlaps.size(0)
         num_proposal = overlaps.size(1)
         num_boxes_per_img = overlaps.size(2)
+        # print (batch_size, num_proposal, num_boxes_per_img)
 
         offset = torch.arange(0, batch_size)*gt_boxes.size(1)
         offset = offset.view(-1, 1).type_as(gt_assignment) + gt_assignment
@@ -146,6 +147,7 @@ class _ProposalTargetLayer(nn.Module):
             # Select background RoIs as those within [BG_THRESH_LO, BG_THRESH_HI)
             bg_inds = torch.nonzero((max_overlaps[i] < cfg.TRAIN.BG_THRESH_HI) &
                                     (max_overlaps[i] >= cfg.TRAIN.BG_THRESH_LO)).view(-1)
+            # print (bg_inds)
             bg_num_rois = bg_inds.numel()
 
             if fg_num_rois > 0 and bg_num_rois > 0:
