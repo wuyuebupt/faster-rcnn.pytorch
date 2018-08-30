@@ -66,12 +66,18 @@ class BasicBlock(nn.Module):
 class Bottleneck(nn.Module):
   expansion = 4
 
-  def __init__(self, inplanes, planes, stride=1, downsample=None):
+  def __init__(self, inplanes, planes, dilation=1, stride=1, downsample=None):
     super(Bottleneck, self).__init__()
     self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, stride=stride, bias=False) # change
     self.bn1 = nn.BatchNorm2d(planes)
-    self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, # change
-                 padding=1, bias=False)
+    if dilation == 2:
+      self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, dilation=dilation, # change
+                   padding=2, bias=False)
+    else:
+      assert(dilation == 1)
+      self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, dilation=dilation, # change
+                   padding=1, bias=False)
+
     self.bn2 = nn.BatchNorm2d(planes)
     self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
     self.bn3 = nn.BatchNorm2d(planes * 4)
@@ -111,12 +117,13 @@ class ResNet(nn.Module):
     self.bn1 = nn.BatchNorm2d(64)
     self.relu = nn.ReLU(inplace=True)
     self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=0, ceil_mode=True) # change
-    self.layer1 = self._make_layer(block, 64, layers[0])
-    self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
-    self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
-    self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
+    self.layer1 = self._make_layer(block, 64, layers[0], dilation=1, stride=1)
+    self.layer2 = self._make_layer(block, 128, layers[1], dilation=1, stride=2)
+    self.layer3 = self._make_layer(block, 256, layers[2], dilation=1, stride=2)
+    self.layer4 = self._make_layer(block, 512, layers[3], dilation=2, stride=1)
+    # self.layer4 = self._make_layer(block, 512, layers[3], dilation=1, stride=2)
     # it is slightly better whereas slower to set stride = 1
-    # self.layer4 = self._make_layer(block, 512, layers[3], stride=1)
+    # self.layer4 = self._make_layer(block, 512, layers[3], dilation=1, stride=1)
     self.avgpool = nn.AvgPool2d(7)
     self.fc = nn.Linear(512 * block.expansion, num_classes)
 
@@ -128,7 +135,7 @@ class ResNet(nn.Module):
         m.weight.data.fill_(1)
         m.bias.data.zero_()
 
-  def _make_layer(self, block, planes, blocks, stride=1):
+  def _make_layer(self, block, planes, blocks,  dilation=1, stride=1):
     downsample = None
     if stride != 1 or self.inplanes != planes * block.expansion:
       downsample = nn.Sequential(
@@ -138,10 +145,10 @@ class ResNet(nn.Module):
       )
 
     layers = []
-    layers.append(block(self.inplanes, planes, stride, downsample))
+    layers.append(block(self.inplanes, planes, dilation, stride, downsample))
     self.inplanes = planes * block.expansion
     for i in range(1, blocks):
-      layers.append(block(self.inplanes, planes))
+      layers.append(block(self.inplanes, planes, dilation))
 
     return nn.Sequential(*layers)
 
@@ -236,16 +243,34 @@ class resnet(_fasterRCNN):
       resnet.load_state_dict({k:v for k,v in state_dict.items() if k in resnet.state_dict()})
 
     # Build resnet.
+    # self.RCNN_base = nn.Sequential(resnet.conv1, resnet.bn1,resnet.relu,
+    #   resnet.maxpool,resnet.layer1,resnet.layer2,resnet.layer3, resnet.layer4)
     self.RCNN_base = nn.Sequential(resnet.conv1, resnet.bn1,resnet.relu,
       resnet.maxpool,resnet.layer1,resnet.layer2,resnet.layer3)
 
     self.RCNN_top = nn.Sequential(resnet.layer4)
+    self.conv_new_1 = nn.Conv2d(2048, 512, 3, stride=1, padding=6, dilation=6)
+    # self.conv_new_1 = nn.Conv2d(2048, 1024, 1, stride=1, padding=0)
+    # self.conv_new_1 = nn.Sequential(nn.Conv2d(2048, 1024, 1, stride=1, padding=0), 
+    #                                 nn.ReLU(inplace=True))
 
-    self.RCNN_cls_score = nn.Linear(2048, self.n_classes)
+    # self.new_conv_relu = nn.ReLU(inplace=True)
+    # 1519 # 31*7^2
+    self.rfcn_cls = nn.Conv2d(512, 7 * 7 * self.n_classes, 1, stride=1, padding=0)
+    # self.rfcn_bbox = nn.Conv2d(1024, 7  * 7 * 4, 1, stride=1, padding=0) # --class-agnostic
     if self.class_agnostic:
-      self.RCNN_bbox_pred = nn.Linear(2048, 4)
+      self.rfcn_bbox = nn.Conv2d(512, 7  * 7 * 4 * 2, 1, stride=1, padding=0) # --class-agnostic
     else:
-      self.RCNN_bbox_pred = nn.Linear(2048, 4 * self.n_classes)
+      self.rfcn_bbox = nn.Conv2d(512, 7  * 7 * 4 * self.n_classes, 1, stride=1, padding=0) # --class-agnostic
+
+    # self.pooling = nn.AvgPool2d(7, 7)
+    # self.RCNN_top = nn.Sequential(resnet.layer4)
+
+    # self.RCNN_cls_score = nn.Linear(2048, self.n_classes)
+    # if self.class_agnostic:
+    #   self.RCNN_bbox_pred = nn.Linear(2048, 4)
+    # else:
+    #   self.RCNN_bbox_pred = nn.Linear(2048, 4 * self.n_classes)
 
     # Fix blocks
     for p in self.RCNN_base[0].parameters(): p.requires_grad=False

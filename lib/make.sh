@@ -23,6 +23,16 @@ nvcc -c -o nms_cuda_kernel.cu.o nms_cuda_kernel.cu \
 cd ../
 python build.py
 
+# compile psroi_pooling
+cd ../../
+cd model/psroi_pooling/src/cuda
+echo "Compiling psroi pooling kernels by nvcc..."
+
+nvcc -c -o psroi_pooling.cu.o psroi_pooling_kernel.cu \
+	 -D GOOGLE_CUDA=1 -x cu -Xcompiler -fPIC $CUDA_ARCH
+cd ../../
+python build.py
+
 # compile roi_pooling
 cd ../../
 cd model/roi_pooling/src

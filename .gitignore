@@ -1,8 +1,15 @@
 data/*
+
+log*
+output/*
+save_dir/*
+cmd
+
 save_dir/
 output/
 *.o
 *.so
+
 # READ THIS BEFORE YOU REFACTOR ME
 #
 # setup.py uses the list of patterns in this file to decide
