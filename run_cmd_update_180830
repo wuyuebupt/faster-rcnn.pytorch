@@ -12,7 +12,7 @@ python trainval_net.py --dataset imagenet_vid --net res101 --bs 4 --nw 20 --lr 1
 
 3. lr 4e-3 4 12
 
-python trainval_net.py --dataset imagenet_vid --net res101 --bs 4 --nw 20 --lr 1e-3 --lr_decay_step 4 --cuda --mGPUs --epochs 12
+python trainval_net.py --dataset imagenet_vid --net res101 --bs 4 --nw 20 --lr 4e-3 --lr_decay_step 4 --cuda --mGPUs --epochs 12
 
 4. lr 1e-3 4 12
 
@@ -20,7 +20,7 @@ python trainval_net.py --dataset imagenet_vid --net res101 --bs 4 --nw 20 --lr 1
 
 5. lr 4e-3 8 16
 
-python trainval_net.py --dataset imagenet_vid --net res101 --bs 4 --nw 20 --lr 4e-3 --lr_decay_step 4 --cuda --mGPUs --epochs 16
+python trainval_net.py --dataset imagenet_vid --net res101 --bs 4 --nw 20 --lr 4e-3 --lr_decay_step 8 --cuda --mGPUs --epochs 16
 
 6. lr 1e-3 8 16
 
