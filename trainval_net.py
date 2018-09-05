@@ -38,6 +38,13 @@ def parse_args():
   Parse input arguments
   """
   parser = argparse.ArgumentParser(description='Train a Fast R-CNN network')
+
+  ### tracking loss weight
+  parser.add_argument('--tracking_cls_weight', dest='tracking_cls_weight',
+                      help='weight to the tracking classification loss',
+                      default=1.0, type=float)
+  ###
+
   parser.add_argument('--dataset', dest='dataset',
                       help='training dataset',
                       default='pascal_voc', type=str)
@@ -292,6 +299,9 @@ if __name__ == '__main__':
   #tr_momentum = cfg.TRAIN.MOMENTUM
   #tr_momentum = args.momentum
 
+  tracking_cls_weight = args.tracking_cls_weight
+  print('tracking_cls_weight {:f}'.format(tracking_cls_weight))
+
   params = []
   for key, value in dict(fasterRCNN.named_parameters()).items():
     if value.requires_grad:
@@ -379,8 +389,8 @@ if __name__ == '__main__':
 
       loss = RCNN_loss_cls.mean() + RCNN_loss_bbox.mean() + \
              RCNN_loss_cls_2.mean() + RCNN_loss_bbox_2.mean() + \
-             RCNN_loss_tracking_cls.mean() + RCNN_loss_tracking_bbox.mean() + \
-             RCNN_loss_tracking_cls_2.mean() + RCNN_loss_tracking_bbox_2.mean()
+             tracking_cls_weight * RCNN_loss_tracking_cls.mean() + RCNN_loss_tracking_bbox.mean() + \
+             tracking_cls_weight * RCNN_loss_tracking_cls_2.mean() + RCNN_loss_tracking_bbox_2.mean()
 
       loss_temp += loss.data[0]
 
