@@ -14,7 +14,7 @@ Runing settings:
 
                           | tracking_cls_weight=1.0 | 0.8 | 0.6 | 0.4 | 0.2 | 0.0 
 --------------------------|-------------------------|-----|-----|-----|-----|-----
-tracking_target_thres=0.5 |                         |     |     |     |     |
+tracking_target_thres=0.5 |(same with v3)           |     |     |     |     |
 tracking_target_thres=0.6 |                         |     |     |     |     |
 tracking_target_thres=0.7 |                         |     |     |     |     |
 tracking_target_thres=0.8 |                         |     |     |     |     |
