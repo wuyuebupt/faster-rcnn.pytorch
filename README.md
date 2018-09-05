@@ -1,5 +1,10 @@
 # A *Faster* Pytorch Implementation of Faster R-CNN
 
+## training cmds
+```
+python trainval_net.py --dataset imagenet_vid --net res101 --bs 2 --nw 6 --lr 1e-4 --lr_decay_step 4 --cuda --epochs 12 --mGPUs --tracking_cls_weight 0.0 --tracking_target_thres 0.9
+```
+
 ## Introduction
 
 This project is a *faster* pytorch implementation of faster R-CNN, aimed to accelerating the training of faster R-CNN object detection models. Recently, there are a number of good implementations:
