@@ -1,9 +1,24 @@
 # A *Faster* Pytorch Implementation of Faster R-CNN
 
 ## training cmds
+
+I add two more parameters: tracking_cls_weight(0.0~1.0) and tracking_target_thres(0.5, 1.0). tracking_cls_weight controls the weights on the loss weight of tracking classification. tracking_target_thres controls the threshould of rois for tracking target. 
+
+I keep the random selection of rois first. So in some cases the gt rois might not be used. 
+
 ```
 python trainval_net.py --dataset imagenet_vid --net res101 --bs 2 --nw 6 --lr 1e-4 --lr_decay_step 4 --cuda --epochs 12 --mGPUs --tracking_cls_weight 0.0 --tracking_target_thres 0.9
 ```
+
+Runing settings:
+
+                          | tracking_cls_weight=1.0 | 0.8 | 0.6 | 0.4 | 0.2 | 0.0 
+--------------------------|-------------------------|-----|-----|-----|-----|-----
+tracking_target_thres=0.5 |                         |     |     |     |     |
+tracking_target_thres=0.6 |                         |     |     |     |     |
+tracking_target_thres=0.7 |                         |     |     |     |     |
+tracking_target_thres=0.8 |                         |     |     |     |     |
+tracking_target_thres=0.9 |                         |     |     |     |     |
 
 ## Introduction
 
