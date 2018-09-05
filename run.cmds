@@ -1,5 +1,0 @@
-# basic runing messages
-
-
-python trainval_net.py --dataset imagenet_vid --net res101 --bs 2 --nw 6 --lr 1e-4 --lr_decay_step 4 --cuda --epochs 12 --mGPUs --tracking_cls_weight 0.0 --tracking_target_thres 0.9
-
