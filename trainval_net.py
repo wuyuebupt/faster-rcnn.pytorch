@@ -43,6 +43,10 @@ def parse_args():
   parser.add_argument('--tracking_cls_weight', dest='tracking_cls_weight',
                       help='weight to the tracking classification loss',
                       default=1.0, type=float)
+
+  parser.add_argument('--tracking_target_thres', dest='tracking_target_thres',
+                      help='threshold to the tracking regression loss',
+                      default=0.5, type=float)
   ###
 
   parser.add_argument('--dataset', dest='dataset',
@@ -198,6 +202,16 @@ if __name__ == '__main__':
     cfg_from_file(args.cfg_file)
   if args.set_cfgs is not None:
     cfg_from_list(args.set_cfgs)
+ 
+  # update some configures
+  tracking_cls_weight = args.tracking_cls_weight
+  print('tracking_cls_weight {:f}'.format(tracking_cls_weight))
+  tracking_target_thres = args.tracking_target_thres
+  print('tracking_target_thres {:f}'.format(tracking_target_thres))
+
+
+  cfg.TRAIN.FG_THRESH_TRACKING = tracking_target_thres 
+  
 
   print('Using config:')
   pprint.pprint(cfg)
@@ -301,6 +315,8 @@ if __name__ == '__main__':
 
   tracking_cls_weight = args.tracking_cls_weight
   print('tracking_cls_weight {:f}'.format(tracking_cls_weight))
+  tracking_target_thres = args.tracking_target_thres
+  print('tracking_target_thres {:f}'.format(tracking_target_thres))
 
   params = []
   for key, value in dict(fasterRCNN.named_parameters()).items():

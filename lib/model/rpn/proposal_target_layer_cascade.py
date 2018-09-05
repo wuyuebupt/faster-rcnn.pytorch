@@ -129,7 +129,10 @@ class _ProposalTargetLayer(nn.Module):
             # assert clss[b].sum() > 0
             if clss[b].sum() == 0:
                 continue
+            # inds -> all positive rois
             inds = torch.nonzero(clss[b] > 0).view(-1)
+            # be more strict 
+
             for i in range(inds.numel()):
                 ind = inds[i]
                 bbox_targets[b, ind, :] = bbox_target_data[b, ind, :]
@@ -165,8 +168,8 @@ class _ProposalTargetLayer(nn.Module):
         # overlaps: (rois x gt_boxes)
 
         overlaps = bbox_overlaps_batch(all_rois, gt_boxes)
-
         max_overlaps, gt_assignment = torch.max(overlaps, 2)
+          
         # print (overlaps)
         # print (max_overlaps)
         # print (gt_assignment)
@@ -185,23 +188,43 @@ class _ProposalTargetLayer(nn.Module):
                                                             .view(batch_size, -1)
 
         labels_batch = labels.new(batch_size, rois_per_image).zero_()
+        labels_batch_tracking = labels.new(batch_size, rois_per_image).zero_()
         rois_batch  = all_rois.new(batch_size, rois_per_image, 5).zero_()
         gt_rois_batch = all_rois.new(batch_size, rois_per_image, 5).zero_()
         tracking_gt_rois_batch = all_rois.new(batch_size, rois_per_image, 5).zero_()
         # Guard against the case when an image has fewer than max_fg_rois_per_image
         # foreground RoIs
         for i in range(batch_size):
+            ## have to do three parts
+            ## [tracking : 1]
+            ## [0.5      : tracking]
+            ## [0.0      : 0.1]
+            assert (cfg.TRAIN.FG_THRESH_TRACKING >= cfg.TRAIN.FG_THRESH)
+
+            fg_tracking_inds = torch.nonzero(max_overlaps[i] >= cfg.TRAIN.FG_THRESH_TRACKING).view(-1)
+            fg_tracking_num_rois = fg_tracking_inds.numel()
+            # print(fg_tracking_inds)
+            # print(fg_tracking_num_rois)
+            # exit()
+
 
             fg_inds = torch.nonzero(max_overlaps[i] >= cfg.TRAIN.FG_THRESH).view(-1)
             fg_num_rois = fg_inds.numel()
+            # print(fg_tracking_inds)
+            # print(fg_num_rois)
+            # exit()
+
 
             # Select background RoIs as those within [BG_THRESH_LO, BG_THRESH_HI)
             bg_inds = torch.nonzero((max_overlaps[i] < cfg.TRAIN.BG_THRESH_HI) &
                                     (max_overlaps[i] >= cfg.TRAIN.BG_THRESH_LO)).view(-1)
             # print (bg_inds)
             bg_num_rois = bg_inds.numel()
+            # print(bg_num_rois)
+            # exit()
 
             if fg_num_rois > 0 and bg_num_rois > 0:
+                # this should be the most case 
                 # sampling fg
                 fg_rois_per_this_image = min(fg_rois_per_image, fg_num_rois)
                 
@@ -211,6 +234,11 @@ class _ProposalTargetLayer(nn.Module):
                 #rand_num = torch.randperm(fg_num_rois).long().cuda()
                 rand_num = torch.from_numpy(np.random.permutation(fg_num_rois)).type_as(gt_boxes).long()
                 fg_inds = fg_inds[rand_num[:fg_rois_per_this_image]]
+                # print (fg_inds)
+                # print (fg_tracking_inds)
+                # exit()
+                # have to further selected the tracking target with higher threshold later 
+                # keep labels the same, keep sampling the same, no change here
 
                 # sampling bg
                 bg_rois_per_this_image = rois_per_image - fg_rois_per_this_image
@@ -244,13 +272,43 @@ class _ProposalTargetLayer(nn.Module):
                 
             # The indices that we're selecting (both fg and bg)
             keep_inds = torch.cat([fg_inds, bg_inds], 0)
+            # print (keep_inds)
+            # print (keep_inds.shape)
+
+            # for j in range(keep_inds.shape[0]):
+            #    print ((keep_inds[j] == fg_tracking_inds).nonzero())
+
+            # for fg_tracking_ind in range(fg_tracking_num_rois):
+            #     print ((keep_inds == fg_tracking_inds[fg_tracking_ind]).nonzero())
+
+            # print ((keep_inds == fg_tracking_inds[fg_tracking_ind]))
+            ## find positive samples for tracking
+            # exit()
 
             # Select sampled values from various arrays:
             labels_batch[i].copy_(labels[i][keep_inds])
+            # print (labels_batch)
+            # labels_batch_tracking[i].copy_(labels[i][keep_inds])
 
             # Clamp labels for the background RoIs to 0
             if fg_rois_per_this_image < rois_per_image:
                 labels_batch[i][fg_rois_per_this_image:] = 0
+                # labels_batch_tracking[i][fg_rois_per_this_image:] = 0
+
+            # change labels for tracking target
+            for fg_tracking_ind in range(fg_tracking_num_rois):
+                # print ((keep_inds == fg_tracking_inds[fg_tracking_ind]).nonzero())
+                tracking_ind = torch.nonzero(keep_inds == fg_tracking_inds[fg_tracking_ind]).view(-1)
+                tracking_number = tracking_ind.numel()
+                assert(tracking_number <= 1)
+                for j in range(tracking_number):
+                    labels_batch_tracking[i][tracking_ind[j]] = labels_batch[i][tracking_ind[j]]
+
+
+            # print (tracking_ind)
+            # print (labels_batch)
+            # print (labels_batch_tracking)
+            # exit()
 
             rois_batch[i] = all_rois[i][keep_inds]
             rois_batch[i,:,0] = i
@@ -258,10 +316,14 @@ class _ProposalTargetLayer(nn.Module):
             # the first 5 are for the original gt
             # print (gt_boxes[i][gt_assignment[i][keep_inds]].shape)
             # 128*10
+            # detection gt is from 0 to 5
             gt_rois_batch[i] = gt_boxes[i][gt_assignment[i][keep_inds]][:,:5]
             # gt_assign for the next
+            # tracking target if from 5 to 10
             tracking_gt_rois_batch[i] = gt_boxes[i][gt_assignment[i][keep_inds]][:,5:]
 
+        # print(tracking_gt_rois_batch)
+        # print(tracking_gt_rois_batch.shape)
         # compute target data and bbox tartget
         bbox_target_data = self._compute_targets_pytorch(
                 rois_batch[:,:,1:5], gt_rois_batch[:,:,:4])
@@ -276,12 +338,17 @@ class _ProposalTargetLayer(nn.Module):
         # print(tracking_target_data.shape)
         # print(labels_batch)
         # print(labels_batch.shape)
+        # exit()
 
         # print (gt_rois_batch[:,:,4])
         # print (tracking_gt_rois_batch[:,:,4])
         tracking_bbox_targets, tracking_bbox_inside_weights = \
-                self._get_tracking_bbox_regression_labels_pytorch(tracking_target_data, labels_batch, num_classes, tracking_gt_rois_batch[:,:,4])
+                self._get_tracking_bbox_regression_labels_pytorch(tracking_target_data, labels_batch_tracking, num_classes, tracking_gt_rois_batch[:,:,4])
+        # tracking_bbox_targets, tracking_bbox_inside_weights = \
+                # self._get_tracking_bbox_regression_labels_pytorch(tracking_target_data, labels_batch, num_classes, tracking_gt_rois_batch[:,:,4])
+        # print (tracking_bbox_inside_weights)
         # print (tracking_bbox_inside_weights.shape)
+        # exit()
 
 
         return labels_batch, rois_batch, bbox_targets, bbox_inside_weights, tracking_bbox_targets, tracking_bbox_inside_weights
