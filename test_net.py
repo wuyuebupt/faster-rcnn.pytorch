@@ -44,6 +44,11 @@ def parse_args():
   Parse input arguments
   """
   parser = argparse.ArgumentParser(description='Train a Fast R-CNN network')
+  ###
+  parser.add_argument('--out_dir', dest='out_dir',
+                      help='directory to load models', default="output",
+                      type=str)
+  ###
   parser.add_argument('--dataset', dest='dataset',
                       help='training dataset',
                       default='pascal_voc', type=str)
@@ -217,11 +222,12 @@ if __name__ == '__main__':
   else:
     thresh = 0.0
 
-  save_name = 'faster_rcnn_10'
+  # save_name = 'faster_rcnn_10'
   num_images = len(imdb.image_index)
   all_boxes = [[[] for _ in xrange(num_images)]
                for _ in xrange(imdb.num_classes)]
 
+  save_name = args.out_dir
   output_dir = get_output_dir(imdb, save_name)
   dataset = roibatchLoader(roidb, ratio_list, ratio_index, 1, \
                         imdb.num_classes, training=False, normalize = False)

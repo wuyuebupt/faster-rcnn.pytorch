@@ -1,4 +1,18 @@
 # A *Faster* Pytorch Implementation of Faster R-CNN
+## new test command
+Add one more parameter "--out_dir" to save the results into different folders. Usage is like:
+```
+CUDA_VISIBLE_DEVICES=0 python test_net.py --dataset imagenet_vid --net res101 --checksession 1 --checkepoch 1 --checkpoint 199 --cuda --load_dir save_dir/  --out_dir setting2
+```
+
+After run the testing with two different paramters setting "setting1" and "setting2". The output should be like:
+```
+output/res101/val/setting1:
+detections.pkl
+
+output/res101/val/setting2:
+detections.pkl
+```
 
 ## Introduction
 
