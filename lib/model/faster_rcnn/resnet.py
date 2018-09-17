@@ -258,10 +258,18 @@ class resnet(_fasterRCNN):
       self.RCNN_top.load_state_dict({k.replace('RCNN_top.', ''):v for k,v in state_dict.items() if k.replace('RCNN_top.', '') in self.RCNN_top.state_dict()})
       self.RCNN_cls_score.load_state_dict({k.replace('RCNN_cls_score.', ''):v for k,v in state_dict.items() if k.replace('RCNN_cls_score.', '') in self.RCNN_cls_score.state_dict()})
       self.RCNN_bbox_pred.load_state_dict({k.replace('RCNN_bbox_pred.', ''):v for k,v in state_dict.items() if k.replace('RCNN_bbox_pred.', '') in self.RCNN_bbox_pred.state_dict()})
+
+      # fix rpn
+      # preload rpn
+      # print ([k for k,v in state_dict.items() if k.replace('RCNN_rpn.', '') in self.RCNN_rpn.state_dict()])
+      self.RCNN_rpn.load_state_dict({k.replace('RCNN_rpn.', ''):v for k,v in state_dict.items() if k.replace('RCNN_rpn.', '') in self.RCNN_rpn.state_dict()})
+
  
     # Fix blocks
     for p in self.RCNN_base[0].parameters(): p.requires_grad=False
     for p in self.RCNN_base[1].parameters(): p.requires_grad=False
+
+    print (cfg.RESNET.FIXED_BLOCKS)
 
     assert (0 <= cfg.RESNET.FIXED_BLOCKS < 4)
     if cfg.RESNET.FIXED_BLOCKS >= 3:
@@ -270,6 +278,16 @@ class resnet(_fasterRCNN):
       for p in self.RCNN_base[5].parameters(): p.requires_grad=False
     if cfg.RESNET.FIXED_BLOCKS >= 1:
       for p in self.RCNN_base[4].parameters(): p.requires_grad=False
+
+
+    # Fix rcnn top 
+    if cfg.RESNET.FIXED_TOPS == True:
+      print ("fix everything!")
+      for p in self.RCNN_top[0].parameters(): p.requires_grad=False
+      for p in self.RCNN_cls_score.parameters(): p.requires_grad=False
+      for p in self.RCNN_bbox_pred.parameters(): p.requires_grad=False
+      for p in self.RCNN_rpn.parameters(): p.requires_grad=False
+
 
     def set_bn_fix(m):
       classname = m.__class__.__name__

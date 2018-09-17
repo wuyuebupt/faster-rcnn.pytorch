@@ -204,6 +204,12 @@ if __name__ == '__main__':
   # -- Note: Use validation set and disable the flipped to enable faster loading.
   cfg.TRAIN.USE_FLIPPED = True
   cfg.USE_GPU_NMS = args.cuda
+  # fix blocks
+  cfg.RESNET.FIXED_BLOCKS = 3
+  cfg.RESNET.FIXED_TOPS = True
+  
+
+
   imdb, roidb, ratio_list, ratio_index = combined_roidb(args.imdb_name)
   train_size = len(roidb)
 

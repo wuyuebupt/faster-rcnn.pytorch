@@ -221,6 +221,10 @@ __C.RESNET.MAX_POOL = False
 # Range: 0 (none) to 3 (all)
 __C.RESNET.FIXED_BLOCKS = 1
 
+# fix top or not
+# default false
+__C.RESNET.FIXED_TOPS = False
+
 #
 # MobileNet options
 #
