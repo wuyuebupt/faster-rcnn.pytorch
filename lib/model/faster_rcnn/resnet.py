@@ -284,7 +284,8 @@ class resnet(_fasterRCNN):
     if cfg.RESNET.FIXED_TOPS == True:
       print ("fix everything!")
       for p in self.RCNN_top[0].parameters(): p.requires_grad=False
-      for p in self.RCNN_cls_score.parameters(): p.requires_grad=False
+      # leave one parameters for training -> 
+      # for p in self.RCNN_cls_score.parameters(): p.requires_grad=False
       for p in self.RCNN_bbox_pred.parameters(): p.requires_grad=False
       for p in self.RCNN_rpn.parameters(): p.requires_grad=False
 

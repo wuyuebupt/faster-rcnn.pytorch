@@ -66,6 +66,11 @@ class _fasterRCNN(nn.Module):
             rpn_loss_cls = 0
             rpn_loss_bbox = 0
 
+        ## rois -> to roi neighbors
+        ## 
+        rois_attention_candidates = self._rois_to_candidates(rois, 0.5)
+
+        rois_attention_candidates = Variable(rois_attention_candidates)
         rois = Variable(rois)
         # do roi pooling based on predicted rois
 
@@ -84,6 +89,8 @@ class _fasterRCNN(nn.Module):
 
         # feed pooled features to top model
         pooled_feat = self._head_to_tail(pooled_feat)
+        print (pooled_feat.shape)
+        exit()
 
         # compute bbox offset
         bbox_pred = self.RCNN_bbox_pred(pooled_feat)
@@ -139,6 +146,55 @@ class _fasterRCNN(nn.Module):
         # normal_init(self.RCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
         # normal_init(self.RCNN_bbox_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)
 
+    def _rois_to_candidates(self, rois, scale):
+        # rois [batchsize x 128 x5]
+        ##
+        ##
+        print (rois.shape)
+        batchsize = rois.size(0)
+        number_rois = rois.size(1)
+	attention_candidates = rois.new(9, batchsize, number_rois, 5).zero_()
+        print (attention_candidates.shape)
+# w = box(1,3) - box(1,1);
+# h = box(1,4) - box(1,2);
+# newbox = zeros(9,size(box,2));
+# 
+#%  scale = 0.5;
+# scale = 1.0;
+# 
+# for i = 1:3
+#     for j = 1:3
+#         newbox((i-1)*3+j, 1)  = box(1,1) + scale * w * (i-2);
+#         newbox((i-1)*3+j, 2)  = box(1,2) + scale * h * (j-2);
+#         newbox((i-1)*3+j, 3)  = box(1,3) + scale * w * (i-2);
+#         newbox((i-1)*3+j, 4)  = box(1,4) + scale * h * (j-2);
+#         newbox((i-1)*3+j, 5)  = box(1,5) ;
+#     end
+# end
+        for i in range(3):
+            for j in range(3):
+                print (i,j)
+                index = i * 3 + j 
+                attention_candidates[index, :, :, 0] = rois[:, :, 0]  
+                attention_candidates[index, :, :, 1] = rois[:, :, 1] + (rois[:, :, 3] - rois[:, :, 1]) * scale * (i - 1)
+                attention_candidates[index, :, :, 2] = rois[:, :, 2] + (rois[:, :, 4] - rois[:, :, 2]) * scale * (j - 1)
+                attention_candidates[index, :, :, 3] = rois[:, :, 3] + (rois[:, :, 3] - rois[:, :, 1]) * scale * (i - 1)
+                attention_candidates[index, :, :, 4] = rois[:, :, 4] + (rois[:, :, 4] - rois[:, :, 2]) * scale * (j - 1)
+        # print (attention_candidates)
+        # exit()
+        # print (attention_candidates[:,0,0,:])
+
+        # !TODO potention problem boundary 
+
+
+        # exit()
+        return attention_candidates
+                
+        
     def create_architecture(self):
         self._init_modules()
         self._init_weights()
+
+
+
+
