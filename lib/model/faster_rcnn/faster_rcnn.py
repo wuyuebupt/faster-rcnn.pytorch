@@ -74,6 +74,9 @@ class _fasterRCNN(nn.Module):
         rois = Variable(rois)
         # do roi pooling based on predicted rois
 
+        print (base_feat.shape) # 4x1024x38x50
+
+
         if cfg.POOLING_MODE == 'crop':
             # pdb.set_trace()
             # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
@@ -88,17 +91,38 @@ class _fasterRCNN(nn.Module):
             pooled_feat = self.RCNN_roi_pool(base_feat, rois.view(-1,5))
 
         # feed pooled features to top model
+        print (pooled_feat.shape) # 512x1024x7x7
+        
         pooled_feat = self._head_to_tail(pooled_feat)
+
         print (pooled_feat.shape)
-        exit()
+        # rois_attention_pooled_feat = pooled_feat.data.new(9, pooled_feat.size(0), pooled_feat.size(1)).zero_()
+        # rois_attention_pooled_feat = pooled_feat.view(1, pooled_feat.size(0), pooled_feat.size(1)).expand(9, pooled_feat.size(0), pooled_feat.size(1))
+        rois_attention_pooled_feat = []
+        # print (rois_attention_pooled_feat.shape)
+
+        for i in range(9):
+            # print (i)
+            # only do the roi align now
+            assert(cfg.POOLING_MODE == 'align')
+            # print (self.RCNN_roi_align(base_feat, rois_attention_candidates[i,:,:,:].view(-1, 5)).shape)
+            pooled_feat_tmp = self.RCNN_roi_align(base_feat, rois_attention_candidates[i,:,:,:].view(-1, 5))
+            pooled_feat_tmp = self._head_to_tail(pooled_feat_tmp)
+
+            rois_attention_pooled_feat.append(pooled_feat_tmp)
+        # print (rois_attention_pooled_feat)
+        # exit()
 
         # compute bbox offset
         bbox_pred = self.RCNN_bbox_pred(pooled_feat)
+        print (bbox_pred.shape)
         if self.training and not self.class_agnostic:
             # select the corresponding columns according to roi labels
             bbox_pred_view = bbox_pred.view(bbox_pred.size(0), int(bbox_pred.size(1) / 4), 4)
             bbox_pred_select = torch.gather(bbox_pred_view, 1, rois_label.view(rois_label.size(0), 1, 1).expand(rois_label.size(0), 1, 4))
             bbox_pred = bbox_pred_select.squeeze(1)
+        print (bbox_pred.shape)
+        exit()
 
         # compute object classification probability
         cls_score = self.RCNN_cls_score(pooled_feat)
