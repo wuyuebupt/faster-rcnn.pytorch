@@ -33,6 +33,59 @@ def bbox_transform(ex_rois, gt_rois):
 
     return targets
 
+
+def bbox_transform_batch_attention(ex_rois, gt_rois):
+
+    if ex_rois.dim() == 2:
+        ex_widths = ex_rois[:, 2] - ex_rois[:, 0] + 1.0
+        ex_heights = ex_rois[:, 3] - ex_rois[:, 1] + 1.0
+
+        ex_x1 = ex_rois[:, 0] 
+        ex_y1 = ex_rois[:, 1] 
+        ex_x2 = ex_rois[:, 2] 
+        ex_y2 = ex_rois[:, 3] 
+
+        gt_x1 = gt_rois[:, :, 0]
+        gt_y1 = gt_rois[:, :, 1]
+        gt_x2 = gt_rois[:, :, 2]
+        gt_y2 = gt_rois[:, :, 3]
+
+        targets_dx1 = (gt_x1 - ex_x1.view(1,-1).expand_as(gt_x1)) / ex_widths
+        targets_dy1 = (gt_y1 - ex_y1.view(1,-1).expand_as(gt_y1)) / ex_heights
+        targets_dx2 = (gt_x2 - ex_x2.view(1,-1).expand_as(gt_x2)) / ex_widths
+        targets_dy2 = (gt_y2 - ex_y2.view(1,-1).expand_as(gt_y2)) / ex_heights
+
+    elif ex_rois.dim() == 3:
+        ex_widths = ex_rois[:, :, 2] - ex_rois[:, :, 0] + 1.0
+        ex_heights = ex_rois[:,:, 3] - ex_rois[:,:, 1] + 1.0
+        ex_ctr_x = ex_rois[:, :, 0] + 0.5 * ex_widths
+        ex_ctr_y = ex_rois[:, :, 1] + 0.5 * ex_heights
+
+        ex_x1 = ex_rois[:, :, 0] 
+        ex_y1 = ex_rois[:, :, 1] 
+        ex_x2 = ex_rois[:, :, 2] 
+        ex_y2 = ex_rois[:, :, 3] 
+
+        gt_x1 = gt_rois[:, :, 0]
+        gt_y1 = gt_rois[:, :, 1]
+        gt_x2 = gt_rois[:, :, 2]
+        gt_y2 = gt_rois[:, :, 3]
+
+        targets_dx1 = (gt_x1 - ex_x1) / ex_widths
+        targets_dy1 = (gt_y1 - ex_y1) / ex_heights
+        targets_dx2 = (gt_x2 - ex_x2) / ex_widths
+        targets_dy2 = (gt_y2 - ex_y2) / ex_heights
+    else:
+        raise ValueError('ex_roi input dimension is not correct.')
+
+    targets = torch.stack(
+        (targets_dx1, targets_dy1, targets_dx2, targets_dy2),2)
+
+    # print (targets)
+    # exit()
+    return targets
+
+
 def bbox_transform_batch(ex_rois, gt_rois):
 
     if ex_rois.dim() == 2:

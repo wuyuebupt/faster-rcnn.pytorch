@@ -14,7 +14,7 @@ import torch.nn as nn
 import numpy as np
 import numpy.random as npr
 from ..utils.config import cfg
-from .bbox_transform import bbox_overlaps_batch, bbox_transform_batch
+from .bbox_transform import bbox_overlaps_batch, bbox_transform_batch, bbox_transform_batch_attention
 import pdb
 
 class _ProposalTargetLayer(nn.Module):
@@ -47,6 +47,7 @@ class _ProposalTargetLayer(nn.Module):
         fg_rois_per_image = int(np.round(cfg.TRAIN.FG_FRACTION * rois_per_image))
         fg_rois_per_image = 1 if fg_rois_per_image == 0 else fg_rois_per_image
 
+        ## come here again -> sample and generate the regression target 
         labels, rois, bbox_targets, bbox_inside_weights = self._sample_rois_pytorch(
             all_rois, gt_boxes, fg_rois_per_image,
             rois_per_image, self._num_classes)
@@ -103,7 +104,14 @@ class _ProposalTargetLayer(nn.Module):
         batch_size = ex_rois.size(0)
         rois_per_image = ex_rois.size(1)
 
-        targets = bbox_transform_batch(ex_rois, gt_rois)
+        # for tx, ty, tw, th
+        # targets = bbox_transform_batch(ex_rois, gt_rois)
+        # for tx_1, ty_1, tx_2, ty_2
+        print ("enter bbox_transform_batch")
+        print (ex_rois.shape)
+        print (gt_rois.shape)
+        # targets = bbox_transform_batch(ex_rois, gt_rois)
+        targets = bbox_transform_batch_attention(ex_rois, gt_rois)
 
         if cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
             # Optionally normalize targets by a precomputed mean and stdev
