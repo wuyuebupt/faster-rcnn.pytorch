@@ -107,9 +107,9 @@ class _ProposalTargetLayer(nn.Module):
         # for tx, ty, tw, th
         # targets = bbox_transform_batch(ex_rois, gt_rois)
         # for tx_1, ty_1, tx_2, ty_2
-        print ("enter bbox_transform_batch")
-        print (ex_rois.shape)
-        print (gt_rois.shape)
+        # print ("enter bbox_transform_batch")
+        # print (ex_rois.shape)
+        # print (gt_rois.shape)
         # targets = bbox_transform_batch(ex_rois, gt_rois)
         targets = bbox_transform_batch_attention(ex_rois, gt_rois)
 
