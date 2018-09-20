@@ -135,16 +135,16 @@ class _fasterRCNN(nn.Module):
         # print (self.attention_regression)
         # print (rois_attention_candidates.is_cuda)
         # print (rois_attention_pooled_feat.is_cuda)
-        bbox_pred = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat) 
+
+        bbox_pred, wx1, wy1, wx2, wy2, dx1, ox1 = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat) 
+
         # print (bbox_pred)
         # print (bbox_pred.shape)
+        # print (wx1.shape)
         # exit()
         ## 
         ## 
         
-       
-
-
         # compute bbox offset
         # bbox_pred = self.RCNN_bbox_pred(pooled_feat)
         # print (bbox_pred.shape)
@@ -178,6 +178,7 @@ class _fasterRCNN(nn.Module):
         cls_prob = cls_prob.view(batch_size, rois.size(1), -1)
         bbox_pred = bbox_pred.view(batch_size, rois.size(1), -1)
 
+        # return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label, wx1, dx1, ox1
         return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label
 
     def _init_weights(self):
@@ -637,10 +638,6 @@ class RelationUnit(nn.Module):
         # print (output)        
 
         # exit()
-
-
-
-        
         # N,_ = f_a.size()
 
         # position_embedding = position_embedding.view(-1,self.dim_g)
@@ -670,6 +667,7 @@ class RelationUnit(nn.Module):
 
         # output = torch.sum(output,-2)
         # return output
-        return output
+        return output, w_x1, w_y1, w_x2, w_y2, delta_x1, output_x1
+
 
 

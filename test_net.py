@@ -240,7 +240,9 @@ if __name__ == '__main__':
       rois, cls_prob, bbox_pred, \
       rpn_loss_cls, rpn_loss_box, \
       RCNN_loss_cls, RCNN_loss_bbox, \
-      rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+      rois_label, \
+      wx1, dx1, ox1 = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+      # rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
 
       scores = cls_prob.data
       boxes = rois.data[:, :, 1:5]
@@ -274,8 +276,15 @@ if __name__ == '__main__':
 
       scores = scores.squeeze()
       pred_boxes = pred_boxes.squeeze()
-
       roi_boxes = roi_boxes.squeeze()
+      box_deltas = box_deltas.squeeze()
+
+      # wx1 = wx1.squeeze()
+      # dx1 = dx1.squeeze()
+      # ox1 = ox1.view(ox1.size(0),1)
+      print (ox1.shape)
+      # ox1 = ox1.squeeze()
+      # print (ox1.shape)
 
       det_toc = time.time()
       detect_time = det_toc - det_tic
@@ -292,6 +301,11 @@ if __name__ == '__main__':
 
             cls_boxes = pred_boxes[inds, :]
             cls_roi_boxes = roi_boxes[inds, :]
+            roi_wx1 = wx1[inds, :]
+            roi_dx1 = dx1[inds, :]
+            roi_ox1 = ox1[inds, :]
+            roi_box_deltas = box_deltas[inds, :]
+
             # if args.class_agnostic:
             #   cls_boxes = pred_boxes[inds, :]
             # else:
@@ -302,14 +316,29 @@ if __name__ == '__main__':
             # cls_dets = torch.cat((cls_boxes, cls_scores), 1)
             cls_dets = cls_dets[order]
             cls_roi_dets = cls_roi_dets[order]
+            roi_wx1 = roi_wx1[order]
+            roi_dx1 = roi_dx1[order]
+            roi_ox1 = roi_ox1[order]
+            roi_box_deltas = roi_box_deltas[order]
 
             keep = nms(cls_dets, cfg.TEST.NMS)
 
             cls_dets = cls_dets[keep.view(-1).long()]
             cls_roi_dets = cls_roi_dets[keep.view(-1).long()]
+            roi_wx1 = roi_wx1[keep.view(-1).long()]
+            roi_dx1 = roi_dx1[keep.view(-1).long()]
+            roi_ox1 = roi_ox1[keep.view(-1).long()]
+            roi_box_deltas = roi_box_deltas[keep.view(-1).long()]
             if vis:
               im2show = vis_detections(im2show, imdb.classes[j], cls_dets.cpu().numpy(), 0.3, (0,204,0))
               im2show = vis_detections(im2show, imdb.classes[j], cls_roi_dets.cpu().numpy(), 0.3, ( 0,255, 255))
+              print (j)
+              print (roi_wx1)
+              print (roi_dx1)
+              print (roi_ox1)
+              print (roi_box_deltas)
+              print (cls_dets)
+              print (cls_roi_dets)
             all_boxes[j][i] = cls_dets.cpu().numpy()
           else:
             all_boxes[j][i] = empty_array
