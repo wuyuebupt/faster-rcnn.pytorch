@@ -249,6 +249,8 @@ class resnet(_fasterRCNN):
     else:
       self.RCNN_bbox_pred = nn.Linear(2048, 4 * self.n_classes)
 
+    self.RCNN_attention_feat = nn.Linear(2048, 256)
+
     if self.pretrained == True:
       print("Loading pretrained weights from %s" %(self.model_path))
       state_dict = torch.load(self.model_path)['model']

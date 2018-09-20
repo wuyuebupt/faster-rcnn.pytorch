@@ -33,7 +33,8 @@ class _fasterRCNN(nn.Module):
         self.RCNN_roi_pool = _RoIPooling(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
         self.RCNN_roi_align = RoIAlignAvg(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
 
-        self.attention_regression = RelationUnit() 
+        # self.attention_regression = RelationUnit(2048, 32) 
+        self.attention_regression = RelationUnit(256, 32) 
 
         self.grid_size = cfg.POOLING_SIZE * 2 if cfg.CROP_RESIZE_WITH_MAX_POOL else cfg.POOLING_SIZE
         self.RCNN_roi_crop = _RoICrop()
@@ -115,8 +116,10 @@ class _fasterRCNN(nn.Module):
             # print (self.RCNN_roi_align(base_feat, rois_attention_candidates[i,:,:,:].view(-1, 5)).shape)
             pooled_feat_tmp = self.RCNN_roi_align(base_feat, rois_attention_candidates[i,:,:,:].view(-1, 5))
             pooled_feat_tmp = self._head_to_tail(pooled_feat_tmp)
+            pooled_attention_feat = self.RCNN_attention_feat(pooled_feat_tmp)
 
-            rois_attention_pooled_feat.append(pooled_feat_tmp)
+            rois_attention_pooled_feat.append(pooled_attention_feat)
+            # rois_attention_pooled_feat.append(pooled_feat_tmp)
         # print (rois_attention_pooled_feat)
         # exit()
 
@@ -196,6 +199,8 @@ class _fasterRCNN(nn.Module):
         # normal_init(self.RCNN_rpn.RPN_bbox_pred, 0, 0.01, cfg.TRAIN.TRUNCATED)
         # normal_init(self.RCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
         # normal_init(self.RCNN_bbox_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)
+
+        normal_init(self.RCNN_attention_feat, 0, 0.001, cfg.TRAIN.TRUNCATED)
         
         # init the attention module
         # normal_init(self.attention_regression, 0, 0.001, cfg.TRAIN.TRUNCATED)
@@ -539,10 +544,14 @@ class RelationUnit(nn.Module):
         # wk_x1= torch.cat((wk_x1_0, wk_x1_1, wk_x1_2, wk_x1_3, wk_x1_4, wk_x1_5, wk_x1_6, wk_x1_7, wk_x1_8), dim=1)
 
         ## without self
-        wk_x1 = torch.cat((wk_x1_0, wk_x1_1, wk_x1_2, wk_x1_3,  wk_x1_5, wk_x1_6, wk_x1_7, wk_x1_8), dim=1)
-        wk_y1 = torch.cat((wk_y1_0, wk_y1_1, wk_y1_2, wk_y1_3,  wk_y1_5, wk_y1_6, wk_y1_7, wk_y1_8), dim=1)
-        wk_x2 = torch.cat((wk_x2_0, wk_x2_1, wk_x2_2, wk_x2_3,  wk_x2_5, wk_x2_6, wk_x2_7, wk_x2_8), dim=1)
-        wk_y2 = torch.cat((wk_y2_0, wk_y2_1, wk_y2_2, wk_y2_3,  wk_y2_5, wk_y2_6, wk_y2_7, wk_y2_8), dim=1)
+        # wk_x1 = torch.cat((wk_x1_0, wk_x1_1, wk_x1_2, wk_x1_3,  wk_x1_5, wk_x1_6, wk_x1_7, wk_x1_8), dim=1)
+        # wk_y1 = torch.cat((wk_y1_0, wk_y1_1, wk_y1_2, wk_y1_3,  wk_y1_5, wk_y1_6, wk_y1_7, wk_y1_8), dim=1)
+        # wk_x2 = torch.cat((wk_x2_0, wk_x2_1, wk_x2_2, wk_x2_3,  wk_x2_5, wk_x2_6, wk_x2_7, wk_x2_8), dim=1)
+        # wk_y2 = torch.cat((wk_y2_0, wk_y2_1, wk_y2_2, wk_y2_3,  wk_y2_5, wk_y2_6, wk_y2_7, wk_y2_8), dim=1)
+        wk_x1 = torch.cat((wk_x1_0, wk_x1_1, wk_x1_2, wk_x1_3, wk_x1_4,  wk_x1_5, wk_x1_6, wk_x1_7, wk_x1_8), dim=1)
+        wk_y1 = torch.cat((wk_y1_0, wk_y1_1, wk_y1_2, wk_y1_3, wk_y1_4,  wk_y1_5, wk_y1_6, wk_y1_7, wk_y1_8), dim=1)
+        wk_x2 = torch.cat((wk_x2_0, wk_x2_1, wk_x2_2, wk_x2_3, wk_x2_4,  wk_x2_5, wk_x2_6, wk_x2_7, wk_x2_8), dim=1)
+        wk_y2 = torch.cat((wk_y2_0, wk_y2_1, wk_y2_2, wk_y2_3, wk_y2_4,  wk_y2_5, wk_y2_6, wk_y2_7, wk_y2_8), dim=1)
 
         # print (wk_x1.shape)
 
@@ -579,9 +588,11 @@ class RelationUnit(nn.Module):
         # print (rois.shape)
         # print (delta_rois.shape)
         ###
-        delta_rois_8 = delta_rois.new(8, delta_rois.size(1), delta_rois.size(2)).zero_()
-        delta_rois_8[0:4, :,:] = delta_rois[0:4,:,:]
-        delta_rois_8[4:8, :,:] = delta_rois[5:9,:,:]
+        # delta_rois_8 = delta_rois.new(8, delta_rois.size(1), delta_rois.size(2)).zero_()
+        # delta_rois_8 = delta_rois.new(9, delta_rois.size(1), delta_rois.size(2)).zero_()
+        delta_rois_8 = delta_rois
+        # delta_rois_8[0:4, :,:] = delta_rois[0:4,:,:]
+        # delta_rois_8[4:8, :,:] = delta_rois[5:9,:,:]
         
         # print (delta_rois_8.shape)
         # print (delta_rois_8)
