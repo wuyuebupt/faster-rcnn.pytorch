@@ -249,7 +249,11 @@ class resnet(_fasterRCNN):
     else:
       self.RCNN_bbox_pred = nn.Linear(2048, 4 * self.n_classes)
 
-    self.RCNN_attention_feat = nn.Linear(2048, 256)
+    # self.RCNN_attention_feat = nn.Linear(2048, 256)
+    self.RCNN_attention_feat = nn.Linear(2048, 128)
+    self.relu = nn.ReLU(inplace=True)
+    # self.RCNN_attention_feat = nn.Linear(2048, 1024)
+    
 
     if self.pretrained == True:
       print("Loading pretrained weights from %s" %(self.model_path))
@@ -285,10 +289,11 @@ class resnet(_fasterRCNN):
     # Fix rcnn top 
     if cfg.RESNET.FIXED_TOPS == True:
       print ("fix everything!")
-      for p in self.RCNN_top[0].parameters(): p.requires_grad=False
-      # leave one parameters for training -> 
-      for p in self.RCNN_cls_score.parameters(): p.requires_grad=False
-      for p in self.RCNN_bbox_pred.parameters(): p.requires_grad=False
+      # for p in self.RCNN_top[0].parameters(): p.requires_grad=False
+      # for p in self.RCNN_cls_score.parameters(): p.requires_grad=False
+      # for p in self.RCNN_bbox_pred.parameters(): p.requires_grad=False
+
+      ## rpn parameters
       for p in self.RCNN_rpn.parameters(): p.requires_grad=False
 
 

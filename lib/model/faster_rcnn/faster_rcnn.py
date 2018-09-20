@@ -33,8 +33,11 @@ class _fasterRCNN(nn.Module):
         self.RCNN_roi_pool = _RoIPooling(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
         self.RCNN_roi_align = RoIAlignAvg(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
 
-        # self.attention_regression = RelationUnit(2048, 32) 
-        self.attention_regression = RelationUnit(256, 32) 
+        self.attention_regression = RelationUnit(2048, 32) 
+        # self.attention_regression = RelationUnit(2048, 64) 
+        # self.attention_regression = RelationUnit(256, 64) 
+        # self.attention_regression = RelationUnit(128, 16) 
+        # self.attention_regression = RelationUnit(1024, 64) 
 
         self.grid_size = cfg.POOLING_SIZE * 2 if cfg.CROP_RESIZE_WITH_MAX_POOL else cfg.POOLING_SIZE
         self.RCNN_roi_crop = _RoICrop()
@@ -116,10 +119,13 @@ class _fasterRCNN(nn.Module):
             # print (self.RCNN_roi_align(base_feat, rois_attention_candidates[i,:,:,:].view(-1, 5)).shape)
             pooled_feat_tmp = self.RCNN_roi_align(base_feat, rois_attention_candidates[i,:,:,:].view(-1, 5))
             pooled_feat_tmp = self._head_to_tail(pooled_feat_tmp)
-            pooled_attention_feat = self.RCNN_attention_feat(pooled_feat_tmp)
+            # v1
+            rois_attention_pooled_feat.append(pooled_feat_tmp)
 
-            rois_attention_pooled_feat.append(pooled_attention_feat)
-            # rois_attention_pooled_feat.append(pooled_feat_tmp)
+            # v2
+            # pooled_attention_feat = self.RCNN_attention_feat(pooled_feat_tmp)
+            # pooled_attention_feat = self.relu(pooled_attention_feat)
+            # rois_attention_pooled_feat.append(pooled_attention_feat)
         # print (rois_attention_pooled_feat)
         # exit()
 
@@ -200,7 +206,8 @@ class _fasterRCNN(nn.Module):
         # normal_init(self.RCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
         # normal_init(self.RCNN_bbox_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)
 
-        normal_init(self.RCNN_attention_feat, 0, 0.001, cfg.TRAIN.TRUNCATED)
+        normal_init(self.RCNN_attention_feat, 0, 0.01, cfg.TRAIN.TRUNCATED)
+        # normal_init(self.RCNN_attention_feat, 0, 0.01, cfg.TRAIN.TRUNCATED)
         
         # init the attention module
         # normal_init(self.attention_regression, 0, 0.001, cfg.TRAIN.TRUNCATED)
@@ -375,50 +382,50 @@ class RelationUnit(nn.Module):
                 m.weight.data.normal_(mean, stddev)
                 # m.bias.data.zero_()
 
-         normal_init(self.WK_x1_0, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y1_0, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_x2_0, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y2_0, 0, 0.001, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_x1_0, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_y1_0, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_x2_0, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_y2_0, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
-         normal_init(self.WK_x1_1, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y1_1, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_x2_1, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y2_1, 0, 0.001, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_x1_1, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_y1_1, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_x2_1, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_y2_1, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
-         normal_init(self.WK_x1_2, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y1_2, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_x2_2, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y2_2, 0, 0.001, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_x1_2, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_y1_2, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_x2_2, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_y2_2, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
-         normal_init(self.WK_x1_3, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y1_3, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_x2_3, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y2_3, 0, 0.001, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_x1_3, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_y1_3, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_x2_3, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_y2_3, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
-         normal_init(self.WK_x1_4, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y1_4, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_x2_4, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y2_4, 0, 0.001, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_x1_4, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_y1_4, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_x2_4, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_y2_4, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
-         normal_init(self.WK_x1_5, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y1_5, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_x2_5, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y2_5, 0, 0.001, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_x1_5, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_y1_5, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_x2_5, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_y2_5, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
-         normal_init(self.WK_x1_6, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y1_6, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_x2_6, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y2_6, 0, 0.001, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_x1_6, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_y1_6, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_x2_6, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_y2_6, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
-         normal_init(self.WK_x1_7, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y1_7, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_x2_7, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y2_7, 0, 0.001, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_x1_7, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_y1_7, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_x2_7, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_y2_7, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
-         normal_init(self.WK_x1_8, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y1_8, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_x2_8, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y2_8, 0, 0.001, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_x1_8, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_y1_8, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_x2_8, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WK_y2_8, 0, 0.01, cfg.TRAIN.TRUNCATED)
          # for i in range(9):
          #     normal_init(self.WK_x1[i], 0, 0.001, cfg.TRAIN.TRUNCATED)
          #     normal_init(self.WK_y1[i], 0, 0.001, cfg.TRAIN.TRUNCATED)
@@ -426,10 +433,10 @@ class RelationUnit(nn.Module):
          #     normal_init(self.WK_y2[i], 0, 0.001, cfg.TRAIN.TRUNCATED)
 
         
-         normal_init(self.WQ_x1, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WQ_y1, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WQ_x2, 0, 0.001, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WQ_y2, 0, 0.001, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WQ_x1, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WQ_y1, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WQ_x2, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         normal_init(self.WQ_y2, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
 
 

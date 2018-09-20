@@ -26,7 +26,7 @@ from roi_data_layer.roibatchLoader import roibatchLoader
 from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
 from model.rpn.bbox_transform import clip_boxes
 from model.nms.nms_wrapper import nms
-from model.rpn.bbox_transform import bbox_transform_inv
+from model.rpn.bbox_transform import bbox_transform_inv, bbox_transform_inv_attention
 from model.utils.net_utils import save_net, load_net, vis_detections
 from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
@@ -250,25 +250,33 @@ if __name__ == '__main__':
           box_deltas = bbox_pred.data
           if cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
           # Optionally normalize targets by a precomputed mean and stdev
-            if args.class_agnostic:
-                box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
-                           + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
-                box_deltas = box_deltas.view(1, -1, 4)
-            else:
-                box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
-                           + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
-                box_deltas = box_deltas.view(1, -1, 4 * len(imdb.classes))
+            box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
+                       + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
+            box_deltas = box_deltas.view(1, -1, 4)
+            # if args.class_agnostic:
+            #     box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
+            #                + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
+            #     box_deltas = box_deltas.view(1, -1, 4)
+            # else:
+            #     box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
+            #                + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
+            #     box_deltas = box_deltas.view(1, -1, 4 * len(imdb.classes))
 
-          pred_boxes = bbox_transform_inv(boxes, box_deltas, 1)
+          # pred_boxes = bbox_transform_inv(boxes, box_deltas, 1)
+          pred_boxes = bbox_transform_inv_attention(boxes, box_deltas, 1)
           pred_boxes = clip_boxes(pred_boxes, im_info.data, 1)
       else:
           # Simply repeat the boxes, once for each class
           pred_boxes = np.tile(boxes, (1, scores.shape[1]))
 
+      roi_boxes = boxes / data[1][0][2]
       pred_boxes /= data[1][0][2]
 
       scores = scores.squeeze()
       pred_boxes = pred_boxes.squeeze()
+
+      roi_boxes = roi_boxes.squeeze()
+
       det_toc = time.time()
       detect_time = det_toc - det_tic
       misc_tic = time.time()
@@ -281,18 +289,27 @@ if __name__ == '__main__':
           if inds.numel() > 0:
             cls_scores = scores[:,j][inds]
             _, order = torch.sort(cls_scores, 0, True)
-            if args.class_agnostic:
-              cls_boxes = pred_boxes[inds, :]
-            else:
-              cls_boxes = pred_boxes[inds][:, j * 4:(j + 1) * 4]
+
+            cls_boxes = pred_boxes[inds, :]
+            cls_roi_boxes = roi_boxes[inds, :]
+            # if args.class_agnostic:
+            #   cls_boxes = pred_boxes[inds, :]
+            # else:
+            #   cls_boxes = pred_boxes[inds][:, j * 4:(j + 1) * 4]
             
             cls_dets = torch.cat((cls_boxes, cls_scores.unsqueeze(1)), 1)
+            cls_roi_dets = torch.cat((cls_roi_boxes, cls_scores.unsqueeze(1)), 1)
             # cls_dets = torch.cat((cls_boxes, cls_scores), 1)
             cls_dets = cls_dets[order]
+            cls_roi_dets = cls_roi_dets[order]
+
             keep = nms(cls_dets, cfg.TEST.NMS)
+
             cls_dets = cls_dets[keep.view(-1).long()]
+            cls_roi_dets = cls_roi_dets[keep.view(-1).long()]
             if vis:
-              im2show = vis_detections(im2show, imdb.classes[j], cls_dets.cpu().numpy(), 0.3)
+              im2show = vis_detections(im2show, imdb.classes[j], cls_dets.cpu().numpy(), 0.3, (0,204,0))
+              im2show = vis_detections(im2show, imdb.classes[j], cls_roi_dets.cpu().numpy(), 0.3, ( 0,255, 255))
             all_boxes[j][i] = cls_dets.cpu().numpy()
           else:
             all_boxes[j][i] = empty_array
@@ -317,8 +334,8 @@ if __name__ == '__main__':
       if vis:
           cv2.imwrite('result.png', im2show)
           pdb.set_trace()
-          #cv2.imshow('test', im2show)
-          #cv2.waitKey(0)
+          # cv2.imshow('test', im2show)
+          # cv2.waitKey(0)
 
   with open(det_file, 'wb') as f:
       pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)

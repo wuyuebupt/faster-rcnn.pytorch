@@ -33,7 +33,8 @@ def bbox_transform(ex_rois, gt_rois):
 
     return targets
 
-
+# attention transform
+# dx1 dy1 dx2 dy2
 def bbox_transform_batch_attention(ex_rois, gt_rois):
 
     if ex_rois.dim() == 2:
@@ -84,6 +85,39 @@ def bbox_transform_batch_attention(ex_rois, gt_rois):
     # print (targets)
     # exit()
     return targets
+
+## attention inv
+def bbox_transform_inv_attention(boxes, deltas, batch_size):
+    widths = boxes[:, :, 2] - boxes[:, :, 0] + 1.0
+    heights = boxes[:, :, 3] - boxes[:, :, 1] + 1.0
+    x1 = boxes[:, :, 0] 
+    y1 = boxes[:, :, 1] 
+    x2 = boxes[:, :, 2] 
+    y2 = boxes[:, :, 3] 
+
+    dx1 = deltas[:, :, 0::4]
+    dy1 = deltas[:, :, 1::4]
+    dx2 = deltas[:, :, 2::4]
+    dy2 = deltas[:, :, 3::4]
+
+    pred_x1 = dx1 * widths.unsqueeze(2)  + x1.unsqueeze(2)
+    pred_y1 = dy1 * heights.unsqueeze(2) + y1.unsqueeze(2)
+    pred_x2 = dx2 * widths.unsqueeze(2)  + x2.unsqueeze(2)
+    pred_y2 = dy2 * heights.unsqueeze(2) + y2.unsqueeze(2)
+
+
+    pred_boxes = deltas.clone()
+    # x1
+    pred_boxes[:, :, 0::4] = pred_x1 
+    # y1
+    pred_boxes[:, :, 1::4] = pred_y1 
+    # x2
+    pred_boxes[:, :, 2::4] = pred_x2 
+    # y2
+    pred_boxes[:, :, 3::4] = pred_y2 
+
+    return pred_boxes
+
 
 
 def bbox_transform_batch(ex_rois, gt_rois):
