@@ -259,12 +259,32 @@ class _fasterRCNN(nn.Module):
                 attention_candidates[index, :, :, 3] = rois[:, :, 3] + (rois[:, :, 3] - rois[:, :, 1]) * scale * (i - 1)
                 attention_candidates[index, :, :, 4] = rois[:, :, 4] + (rois[:, :, 4] - rois[:, :, 2]) * scale * (j - 1)
 
-        ## boundary 
-        attention_candidates[:,:,:,1].clamp_(0, img_w)
-        attention_candidates[:,:,:,3].clamp_(0, img_w)
+        ## v1: boundary clamp
+        # attention_candidates[:,:,:,1].clamp_(0, img_w)
+        # attention_candidates[:,:,:,3].clamp_(0, img_w)
 
-        attention_candidates[:,:,:,2].clamp_(0, img_h)
-        attention_candidates[:,:,:,4].clamp_(0, img_h)
+        # attention_candidates[:,:,:,2].clamp_(0, img_h)
+        # attention_candidates[:,:,:,4].clamp_(0, img_h)
+
+
+        ## v2: boundary offset move inside if the boxes is out
+        # calcualte delta
+        offset_x1 = 0 - attention_candidates[:,:,:,1] 
+        offset_x1 = offset_x1.clamp_(0, img_w)
+        attention_candidates[:,:,:,1] = attention_candidates[:,:,:,1] + offset_x1
+
+        offset_y1 = 0 - attention_candidates[:,:,:,2] 
+        offset_y1 = offset_y1.clamp_(0, img_h)
+        attention_candidates[:,:,:,2] = attention_candidates[:,:,:,2] + offset_y1
+
+
+        offset_x2 = attention_candidates[:,:,:,3] - img_w
+        offset_x2 = offset_x2.clamp_(0, img_w)
+        attention_candidates[:,:,:,3] = attention_candidates[:,:,:,3] - offset_x2
+
+        offset_y2 = attention_candidates[:,:,:,4] - img_h 
+        offset_y2 = offset_y2.clamp_(0, img_h)
+        attention_candidates[:,:,:,4] = attention_candidates[:,:,:,4] - offset_y2
 
   
         ## get the delta_x 
