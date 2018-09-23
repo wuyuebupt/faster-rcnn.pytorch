@@ -205,8 +205,9 @@ if __name__ == '__main__':
   cfg.TRAIN.USE_FLIPPED = True
   cfg.USE_GPU_NMS = args.cuda
   # fix blocks
-  cfg.RESNET.FIXED_BLOCKS = 3
-  cfg.RESNET.FIXED_TOPS = True
+  cfg.RESNET.FIXED_BLOCKS = 1
+  cfg.RESNET.FIXED_TOPS = False
+
   
 
 
@@ -330,14 +331,17 @@ if __name__ == '__main__':
       rois, cls_prob, bbox_pred, \
       rpn_loss_cls, rpn_loss_box, \
       RCNN_loss_cls, RCNN_loss_bbox, \
-      rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+      rois_label, \
+      wx1, wy1, wx2, wy2, \
+      dx1, dy1, dx2, dy2, \
+      ox1, oy1, ox2, oy2 = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
 
-      # loss = rpn_loss_cls.mean() + rpn_loss_box.mean() \
-      #      + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
+      loss = rpn_loss_cls.mean() + rpn_loss_box.mean() \
+           + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
 
       # loss = RCNN_loss_bbox.mean()
 
-      loss = RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
+      # loss = RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
 
       loss_temp += loss.data[0]
 

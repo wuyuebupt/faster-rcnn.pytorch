@@ -33,7 +33,8 @@ class _fasterRCNN(nn.Module):
         self.RCNN_roi_pool = _RoIPooling(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
         self.RCNN_roi_align = RoIAlignAvg(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
 
-        self.attention_regression = RelationUnit(2048, 32) 
+        # self.attention_regression = RelationUnit(2048, 32) 
+        self.attention_regression = RelationUnit(512, 32) 
         # self.attention_regression = RelationUnit(2048, 64) 
         # self.attention_regression = RelationUnit(256, 64) 
         # self.attention_regression = RelationUnit(128, 16) 
@@ -120,12 +121,12 @@ class _fasterRCNN(nn.Module):
             pooled_feat_tmp = self.RCNN_roi_align(base_feat, rois_attention_candidates[i,:,:,:].view(-1, 5))
             pooled_feat_tmp = self._head_to_tail(pooled_feat_tmp)
             # v1
-            rois_attention_pooled_feat.append(pooled_feat_tmp)
+            # rois_attention_pooled_feat.append(pooled_feat_tmp)
 
             # v2
-            # pooled_attention_feat = self.RCNN_attention_feat(pooled_feat_tmp)
-            # pooled_attention_feat = self.relu(pooled_attention_feat)
-            # rois_attention_pooled_feat.append(pooled_attention_feat)
+            pooled_attention_feat = self.RCNN_attention_feat(pooled_feat_tmp)
+            pooled_attention_feat = self.relu(pooled_attention_feat)
+            rois_attention_pooled_feat.append(pooled_attention_feat)
         # print (rois_attention_pooled_feat)
         # exit()
 
@@ -136,7 +137,7 @@ class _fasterRCNN(nn.Module):
         # print (rois_attention_candidates.is_cuda)
         # print (rois_attention_pooled_feat.is_cuda)
 
-        bbox_pred, wx1, wy1, wx2, wy2, dx1, ox1 = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat) 
+        bbox_pred, wx1, wy1, wx2, wy2, dx1, dy1, dx2, dy2, ox1, oy1, ox2, oy2 = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat) 
 
         # print (bbox_pred)
         # print (bbox_pred.shape)
@@ -179,7 +180,9 @@ class _fasterRCNN(nn.Module):
         bbox_pred = bbox_pred.view(batch_size, rois.size(1), -1)
 
         # return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label, wx1, dx1, ox1
-        return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label
+        return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label, wx1, wy1, wx2, wy2, dx1, dy1, dx2, dy2, ox1, oy1, ox2, oy2
+        # return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label
+
 
     def _init_weights(self):
         def normal_init(m, mean, stddev, truncated=False):
@@ -201,11 +204,11 @@ class _fasterRCNN(nn.Module):
         
         # init and fix
 
-        # normal_init(self.RCNN_rpn.RPN_Conv, 0, 0.01, cfg.TRAIN.TRUNCATED)
-        # normal_init(self.RCNN_rpn.RPN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
-        # normal_init(self.RCNN_rpn.RPN_bbox_pred, 0, 0.01, cfg.TRAIN.TRUNCATED)
-        # normal_init(self.RCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
-        # normal_init(self.RCNN_bbox_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)
+        normal_init(self.RCNN_rpn.RPN_Conv, 0, 0.01, cfg.TRAIN.TRUNCATED)
+        normal_init(self.RCNN_rpn.RPN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
+        normal_init(self.RCNN_rpn.RPN_bbox_pred, 0, 0.01, cfg.TRAIN.TRUNCATED)
+        normal_init(self.RCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
+        normal_init(self.RCNN_bbox_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)
 
         normal_init(self.RCNN_attention_feat, 0, 0.01, cfg.TRAIN.TRUNCATED)
         # normal_init(self.RCNN_attention_feat, 0, 0.01, cfg.TRAIN.TRUNCATED)
@@ -617,21 +620,28 @@ class RelationUnit(nn.Module):
         delta_x2 = Variable(delta_x2)
         delta_y2 = Variable(delta_y2)
 
-        output_x1 = w_x1 * delta_x1
-        output_y1 = w_y1 * delta_y1
-        output_x2 = w_x2 * delta_x2
-        output_y2 = w_y2 * delta_y2
+
+        output_x1_before =  w_x1 * delta_x1
+        output_y1_before =  w_y1 * delta_y1
+        output_x2_before =  w_x2 * delta_x2
+        output_y2_before =  w_y2 * delta_y2
+        # output_x1_before = 3 * w_x1 * delta_x1
+        # output_y1_before = 3 * w_y1 * delta_y1
+        # output_x2_before = 3 * w_x2 * delta_x2
+        # output_y2_before = 3 * w_y2 * delta_y2
 
         # print (output_x1.shape)        
-        output_x1 = torch.sum(output_x1, -1)
-        output_y1 = torch.sum(output_y1, -1)
-        output_x2 = torch.sum(output_x2, -1)
-        output_y2 = torch.sum(output_y2, -1)
+        output_x1 = torch.sum(output_x1_before, -1)
+        output_y1 = torch.sum(output_y1_before, -1)
+        output_x2 = torch.sum(output_x2_before, -1)
+        output_y2 = torch.sum(output_y2_before, -1)
 
         output_x1 = output_x1.view(output_x1.size(0), 1)
         output_y1 = output_y1.view(output_y1.size(0), 1)
         output_x2 = output_x2.view(output_x2.size(0), 1)
         output_y2 = output_y2.view(output_y2.size(0), 1)
+        # print (output_y2[0,:])
+        # exit()
 
         # print (output_x1.shape)        
         output = torch.cat((output_x1, output_y1,output_x2, output_y2), dim=1)
@@ -667,7 +677,6 @@ class RelationUnit(nn.Module):
 
         # output = torch.sum(output,-2)
         # return output
-        return output, w_x1, w_y1, w_x2, w_y2, delta_x1, output_x1
-
+        return output, w_x1, w_y1, w_x2, w_y2, delta_x1, delta_y1, delta_x2, delta_y2, output_x1_before,  output_y1_before, output_x2_before, output_y2_before
 
 

@@ -226,6 +226,14 @@ if __name__ == '__main__':
   _t = {'im_detect': time.time(), 'misc': time.time()}
   det_file = os.path.join(output_dir, 'detections.pkl')
 
+  ## evaluate results
+  # with open(det_file, 'rb') as f:
+  #     all_boxes = pickle.load(f)
+  # print('Evaluating detections')
+  # imdb.evaluate_detections(all_boxes, output_dir)
+  # exit()
+
+
   fasterRCNN.eval()
   empty_array = np.transpose(np.array([[],[],[],[],[]]), (1,0))
   for i in range(num_images):
@@ -241,7 +249,13 @@ if __name__ == '__main__':
       rpn_loss_cls, rpn_loss_box, \
       RCNN_loss_cls, RCNN_loss_bbox, \
       rois_label, \
-      wx1, dx1, ox1 = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+      wx1, wy1, wx2, wy2, \
+      dx1, dy1, dx2, dy2, \
+      ox1, oy1, ox2, oy2 = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+      # print (oy2[0,:])
+      # print (ox2[0,:])
+      # print (bbox_pred[0,0,:])
+      # wx1, dx1, ox1 = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
       # rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
 
       scores = cls_prob.data
@@ -282,7 +296,7 @@ if __name__ == '__main__':
       # wx1 = wx1.squeeze()
       # dx1 = dx1.squeeze()
       # ox1 = ox1.view(ox1.size(0),1)
-      print (ox1.shape)
+      #print (ox1.shape)
       # ox1 = ox1.squeeze()
       # print (ox1.shape)
 
@@ -301,10 +315,25 @@ if __name__ == '__main__':
 
             cls_boxes = pred_boxes[inds, :]
             cls_roi_boxes = roi_boxes[inds, :]
-            roi_wx1 = wx1[inds, :]
-            roi_dx1 = dx1[inds, :]
-            roi_ox1 = ox1[inds, :]
-            roi_box_deltas = box_deltas[inds, :]
+            if vis:
+                roi_wx1 = wx1[inds, :]
+                roi_wy1 = wy1[inds, :]
+                roi_wx2 = wx2[inds, :]
+                roi_wy2 = wy2[inds, :]
+
+                roi_dx1 = dx1[inds, :]
+                roi_dy1 = dy1[inds, :]
+                roi_dx2 = dx2[inds, :]
+                roi_dy2 = dy2[inds, :]
+
+                roi_ox1 = ox1[inds, :]
+                roi_oy1 = oy1[inds, :]
+                roi_ox2 = ox2[inds, :]
+                roi_oy2 = oy2[inds, :]
+
+                # roi_dx1 = dx1[inds, :]
+                # roi_ox1 = ox1[inds, :]
+                roi_box_deltas = box_deltas[inds, :]
 
             # if args.class_agnostic:
             #   cls_boxes = pred_boxes[inds, :]
@@ -316,29 +345,75 @@ if __name__ == '__main__':
             # cls_dets = torch.cat((cls_boxes, cls_scores), 1)
             cls_dets = cls_dets[order]
             cls_roi_dets = cls_roi_dets[order]
-            roi_wx1 = roi_wx1[order]
-            roi_dx1 = roi_dx1[order]
-            roi_ox1 = roi_ox1[order]
-            roi_box_deltas = roi_box_deltas[order]
+            if vis:
+                roi_wx1 = roi_wx1[order]
+                roi_wy1 = roi_wy1[order]
+                roi_wx2 = roi_wx2[order]
+                roi_wy2 = roi_wy2[order]
+
+                roi_dx1 = roi_dx1[order]
+                roi_dy1 = roi_dy1[order]
+                roi_dx2 = roi_dx2[order]
+                roi_dy2 = roi_dy2[order]
+
+                roi_ox1 = roi_ox1[order]
+                roi_oy1 = roi_oy1[order]
+                roi_ox2 = roi_ox2[order]
+                roi_oy2 = roi_oy2[order]
+                # roi_dx1 = roi_dx1[order]
+                # roi_ox1 = roi_ox1[order]
+                roi_box_deltas = roi_box_deltas[order]
 
             keep = nms(cls_dets, cfg.TEST.NMS)
 
             cls_dets = cls_dets[keep.view(-1).long()]
             cls_roi_dets = cls_roi_dets[keep.view(-1).long()]
-            roi_wx1 = roi_wx1[keep.view(-1).long()]
-            roi_dx1 = roi_dx1[keep.view(-1).long()]
-            roi_ox1 = roi_ox1[keep.view(-1).long()]
-            roi_box_deltas = roi_box_deltas[keep.view(-1).long()]
+            if vis:
+                roi_wx1 = roi_wx1[keep.view(-1).long()]
+                roi_wy1 = roi_wy1[keep.view(-1).long()]
+                roi_wx2 = roi_wx2[keep.view(-1).long()]
+                roi_wy2 = roi_wy2[keep.view(-1).long()]
+
+                roi_dx1 = roi_dx1[keep.view(-1).long()]
+                roi_dy1 = roi_dy1[keep.view(-1).long()]
+                roi_dx2 = roi_dx2[keep.view(-1).long()]
+                roi_dy2 = roi_dy2[keep.view(-1).long()]
+
+                roi_ox1 = roi_ox1[keep.view(-1).long()]
+                roi_oy1 = roi_oy1[keep.view(-1).long()]
+                roi_ox2 = roi_ox2[keep.view(-1).long()]
+                roi_oy2 = roi_oy2[keep.view(-1).long()]
+                # roi_dx1 = roi_dx1[keep.view(-1).long()]
+                # roi_ox1 = roi_ox1[keep.view(-1).long()]
+                roi_box_deltas = roi_box_deltas[keep.view(-1).long()]
             if vis:
               im2show = vis_detections(im2show, imdb.classes[j], cls_dets.cpu().numpy(), 0.3, (0,204,0))
               im2show = vis_detections(im2show, imdb.classes[j], cls_roi_dets.cpu().numpy(), 0.3, ( 0,255, 255))
+              
               print (j)
-              print (roi_wx1)
-              print (roi_dx1)
-              print (roi_ox1)
-              print (roi_box_deltas)
+              print ('x1', roi_wx1)
+              print ('y1', roi_wy1)
+              print ('x2', roi_wx2)
+              print ('y2', roi_wy2)
+
+              # print ('dx1', roi_dx1)
+              # print ('dy1', roi_dy1)
+              # print ('dx2', roi_dx2)
+              # print ('dy2', roi_dy2)
+
+              print ('ox1', roi_ox1)
+              print ('oy1', roi_oy1)
+              print ('ox2', roi_ox2)
+              print ('oy2', roi_oy2)
               print (cls_dets)
-              print (cls_roi_dets)
+
+              # print (j)
+              # print (roi_wx1)
+              # print (roi_dx1)
+              # print (roi_ox1)
+              print (roi_box_deltas)
+              # print (cls_dets)
+              # print (cls_roi_dets)
             all_boxes[j][i] = cls_dets.cpu().numpy()
           else:
             all_boxes[j][i] = empty_array
@@ -369,8 +444,9 @@ if __name__ == '__main__':
   with open(det_file, 'wb') as f:
       pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
 
-  # print('Evaluating detections')
-  # imdb.evaluate_detections(all_boxes, output_dir)
+  
+  print('Evaluating detections')
+  imdb.evaluate_detections(all_boxes, output_dir)
 
   end = time.time()
   print("test time: %0.4fs" % (end - start))

@@ -219,8 +219,8 @@ def resnet152(pretrained=False):
 
 class resnet(_fasterRCNN):
   def __init__(self, classes, num_layers=101, pretrained=False, class_agnostic=False):
-    # self.model_path = 'data/pretrained_model/resnet101_caffe.pth'
-    self.model_path = 'data/pretrained_model/faster_rcnn_1_10_1251.pth'
+    self.model_path = 'data/pretrained_model/resnet101_caffe.pth'
+    # self.model_path = 'data/pretrained_model/faster_rcnn_1_10_1251.pth'
     self.dout_base_model = 1024
     self.pretrained = pretrained
     self.class_agnostic = class_agnostic
@@ -230,10 +230,10 @@ class resnet(_fasterRCNN):
   def _init_modules(self):
     resnet = resnet101()
 
-    # if self.pretrained == True:
-    #   print("Loading pretrained weights from %s" %(self.model_path))
-    #   state_dict = torch.load(self.model_path)
-    #   resnet.load_state_dict({k:v for k,v in state_dict.items() if k in resnet.state_dict()})
+    if self.pretrained == True:
+      print("Loading pretrained weights from %s" %(self.model_path))
+      state_dict = torch.load(self.model_path)
+      resnet.load_state_dict({k:v for k,v in state_dict.items() if k in resnet.state_dict()})
 
  
 
@@ -250,12 +250,13 @@ class resnet(_fasterRCNN):
       self.RCNN_bbox_pred = nn.Linear(2048, 4 * self.n_classes)
 
     # self.RCNN_attention_feat = nn.Linear(2048, 256)
-    self.RCNN_attention_feat = nn.Linear(2048, 128)
+    self.RCNN_attention_feat = nn.Linear(2048, 512)
     self.relu = nn.ReLU(inplace=True)
     # self.RCNN_attention_feat = nn.Linear(2048, 1024)
     
 
-    if self.pretrained == True:
+    # if self.pretrained == True:
+    if False:
       print("Loading pretrained weights from %s" %(self.model_path))
       state_dict = torch.load(self.model_path)['model']
       # print ([k for k,v in state_dict.items()])
