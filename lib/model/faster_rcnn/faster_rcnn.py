@@ -640,7 +640,7 @@ class RelationUnit(nn.Module):
         delta_x2 = Variable(delta_x2)
         delta_y2 = Variable(delta_y2)
 
-
+        ## 70.8
         output_x1_before =  w_x1 * delta_x1
         output_y1_before =  w_y1 * delta_y1
         output_x2_before =  w_x2 * delta_x2
