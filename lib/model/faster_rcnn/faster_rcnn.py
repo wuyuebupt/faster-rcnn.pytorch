@@ -33,8 +33,11 @@ class _fasterRCNN(nn.Module):
         self.RCNN_roi_pool = _RoIPooling(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
         self.RCNN_roi_align = RoIAlignAvg(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
 
+        # new linear prediction
+        self.attention_regression = RelationUnit(512, 1) 
+
         # self.attention_regression = RelationUnit(2048, 32) 
-        self.attention_regression = RelationUnit(512, 32) 
+        # self.attention_regression = RelationUnit(512, 32) 
         # self.attention_regression = RelationUnit(2048, 64) 
         # self.attention_regression = RelationUnit(256, 64) 
         # self.attention_regression = RelationUnit(128, 16) 
@@ -371,11 +374,6 @@ class RelationUnit(nn.Module):
         self.WK_x2_8 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
         self.WK_y2_8 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
 
-        self.WK_x1_9 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_y1_9 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_x2_9 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_y2_9 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-
 
         # self.WK_x1 = []
         # self.WK_y1 = []
@@ -391,6 +389,17 @@ class RelationUnit(nn.Module):
         self.WQ_y1 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias)
         self.WQ_x2 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias)
         self.WQ_y2 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias)
+
+        ## bbox regression
+        self.bbox_regress_0 = nn.Linear(appearance_feature_dim, 4, bias=bias)
+        self.bbox_regress_1 = nn.Linear(appearance_feature_dim, 4, bias=bias)
+        self.bbox_regress_2 = nn.Linear(appearance_feature_dim, 4, bias=bias)
+        self.bbox_regress_3 = nn.Linear(appearance_feature_dim, 4, bias=bias)
+        self.bbox_regress_4 = nn.Linear(appearance_feature_dim, 4, bias=bias)
+        self.bbox_regress_5 = nn.Linear(appearance_feature_dim, 4, bias=bias)
+        self.bbox_regress_6 = nn.Linear(appearance_feature_dim, 4, bias=bias)
+        self.bbox_regress_7 = nn.Linear(appearance_feature_dim, 4, bias=bias)
+        self.bbox_regress_8 = nn.Linear(appearance_feature_dim, 4, bias=bias)
 
         # self.WV = nn.Linear(appearance_feature_dim, key_feature_dim, bias=False)
         self.relu = nn.ReLU(inplace=True)
@@ -462,6 +471,17 @@ class RelationUnit(nn.Module):
          normal_init(self.WQ_x2, 0, 0.01, cfg.TRAIN.TRUNCATED)
          normal_init(self.WQ_y2, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
+         normal_init(self.bbox_regress_0, 0, 0.001, cfg.TRAIN.TRUNCATED)
+         normal_init(self.bbox_regress_1, 0, 0.001, cfg.TRAIN.TRUNCATED)
+         normal_init(self.bbox_regress_2, 0, 0.001, cfg.TRAIN.TRUNCATED)
+         normal_init(self.bbox_regress_3, 0, 0.001, cfg.TRAIN.TRUNCATED)
+         normal_init(self.bbox_regress_4, 0, 0.001, cfg.TRAIN.TRUNCATED)
+         normal_init(self.bbox_regress_5, 0, 0.001, cfg.TRAIN.TRUNCATED)
+         normal_init(self.bbox_regress_6, 0, 0.001, cfg.TRAIN.TRUNCATED)
+         normal_init(self.bbox_regress_7, 0, 0.001, cfg.TRAIN.TRUNCATED)
+         normal_init(self.bbox_regress_8, 0, 0.001, cfg.TRAIN.TRUNCATED)
+
+
 
 
     def forward(self, rois, delta_rois, features):
@@ -530,6 +550,28 @@ class RelationUnit(nn.Module):
         wk_y2_8 = self.WK_y2_8(features[8])
         # print (wk_y2_8.shape)
 
+        ## bbox regression
+        offset_0 = self.bbox_regress_0(features[0])
+        offset_1 = self.bbox_regress_0(features[1])
+        offset_2 = self.bbox_regress_0(features[2])
+        offset_3 = self.bbox_regress_0(features[3])
+        offset_4 = self.bbox_regress_0(features[4])
+        offset_5 = self.bbox_regress_0(features[5])
+        offset_6 = self.bbox_regress_0(features[6])
+        offset_7 = self.bbox_regress_0(features[7])
+        offset_8 = self.bbox_regress_0(features[8])
+        # offset_0 = Variable(offset_0)
+        # offset_1 = Variable(offset_1)
+        # offset_2 = Variable(offset_2)
+        # offset_3 = Variable(offset_3)
+        # offset_4 = Variable(offset_4)
+        # offset_5 = Variable(offset_5)
+        # offset_6 = Variable(offset_6)
+        # offset_7 = Variable(offset_7)
+        # offset_8 = Variable(offset_8)
+        # print (offset_8.shape)
+        ## end bbox regression
+
 
         wk_x1_0 = wk_x1_0.view(N, 1, self.dim_k) 
         wk_x1_1 = wk_x1_1.view(N, 1, self.dim_k) 
@@ -586,32 +628,53 @@ class RelationUnit(nn.Module):
 
         # print (wk_x1.shape)
 
+
+        ## old attention
         wq_x1 = wq_x1.view(N, 1, self.dim_k) 
         wq_y1 = wq_y1.view(N, 1, self.dim_k) 
         wq_x2 = wq_x2.view(N, 1, self.dim_k) 
         wq_y2 = wq_y2.view(N, 1, self.dim_k) 
 
-        scale_dot_x1 = torch.sum((wk_x1 * wq_x1), -1)
-        scale_dot_x1 = scale_dot_x1 / np.sqrt(self.dim_k)
+        # scale_dot_x1 = torch.sum((wk_x1 * wq_x1), -1)
+        # scale_dot_x1 = scale_dot_x1 / np.sqrt(self.dim_k)
 
-        scale_dot_y1 = torch.sum((wk_y1 * wq_y1), -1)
-        scale_dot_y1 = scale_dot_y1 / np.sqrt(self.dim_k)
+        # scale_dot_y1 = torch.sum((wk_y1 * wq_y1), -1)
+        # scale_dot_y1 = scale_dot_y1 / np.sqrt(self.dim_k)
 
-        scale_dot_x2 = torch.sum((wk_x2 * wq_x2), -1)
-        scale_dot_x2 = scale_dot_x2 / np.sqrt(self.dim_k)
+        # scale_dot_x2 = torch.sum((wk_x2 * wq_x2), -1)
+        # scale_dot_x2 = scale_dot_x2 / np.sqrt(self.dim_k)
 
-        scale_dot_y2 = torch.sum((wk_y2 * wq_y2), -1)
-        scale_dot_y2 = scale_dot_y2 / np.sqrt(self.dim_k)
+        # scale_dot_y2 = torch.sum((wk_y2 * wq_y2), -1)
+        # scale_dot_y2 = scale_dot_y2 / np.sqrt(self.dim_k)
+        # # print (scale_dot_x1.shape)
+        # # print (scale_dot_y1.shape)
+        # # print (scale_dot_x2.shape)
+        # # print (scale_dot_y2.shape)
+
+        # w_x1 = torch.nn.Softmax(dim=1)(scale_dot_x1)
+        # w_y1 = torch.nn.Softmax(dim=1)(scale_dot_y1)
+        # w_x2 = torch.nn.Softmax(dim=1)(scale_dot_x2)
+        # w_y2 = torch.nn.Softmax(dim=1)(scale_dot_y2)
+        ## end old attention
+        ## new predict weight from features
+        scale_dot_x1 = wk_x1 
         # print (scale_dot_x1.shape)
-        # print (scale_dot_y1.shape)
-        # print (scale_dot_x2.shape)
-        # print (scale_dot_y2.shape)
+        scale_dot_y1 = wk_y1 
+        scale_dot_x2 = wk_x2 
+        scale_dot_y2 = wk_y2 
 
         w_x1 = torch.nn.Softmax(dim=1)(scale_dot_x1)
         w_y1 = torch.nn.Softmax(dim=1)(scale_dot_y1)
         w_x2 = torch.nn.Softmax(dim=1)(scale_dot_x2)
         w_y2 = torch.nn.Softmax(dim=1)(scale_dot_y2)
+        w_x1 = w_x1.view(N, w_x1.size(1)* w_x1.size(2)) 
+        w_y1 = w_y1.view(N, w_y1.size(1)* w_y1.size(2)) 
+        w_x2 = w_x2.view(N, w_x2.size(1)* w_x2.size(2)) 
+        w_y2 = w_y2.view(N, w_y2.size(1)* w_y2.size(2)) 
+        ## end new predict weight from features
+       
         # print (w_x1.shape)
+        # exit()
         # print (w_x1)
 
         # generate the results
@@ -621,30 +684,59 @@ class RelationUnit(nn.Module):
         ###
         # delta_rois_8 = delta_rois.new(8, delta_rois.size(1), delta_rois.size(2)).zero_()
         # delta_rois_8 = delta_rois.new(9, delta_rois.size(1), delta_rois.size(2)).zero_()
-        delta_rois_8 = delta_rois
+        # print (delta_rois)
+        # exit()
+        delta_rois_8 = delta_rois[:,:,1:5]
         # delta_rois_8[0:4, :,:] = delta_rois[0:4,:,:]
         # delta_rois_8[4:8, :,:] = delta_rois[5:9,:,:]
         
         # print (delta_rois_8.shape)
+        ## predicted movement for all 8 boxes 
+        delta_rois_8 = Variable(delta_rois_8)
+        delta_rois_8[0,:,:] = delta_rois_8[0,:,:] + offset_0
+        delta_rois_8[1,:,:] = delta_rois_8[1,:,:] + offset_1
+        delta_rois_8[2,:,:] = delta_rois_8[2,:,:] + offset_2
+        delta_rois_8[3,:,:] = delta_rois_8[3,:,:] + offset_3
+        delta_rois_8[4,:,:] = delta_rois_8[4,:,:] + offset_4
+        delta_rois_8[5,:,:] = delta_rois_8[5,:,:] + offset_5
+        delta_rois_8[6,:,:] = delta_rois_8[6,:,:] + offset_6
+        delta_rois_8[7,:,:] = delta_rois_8[7,:,:] + offset_7
+        delta_rois_8[8,:,:] = delta_rois_8[8,:,:] + offset_8
+        # print (delta_rois_8.shape)
+        # exit()
         # print (delta_rois_8)
+        # exit()
         
         # output the target
-        delta_x1 = torch.t(delta_rois_8[:,:,1])
-        delta_y1 = torch.t(delta_rois_8[:,:,2])
-        delta_x2 = torch.t(delta_rois_8[:,:,3])
-        delta_y2 = torch.t(delta_rois_8[:,:,4])
+        delta_x1 = torch.t(delta_rois_8[:,:,0])
+        delta_y1 = torch.t(delta_rois_8[:,:,1])
+        delta_x2 = torch.t(delta_rois_8[:,:,2])
+        delta_y2 = torch.t(delta_rois_8[:,:,3])
         # print (delta_x1.shape)
         # print (delta_x1)
-        delta_x1 = Variable(delta_x1)
-        delta_y1 = Variable(delta_y1)
-        delta_x2 = Variable(delta_x2)
-        delta_y2 = Variable(delta_y2)
+        # delta_x1 = Variable(delta_x1)
+        # delta_y1 = Variable(delta_y1)
+        # delta_x2 = Variable(delta_x2)
+        # delta_y2 = Variable(delta_y2)
 
-        ## 70.8
-        output_x1_before =  w_x1 * delta_x1
-        output_y1_before =  w_y1 * delta_y1
-        output_x2_before =  w_x2 * delta_x2
-        output_y2_before =  w_y2 * delta_y2
+        ##
+        # print (delta_x1.shape)
+        # print (w_x1.shape)
+        
+
+        ##  
+        output_x1_before =  w_x1 * (delta_x1)
+        output_y1_before =  w_y1 * (delta_y1)
+        output_x2_before =  w_x2 * (delta_x2)
+        output_y2_before =  w_y2 * (delta_y2)
+
+        ## old delta
+        # output_x1_before =  w_x1 * delta_x1
+        # output_y1_before =  w_y1 * delta_y1
+        # output_x2_before =  w_x2 * delta_x2
+        # output_y2_before =  w_y2 * delta_y2
+        ## end old delta
+
         # output_x1_before = 3 * w_x1 * delta_x1
         # output_y1_before = 3 * w_y1 * delta_y1
         # output_x2_before = 3 * w_x2 * delta_x2

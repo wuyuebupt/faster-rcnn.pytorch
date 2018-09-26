@@ -338,6 +338,7 @@ if __name__ == '__main__':
 
       loss = rpn_loss_cls.mean() + rpn_loss_box.mean() \
            + RCNN_loss_cls.mean() + 10 * RCNN_loss_bbox.mean()
+      #      + RCNN_loss_cls.mean() +  RCNN_loss_bbox.mean()
       #      + RCNN_loss_cls.mean() + 5 * RCNN_loss_bbox.mean()
       #      + RCNN_loss_cls.mean() + 3 * RCNN_loss_bbox.mean()
       #      + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
