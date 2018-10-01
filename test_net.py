@@ -390,28 +390,28 @@ if __name__ == '__main__':
               im2show = vis_detections(im2show, imdb.classes[j], cls_dets.cpu().numpy(), 0.3, (0,204,0))
               im2show = vis_detections(im2show, imdb.classes[j], cls_roi_dets.cpu().numpy(), 0.3, ( 0,255, 255))
               
-              print (j)
-              print ('x1', roi_wx1)
-              print ('y1', roi_wy1)
-              print ('x2', roi_wx2)
-              print ('y2', roi_wy2)
+              # print (j)
+              # print ('x1', roi_wx1)
+              # print ('y1', roi_wy1)
+              # print ('x2', roi_wx2)
+              # print ('y2', roi_wy2)
 
-              # print ('dx1', roi_dx1)
-              # print ('dy1', roi_dy1)
-              # print ('dx2', roi_dx2)
-              # print ('dy2', roi_dy2)
+              # # print ('dx1', roi_dx1)
+              # # print ('dy1', roi_dy1)
+              # # print ('dx2', roi_dx2)
+              # # print ('dy2', roi_dy2)
 
-              print ('ox1', roi_ox1)
-              print ('oy1', roi_oy1)
-              print ('ox2', roi_ox2)
-              print ('oy2', roi_oy2)
-              print (cls_dets)
+              # print ('ox1', roi_ox1)
+              # print ('oy1', roi_oy1)
+              # print ('ox2', roi_ox2)
+              # print ('oy2', roi_oy2)
+              # print (cls_dets)
 
               # print (j)
               # print (roi_wx1)
               # print (roi_dx1)
               # print (roi_ox1)
-              print (roi_box_deltas)
+              # print (roi_box_deltas)
               # print (cls_dets)
               # print (cls_roi_dets)
             all_boxes[j][i] = cls_dets.cpu().numpy()
@@ -436,8 +436,12 @@ if __name__ == '__main__':
       sys.stdout.flush()
 
       if vis:
-          cv2.imwrite('result.png', im2show)
-          pdb.set_trace()
+          output_file = 'logs/testOutput/{:05d}.png'.format(i)
+          cv2.imwrite(output_file, im2show)
+
+          # cv2.imwrite('result.png', im2show)
+          # pdb.set_trace()
+
           # cv2.imshow('test', im2show)
           # cv2.waitKey(0)
 
