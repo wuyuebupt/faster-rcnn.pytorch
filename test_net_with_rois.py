@@ -237,11 +237,11 @@ if __name__ == '__main__':
   det_file_ious = os.path.join(output_dir, 'detections_ious.pkl')
 
   ### evaluate results
-  # with open(det_file, 'rb') as f:
-  #     all_boxes = pickle.load(f)
-  # print('Evaluating detections')
-  # imdb.evaluate_detections(all_boxes, output_dir)
-  # exit()
+  with open(det_file, 'rb') as f:
+      all_boxes = pickle.load(f)
+  print('Evaluating detections')
+  imdb.evaluate_detections(all_boxes, output_dir)
+  exit()
   ###
 
 
@@ -452,9 +452,13 @@ if __name__ == '__main__':
       # get overlaps
       bboxes_all_classes = []
       bboxes_rois_all_classes = []
+      classes_pred = []
       for j in xrange(1, imdb.num_classes):
           bboxes_all_classes.extend(all_boxes[j][i])
           bboxes_rois_all_classes.extend(all_boxes_rois[j][i])
+          classes_pred.extend([j for tmp in range(len(all_boxes[j][i]))])
+      # print (classes_pred)
+      # exit()
 
       # print (bboxes_all_classes)
       bboxes_all = np.array(bboxes_all_classes)
@@ -482,6 +486,7 @@ if __name__ == '__main__':
       ## gt boxes 1 x K x 4
       overlaps = bbox_overlaps_batch(overlap_boxes, gt_boxes)
       overlaps_rois = bbox_overlaps_batch(overlap_boxes_rois, gt_boxes)
+      # print (gt_boxes)
 
       ## overlaps N x K
       # print (overlaps)
@@ -492,7 +497,7 @@ if __name__ == '__main__':
       # print (max_overlaps.shape)
       # print (gt_assignment)
       ## 
-      threshold = 0.5
+      threshold = 0.0
       above_thres_inds = torch.nonzero(max_overlaps[0] >= threshold).view(-1)
       above_thres_inds = torch.nonzero(max_overlaps[0] >= threshold).view(-1)
       # print (above_thres_inds.shape)
@@ -522,10 +527,17 @@ if __name__ == '__main__':
           # print (overlaps_rois[0][keep_inds[i]][0, gt_assignment[0][keep_inds][i].data[0]])
           pred_iou = overlaps[0][keep_inds[k]][0, gt_assignment[0][keep_inds][k].data[0]].data[0]
           roi_iou  = overlaps_rois[0][keep_inds[k]][0, gt_assignment[0][keep_inds][k].data[0]].data[0]
-          pred_class = bboxes_all[keep_inds[k]][4]
+
+          pred_score = bboxes_all[keep_inds[k]][4]
+          pred_class = classes_pred[int(keep_inds[k].data[0])]
+
           # print (pred_iou, roi_iou)
           # print (roi_iou, pred_iou, pred_class, ) 
-          iou_pairs.append([roi_iou, pred_iou, pred_class]) 
+          k_bbox = overlap_boxes[keep_inds[k]].data.cpu().numpy()
+          k_roi  = overlap_boxes_rois[keep_inds[k]].data.cpu().numpy()
+          k_gt   = gt_boxes[0, gt_assignment[0][keep_inds][k].data[0]].data.cpu().numpy()
+          # print (k_bbox, k_roi, k_gt)
+          iou_pairs.append([roi_iou, pred_iou, pred_score, pred_class, k_bbox, k_roi, k_gt]) 
           # over_i = overlaps[0][keep# _inds[i]][0, gt_assignment[0][keep_inds][i].data[0]]
           # print (over_i[0, gt_assignment[0][keep_inds][i].data[0]])
 
@@ -570,8 +582,6 @@ if __name__ == '__main__':
   with open(det_file_ious, 'wb') as f:
       pickle.dump( iou_pairs, f, pickle.HIGHEST_PROTOCOL)
 
-  exit()
-  
   print('Evaluating detections')
   imdb.evaluate_detections(all_boxes, output_dir)
   # imdb.evaluate_detections(all_boxes_rois, output_dir)

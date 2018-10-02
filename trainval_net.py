@@ -337,7 +337,7 @@ if __name__ == '__main__':
       ox1, oy1, ox2, oy2 = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
 
       loss = rpn_loss_cls.mean() + rpn_loss_box.mean() \
-           + RCNN_loss_cls.mean() + 20 * RCNN_loss_bbox.mean()
+           + RCNN_loss_cls.mean() + 10 * RCNN_loss_bbox.mean()
       #      + RCNN_loss_cls.mean() + 15 * RCNN_loss_bbox.mean()
       #      + RCNN_loss_cls.mean() + 10 * RCNN_loss_bbox.mean()
       #      + RCNN_loss_cls.mean() +  RCNN_loss_bbox.mean()
