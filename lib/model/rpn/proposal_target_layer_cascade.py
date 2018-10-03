@@ -48,13 +48,14 @@ class _ProposalTargetLayer(nn.Module):
         fg_rois_per_image = 1 if fg_rois_per_image == 0 else fg_rois_per_image
 
         ## come here again -> sample and generate the regression target 
-        labels, rois, bbox_targets, bbox_inside_weights = self._sample_rois_pytorch(
+        # labels, rois, bbox_targets, bbox_inside_weights = self._sample_rois_pytorch(
+        labels, rois, bbox_targets, bbox_inside_weights, gt_rois = self._sample_rois_pytorch(
             all_rois, gt_boxes, fg_rois_per_image,
             rois_per_image, self._num_classes)
 
         bbox_outside_weights = (bbox_inside_weights > 0).float()
 
-        return rois, labels, bbox_targets, bbox_inside_weights, bbox_outside_weights
+        return rois, labels, bbox_targets, bbox_inside_weights, bbox_outside_weights, gt_rois
 
     def backward(self, top, propagate_down, bottom):
         """This layer does not propagate gradients."""
@@ -144,6 +145,7 @@ class _ProposalTargetLayer(nn.Module):
         labels_batch = labels.new(batch_size, rois_per_image).zero_()
         rois_batch  = all_rois.new(batch_size, rois_per_image, 5).zero_()
         gt_rois_batch = all_rois.new(batch_size, rois_per_image, 5).zero_()
+        gt_rois = all_rois.new(batch_size, rois_per_image, 5).zero_()
         # Guard against the case when an image has fewer than max_fg_rois_per_image
         # foreground RoIs
         for i in range(batch_size):
@@ -218,4 +220,8 @@ class _ProposalTargetLayer(nn.Module):
         bbox_targets, bbox_inside_weights = \
                 self._get_bbox_regression_labels_pytorch(bbox_target_data, labels_batch, num_classes)
 
-        return labels_batch, rois_batch, bbox_targets, bbox_inside_weights
+        # permute the column order
+        gt_rois[:,:,0] = rois_batch[:,:,0]
+        gt_rois[:,:,1:5] = gt_rois_batch[:,:,:4]
+
+        return labels_batch, rois_batch, bbox_targets, bbox_inside_weights, gt_rois
