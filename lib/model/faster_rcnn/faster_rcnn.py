@@ -16,6 +16,9 @@ import time
 import pdb
 from model.utils.net_utils import _smooth_l1_loss, _crop_pool_layer, _affine_grid_gen, _affine_theta
 
+from torch.nn.parameter import Parameter
+import math
+
 class _fasterRCNN(nn.Module):
     """ faster RCNN """
     def __init__(self, classes, class_agnostic):
@@ -140,7 +143,8 @@ class _fasterRCNN(nn.Module):
         # print (rois_attention_candidates.is_cuda)
         # print (rois_attention_pooled_feat.is_cuda)
 
-        bbox_pred, wx1, wy1, wx2, wy2, dx1, dy1, dx2, dy2, ox1, oy1, ox2, oy2 = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat) 
+        # bbox_pred, wx1, wy1, wx2, wy2, dx1, dy1, dx2, dy2, ox1, oy1, ox2, oy2 = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat) 
+        bbox_pred = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat) 
 
         # print (bbox_pred)
         # print (bbox_pred.shape)
@@ -183,7 +187,8 @@ class _fasterRCNN(nn.Module):
         bbox_pred = bbox_pred.view(batch_size, rois.size(1), -1)
 
         # return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label, wx1, dx1, ox1
-        return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label, wx1, wy1, wx2, wy2, dx1, dy1, dx2, dy2, ox1, oy1, ox2, oy2
+        # return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label, wx1, wy1, wx2, wy2, dx1, dy1, dx2, dy2, ox1, oy1, ox2, oy2
+        return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label
         # return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label
 
 
@@ -326,80 +331,94 @@ class RelationUnit(nn.Module):
     def __init__(self, appearance_feature_dim=2048, key_feature_dim = 64):
         super(RelationUnit, self).__init__()
         self.dim_k = key_feature_dim
+        self.dim_feat = appearance_feature_dim
 
         # bias = True
         bias = False
-        self.WK_x1_0 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_y1_0 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_x2_0 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_y2_0 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        
+        ## neighbors number: 9
+        # self.WK_x1 = Parameter(torch.Tensor(appearance_feature_dim, key_feature_dim, 9))
+        # self.WK_y1 = Parameter(torch.Tensor(appearance_feature_dim, key_feature_dim, 9))
+        # self.WK_x2 = Parameter(torch.Tensor(appearance_feature_dim, key_feature_dim, 9))
+        # self.WK_y2 = Parameter(torch.Tensor(appearance_feature_dim, key_feature_dim, 9))
+        self.alpha_w = Parameter(torch.Tensor(9, key_feature_dim, appearance_feature_dim, 4))
+        # self.WK_y1 = Parameter(torch.Tensor(9, key_feature_dim, appearance_feature_dim))
+        # self.WK_x2 = Parameter(torch.Tensor(9, key_feature_dim, appearance_feature_dim))
+        # self.WK_y2 = Parameter(torch.Tensor(9, key_feature_dim, appearance_feature_dim))
 
-        self.WK_x1_1 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_y1_1 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_x2_1 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_y2_1 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-
-        self.WK_x1_2 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_y1_2 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_x2_2 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_y2_2 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-
-        self.WK_x1_3 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_y1_3 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_x2_3 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_y2_3 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-
-        self.WK_x1_4 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_y1_4 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_x2_4 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_y2_4 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-
-        self.WK_x1_5 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_y1_5 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_x2_5 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_y2_5 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-
-        self.WK_x1_6 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_y1_6 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_x2_6 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_y2_6 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-
-        self.WK_x1_7 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_y1_7 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_x2_7 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_y2_7 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-
-        self.WK_x1_8 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_y1_8 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_x2_8 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
-        self.WK_y2_8 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # print (self.alpha_w.shape)
+        # exit()
+        ## init weigths 
+        # stdv = 1. / math.sqrt(self.WK_x1.size(1))
+        # self.WK_x1.data.uniform_(-stdv, stdv)
 
 
-        # self.WK_x1 = []
-        # self.WK_y1 = []
-        # self.WK_x2 = []
-        # self.WK_y2 = []
-        # for i in range(9):
-        #     self.WK_x1.append(nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias))
-        #     self.WK_y1.append(nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias))
-        #     self.WK_x2.append(nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias))
-        #     self.WK_y2.append(nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias))
+        # self.WK_x1_0 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_y1_0 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_x2_0 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_y2_0 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
 
-        self.WQ_x1 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias)
-        self.WQ_y1 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias)
-        self.WQ_x2 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias)
-        self.WQ_y2 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias)
+        # self.WK_x1_1 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_y1_1 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_x2_1 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_y2_1 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+
+        # self.WK_x1_2 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_y1_2 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_x2_2 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_y2_2 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+
+        # self.WK_x1_3 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_y1_3 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_x2_3 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_y2_3 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+
+        # self.WK_x1_4 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_y1_4 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_x2_4 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_y2_4 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+
+        # self.WK_x1_5 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_y1_5 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_x2_5 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_y2_5 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+
+        # self.WK_x1_6 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_y1_6 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_x2_6 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_y2_6 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+
+        # self.WK_x1_7 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_y1_7 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_x2_7 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_y2_7 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+
+        # self.WK_x1_8 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_y1_8 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_x2_8 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+        # self.WK_y2_8 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias) 
+
+        # self.WQ_x1 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias)
+        # self.WQ_y1 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias)
+        # self.WQ_x2 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias)
+        # self.WQ_y2 = nn.Linear(appearance_feature_dim, key_feature_dim, bias=bias)
 
         ## bbox regression
-        self.bbox_regress_0 = nn.Linear(appearance_feature_dim, 4, bias=bias)
-        self.bbox_regress_1 = nn.Linear(appearance_feature_dim, 4, bias=bias)
-        self.bbox_regress_2 = nn.Linear(appearance_feature_dim, 4, bias=bias)
-        self.bbox_regress_3 = nn.Linear(appearance_feature_dim, 4, bias=bias)
-        self.bbox_regress_4 = nn.Linear(appearance_feature_dim, 4, bias=bias)
-        self.bbox_regress_5 = nn.Linear(appearance_feature_dim, 4, bias=bias)
-        self.bbox_regress_6 = nn.Linear(appearance_feature_dim, 4, bias=bias)
-        self.bbox_regress_7 = nn.Linear(appearance_feature_dim, 4, bias=bias)
-        self.bbox_regress_8 = nn.Linear(appearance_feature_dim, 4, bias=bias)
+        # self.bbox_regress_0 = nn.Linear(appearance_feature_dim, 4, bias=bias)
+        # self.bbox_regress_1 = nn.Linear(appearance_feature_dim, 4, bias=bias)
+        # self.bbox_regress_2 = nn.Linear(appearance_feature_dim, 4, bias=bias)
+        # self.bbox_regress_3 = nn.Linear(appearance_feature_dim, 4, bias=bias)
+        # self.bbox_regress_4 = nn.Linear(appearance_feature_dim, 4, bias=bias)
+        # self.bbox_regress_5 = nn.Linear(appearance_feature_dim, 4, bias=bias)
+        # self.bbox_regress_6 = nn.Linear(appearance_feature_dim, 4, bias=bias)
+        # self.bbox_regress_7 = nn.Linear(appearance_feature_dim, 4, bias=bias)
+        # self.bbox_regress_8 = nn.Linear(appearance_feature_dim, 4, bias=bias)
+
+        ## 
+        # self.bbox_regress = Parameter(torch.Tensor(appearance_feature_dim, 4, 9))
+        self.bbox_regress = Parameter(torch.Tensor(9, 1, appearance_feature_dim, 4))
+        #  print (self.bbox_regress.shape)
+        #  exit()
 
         # self.WV = nn.Linear(appearance_feature_dim, key_feature_dim, bias=False)
         self.relu = nn.ReLU(inplace=True)
@@ -415,50 +434,60 @@ class RelationUnit(nn.Module):
                 m.weight.data.normal_(mean, stddev)
                 # m.bias.data.zero_()
 
-         normal_init(self.WK_x1_0, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y1_0, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_x2_0, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y2_0, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         mean = 0
+         stddev = 0.01
+         if cfg.TRAIN.TRUNCATED:
+             self.alpha_w.data.normal_().fmod_(2).mul_(stddev).add_(mean)
+             self.bbox_regress.data.normal_().fmod_(2).mul_(stddev).add_(mean)
+         else:
+             self.alpha_w.data.normal_(mean, stddev)
+             self.bbox_regress.data.normal_(mean, stddev)
 
-         normal_init(self.WK_x1_1, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y1_1, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_x2_1, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y2_1, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
-         normal_init(self.WK_x1_2, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y1_2, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_x2_2, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y2_2, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_x1_0, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_y1_0, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_x2_0, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_y2_0, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
-         normal_init(self.WK_x1_3, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y1_3, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_x2_3, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y2_3, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_x1_1, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_y1_1, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_x2_1, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_y2_1, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
-         normal_init(self.WK_x1_4, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y1_4, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_x2_4, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y2_4, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_x1_2, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_y1_2, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_x2_2, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_y2_2, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
-         normal_init(self.WK_x1_5, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y1_5, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_x2_5, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y2_5, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_x1_3, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_y1_3, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_x2_3, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_y2_3, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
-         normal_init(self.WK_x1_6, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y1_6, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_x2_6, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y2_6, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_x1_4, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_y1_4, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_x2_4, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_y2_4, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
-         normal_init(self.WK_x1_7, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y1_7, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_x2_7, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y2_7, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_x1_5, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_y1_5, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_x2_5, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_y2_5, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
-         normal_init(self.WK_x1_8, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y1_8, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_x2_8, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WK_y2_8, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_x1_6, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_y1_6, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_x2_6, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_y2_6, 0, 0.01, cfg.TRAIN.TRUNCATED)
+
+         # normal_init(self.WK_x1_7, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_y1_7, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_x2_7, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_y2_7, 0, 0.01, cfg.TRAIN.TRUNCATED)
+
+         # normal_init(self.WK_x1_8, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_y1_8, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_x2_8, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WK_y2_8, 0, 0.01, cfg.TRAIN.TRUNCATED)
          # for i in range(9):
          #     normal_init(self.WK_x1[i], 0, 0.001, cfg.TRAIN.TRUNCATED)
          #     normal_init(self.WK_y1[i], 0, 0.001, cfg.TRAIN.TRUNCATED)
@@ -466,20 +495,20 @@ class RelationUnit(nn.Module):
          #     normal_init(self.WK_y2[i], 0, 0.001, cfg.TRAIN.TRUNCATED)
 
         
-         normal_init(self.WQ_x1, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WQ_y1, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WQ_x2, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.WQ_y2, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WQ_x1, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WQ_y1, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WQ_x2, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.WQ_y2, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
-         normal_init(self.bbox_regress_0, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.bbox_regress_1, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.bbox_regress_2, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.bbox_regress_3, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.bbox_regress_4, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.bbox_regress_5, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.bbox_regress_6, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.bbox_regress_7, 0, 0.01, cfg.TRAIN.TRUNCATED)
-         normal_init(self.bbox_regress_8, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.bbox_regress_0, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.bbox_regress_1, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.bbox_regress_2, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.bbox_regress_3, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.bbox_regress_4, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.bbox_regress_5, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.bbox_regress_6, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.bbox_regress_7, 0, 0.01, cfg.TRAIN.TRUNCATED)
+         # normal_init(self.bbox_regress_8, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
 
 
@@ -497,69 +526,89 @@ class RelationUnit(nn.Module):
         q_feat = features[4]
         N = q_feat.size(0)
         # print (N)
-        wq_x1 = self.WQ_x1(q_feat)
-        wq_y1 = self.WQ_y1(q_feat)
-        wq_x2 = self.WQ_x2(q_feat)
-        wq_y2 = self.WQ_y2(q_feat)
+        # wq_x1 = self.WQ_x1(q_feat)
+        # wq_y1 = self.WQ_y1(q_feat)
+        # wq_x2 = self.WQ_x2(q_feat)
+        # wq_y2 = self.WQ_y2(q_feat)
         # print (wq_y2.shape)
 
+        ## old version
         # wk_i * f
-        wk_x1_0 = self.WK_x1_0(features[0])
-        wk_y1_0 = self.WK_y1_0(features[0])
-        wk_x2_0 = self.WK_x2_0(features[0])
-        wk_y2_0 = self.WK_y2_0(features[0])
+        # wk_x1_0 = self.WK_x1_0(features[0])
+        # wk_y1_0 = self.WK_y1_0(features[0])
+        # wk_x2_0 = self.WK_x2_0(features[0])
+        # wk_y2_0 = self.WK_y2_0(features[0])
 
-        wk_x1_1 = self.WK_x1_1(features[1])
-        wk_y1_1 = self.WK_y1_1(features[1])
-        wk_x2_1 = self.WK_x2_1(features[1])
-        wk_y2_1 = self.WK_y2_1(features[1])
+        # wk_x1_1 = self.WK_x1_1(features[1])
+        # wk_y1_1 = self.WK_y1_1(features[1])
+        # wk_x2_1 = self.WK_x2_1(features[1])
+        # wk_y2_1 = self.WK_y2_1(features[1])
 
-        wk_x1_2 = self.WK_x1_2(features[2])
-        wk_y1_2 = self.WK_y1_2(features[2])
-        wk_x2_2 = self.WK_x2_2(features[2])
-        wk_y2_2 = self.WK_y2_2(features[2])
+        # wk_x1_2 = self.WK_x1_2(features[2])
+        # wk_y1_2 = self.WK_y1_2(features[2])
+        # wk_x2_2 = self.WK_x2_2(features[2])
+        # wk_y2_2 = self.WK_y2_2(features[2])
 
-        wk_x1_3 = self.WK_x1_3(features[3])
-        wk_y1_3 = self.WK_y1_3(features[3])
-        wk_x2_3 = self.WK_x2_3(features[3])
-        wk_y2_3 = self.WK_y2_3(features[3])
+        # wk_x1_3 = self.WK_x1_3(features[3])
+        # wk_y1_3 = self.WK_y1_3(features[3])
+        # wk_x2_3 = self.WK_x2_3(features[3])
+        # wk_y2_3 = self.WK_y2_3(features[3])
 
-        wk_x1_4 = self.WK_x1_4(features[4])
-        wk_y1_4 = self.WK_y1_4(features[4])
-        wk_x2_4 = self.WK_x2_4(features[4])
-        wk_y2_4 = self.WK_y2_4(features[4])
+        # wk_x1_4 = self.WK_x1_4(features[4])
+        # wk_y1_4 = self.WK_y1_4(features[4])
+        # wk_x2_4 = self.WK_x2_4(features[4])
+        # wk_y2_4 = self.WK_y2_4(features[4])
 
-        wk_x1_5 = self.WK_x1_5(features[5])
-        wk_y1_5 = self.WK_y1_5(features[5])
-        wk_x2_5 = self.WK_x2_5(features[5])
-        wk_y2_5 = self.WK_y2_5(features[5])
+        # wk_x1_5 = self.WK_x1_5(features[5])
+        # wk_y1_5 = self.WK_y1_5(features[5])
+        # wk_x2_5 = self.WK_x2_5(features[5])
+        # wk_y2_5 = self.WK_y2_5(features[5])
 
-        wk_x1_6 = self.WK_x1_6(features[6])
-        wk_y1_6 = self.WK_y1_6(features[6])
-        wk_x2_6 = self.WK_x2_6(features[6])
-        wk_y2_6 = self.WK_y2_6(features[6])
+        # wk_x1_6 = self.WK_x1_6(features[6])
+        # wk_y1_6 = self.WK_y1_6(features[6])
+        # wk_x2_6 = self.WK_x2_6(features[6])
+        # wk_y2_6 = self.WK_y2_6(features[6])
 
-        wk_x1_7 = self.WK_x1_7(features[7])
-        wk_y1_7 = self.WK_y1_7(features[7])
-        wk_x2_7 = self.WK_x2_7(features[7])
-        wk_y2_7 = self.WK_y2_7(features[7])
+        # wk_x1_7 = self.WK_x1_7(features[7])
+        # wk_y1_7 = self.WK_y1_7(features[7])
+        # wk_x2_7 = self.WK_x2_7(features[7])
+        # wk_y2_7 = self.WK_y2_7(features[7])
 
-        wk_x1_8 = self.WK_x1_8(features[8])
-        wk_y1_8 = self.WK_y1_8(features[8])
-        wk_x2_8 = self.WK_x2_8(features[8])
-        wk_y2_8 = self.WK_y2_8(features[8])
+        # wk_x1_8 = self.WK_x1_8(features[8])
+        # wk_y1_8 = self.WK_y1_8(features[8])
+        # wk_x2_8 = self.WK_x2_8(features[8])
+        # wk_y2_8 = self.WK_y2_8(features[8])
         # print (wk_y2_8.shape)
 
+        ## new version
+        # print (len(features))
+        # print (features[0])
+        # print (features[0].shape)
+        all_features = torch.stack(features)
+
+        all_features_offset = all_features.view(9, N, self.dim_feat, 1)
+
+        # print (all_features_offset.shape)
+        # print (self.alpha_w.shape)
+
+        alpha_dot = all_features_offset * self.alpha_w
+        # print (alpha_dot.shape)
+        alpha = torch.sum(alpha_dot, -2)
+        # print (alpha)
+        # print (alpha.shape)
+        # print ("start offset")
+
+        # wk_x1 = F.linear(self.WK_x1 
         ## bbox regression
-        offset_0 = self.bbox_regress_0(features[0])
-        offset_1 = self.bbox_regress_1(features[1])
-        offset_2 = self.bbox_regress_2(features[2])
-        offset_3 = self.bbox_regress_3(features[3])
-        offset_4 = self.bbox_regress_4(features[4])
-        offset_5 = self.bbox_regress_5(features[5])
-        offset_6 = self.bbox_regress_6(features[6])
-        offset_7 = self.bbox_regress_7(features[7])
-        offset_8 = self.bbox_regress_8(features[8])
+        # offset_0 = self.bbox_regress_0(features[0])
+        # offset_1 = self.bbox_regress_1(features[1])
+        # offset_2 = self.bbox_regress_2(features[2])
+        # offset_3 = self.bbox_regress_3(features[3])
+        # offset_4 = self.bbox_regress_4(features[4])
+        # offset_5 = self.bbox_regress_5(features[5])
+        # offset_6 = self.bbox_regress_6(features[6])
+        # offset_7 = self.bbox_regress_7(features[7])
+        # offset_8 = self.bbox_regress_8(features[8])
         # offset_0 = Variable(offset_0)
         # offset_1 = Variable(offset_1)
         # offset_2 = Variable(offset_2)
@@ -572,46 +621,54 @@ class RelationUnit(nn.Module):
         # print (offset_8.shape)
         ## end bbox regression
 
+        # print (self.bbox_regress.shape)           
+        # all_features_offset = all_features.view(9, N, self.dim_feat, 1)
+        # print (all_features_offset.shape)           
+        offset_dot = all_features_offset * self.bbox_regress
+        # print (offset_dot.shape)
+        offset = torch.sum(offset_dot, -2)
+        # print (offset.shape)
 
-        wk_x1_0 = wk_x1_0.view(N, 1, self.dim_k) 
-        wk_x1_1 = wk_x1_1.view(N, 1, self.dim_k) 
-        wk_x1_2 = wk_x1_2.view(N, 1, self.dim_k) 
-        wk_x1_3 = wk_x1_3.view(N, 1, self.dim_k) 
-        wk_x1_4 = wk_x1_4.view(N, 1, self.dim_k) 
-        wk_x1_5 = wk_x1_5.view(N, 1, self.dim_k) 
-        wk_x1_6 = wk_x1_6.view(N, 1, self.dim_k) 
-        wk_x1_7 = wk_x1_7.view(N, 1, self.dim_k) 
-        wk_x1_8 = wk_x1_8.view(N, 1, self.dim_k) 
+        ## exit()
+        # wk_x1_0 = wk_x1_0.view(N, 1, self.dim_k) 
+        # wk_x1_1 = wk_x1_1.view(N, 1, self.dim_k) 
+        # wk_x1_2 = wk_x1_2.view(N, 1, self.dim_k) 
+        # wk_x1_3 = wk_x1_3.view(N, 1, self.dim_k) 
+        # wk_x1_4 = wk_x1_4.view(N, 1, self.dim_k) 
+        # wk_x1_5 = wk_x1_5.view(N, 1, self.dim_k) 
+        # wk_x1_6 = wk_x1_6.view(N, 1, self.dim_k) 
+        # wk_x1_7 = wk_x1_7.view(N, 1, self.dim_k) 
+        # wk_x1_8 = wk_x1_8.view(N, 1, self.dim_k) 
 
-        wk_y1_0 = wk_y1_0.view(N, 1, self.dim_k) 
-        wk_y1_1 = wk_y1_1.view(N, 1, self.dim_k) 
-        wk_y1_2 = wk_y1_2.view(N, 1, self.dim_k) 
-        wk_y1_3 = wk_y1_3.view(N, 1, self.dim_k) 
-        wk_y1_4 = wk_y1_4.view(N, 1, self.dim_k) 
-        wk_y1_5 = wk_y1_5.view(N, 1, self.dim_k) 
-        wk_y1_6 = wk_y1_6.view(N, 1, self.dim_k) 
-        wk_y1_7 = wk_y1_7.view(N, 1, self.dim_k) 
-        wk_y1_8 = wk_y1_8.view(N, 1, self.dim_k) 
+        # wk_y1_0 = wk_y1_0.view(N, 1, self.dim_k) 
+        # wk_y1_1 = wk_y1_1.view(N, 1, self.dim_k) 
+        # wk_y1_2 = wk_y1_2.view(N, 1, self.dim_k) 
+        # wk_y1_3 = wk_y1_3.view(N, 1, self.dim_k) 
+        # wk_y1_4 = wk_y1_4.view(N, 1, self.dim_k) 
+        # wk_y1_5 = wk_y1_5.view(N, 1, self.dim_k) 
+        # wk_y1_6 = wk_y1_6.view(N, 1, self.dim_k) 
+        # wk_y1_7 = wk_y1_7.view(N, 1, self.dim_k) 
+        # wk_y1_8 = wk_y1_8.view(N, 1, self.dim_k) 
 
-        wk_x2_0 = wk_x2_0.view(N, 1, self.dim_k) 
-        wk_x2_1 = wk_x2_1.view(N, 1, self.dim_k) 
-        wk_x2_2 = wk_x2_2.view(N, 1, self.dim_k) 
-        wk_x2_3 = wk_x2_3.view(N, 1, self.dim_k) 
-        wk_x2_4 = wk_x2_4.view(N, 1, self.dim_k) 
-        wk_x2_5 = wk_x2_5.view(N, 1, self.dim_k) 
-        wk_x2_6 = wk_x2_6.view(N, 1, self.dim_k) 
-        wk_x2_7 = wk_x2_7.view(N, 1, self.dim_k) 
-        wk_x2_8 = wk_x2_8.view(N, 1, self.dim_k) 
+        # wk_x2_0 = wk_x2_0.view(N, 1, self.dim_k) 
+        # wk_x2_1 = wk_x2_1.view(N, 1, self.dim_k) 
+        # wk_x2_2 = wk_x2_2.view(N, 1, self.dim_k) 
+        # wk_x2_3 = wk_x2_3.view(N, 1, self.dim_k) 
+        # wk_x2_4 = wk_x2_4.view(N, 1, self.dim_k) 
+        # wk_x2_5 = wk_x2_5.view(N, 1, self.dim_k) 
+        # wk_x2_6 = wk_x2_6.view(N, 1, self.dim_k) 
+        # wk_x2_7 = wk_x2_7.view(N, 1, self.dim_k) 
+        # wk_x2_8 = wk_x2_8.view(N, 1, self.dim_k) 
 
-        wk_y2_0 = wk_y2_0.view(N, 1, self.dim_k) 
-        wk_y2_1 = wk_y2_1.view(N, 1, self.dim_k) 
-        wk_y2_2 = wk_y2_2.view(N, 1, self.dim_k) 
-        wk_y2_3 = wk_y2_3.view(N, 1, self.dim_k) 
-        wk_y2_4 = wk_y2_4.view(N, 1, self.dim_k) 
-        wk_y2_5 = wk_y2_5.view(N, 1, self.dim_k) 
-        wk_y2_6 = wk_y2_6.view(N, 1, self.dim_k) 
-        wk_y2_7 = wk_y2_7.view(N, 1, self.dim_k) 
-        wk_y2_8 = wk_y2_8.view(N, 1, self.dim_k) 
+        # wk_y2_0 = wk_y2_0.view(N, 1, self.dim_k) 
+        # wk_y2_1 = wk_y2_1.view(N, 1, self.dim_k) 
+        # wk_y2_2 = wk_y2_2.view(N, 1, self.dim_k) 
+        # wk_y2_3 = wk_y2_3.view(N, 1, self.dim_k) 
+        # wk_y2_4 = wk_y2_4.view(N, 1, self.dim_k) 
+        # wk_y2_5 = wk_y2_5.view(N, 1, self.dim_k) 
+        # wk_y2_6 = wk_y2_6.view(N, 1, self.dim_k) 
+        # wk_y2_7 = wk_y2_7.view(N, 1, self.dim_k) 
+        # wk_y2_8 = wk_y2_8.view(N, 1, self.dim_k) 
 
         # with self
         # wk_x1= torch.cat((wk_x1_0, wk_x1_1, wk_x1_2, wk_x1_3, wk_x1_4, wk_x1_5, wk_x1_6, wk_x1_7, wk_x1_8), dim=1)
@@ -621,19 +678,19 @@ class RelationUnit(nn.Module):
         # wk_y1 = torch.cat((wk_y1_0, wk_y1_1, wk_y1_2, wk_y1_3,  wk_y1_5, wk_y1_6, wk_y1_7, wk_y1_8), dim=1)
         # wk_x2 = torch.cat((wk_x2_0, wk_x2_1, wk_x2_2, wk_x2_3,  wk_x2_5, wk_x2_6, wk_x2_7, wk_x2_8), dim=1)
         # wk_y2 = torch.cat((wk_y2_0, wk_y2_1, wk_y2_2, wk_y2_3,  wk_y2_5, wk_y2_6, wk_y2_7, wk_y2_8), dim=1)
-        wk_x1 = torch.cat((wk_x1_0, wk_x1_1, wk_x1_2, wk_x1_3, wk_x1_4,  wk_x1_5, wk_x1_6, wk_x1_7, wk_x1_8), dim=1)
-        wk_y1 = torch.cat((wk_y1_0, wk_y1_1, wk_y1_2, wk_y1_3, wk_y1_4,  wk_y1_5, wk_y1_6, wk_y1_7, wk_y1_8), dim=1)
-        wk_x2 = torch.cat((wk_x2_0, wk_x2_1, wk_x2_2, wk_x2_3, wk_x2_4,  wk_x2_5, wk_x2_6, wk_x2_7, wk_x2_8), dim=1)
-        wk_y2 = torch.cat((wk_y2_0, wk_y2_1, wk_y2_2, wk_y2_3, wk_y2_4,  wk_y2_5, wk_y2_6, wk_y2_7, wk_y2_8), dim=1)
+        # wk_x1 = torch.cat((wk_x1_0, wk_x1_1, wk_x1_2, wk_x1_3, wk_x1_4,  wk_x1_5, wk_x1_6, wk_x1_7, wk_x1_8), dim=1)
+        # wk_y1 = torch.cat((wk_y1_0, wk_y1_1, wk_y1_2, wk_y1_3, wk_y1_4,  wk_y1_5, wk_y1_6, wk_y1_7, wk_y1_8), dim=1)
+        # wk_x2 = torch.cat((wk_x2_0, wk_x2_1, wk_x2_2, wk_x2_3, wk_x2_4,  wk_x2_5, wk_x2_6, wk_x2_7, wk_x2_8), dim=1)
+        # wk_y2 = torch.cat((wk_y2_0, wk_y2_1, wk_y2_2, wk_y2_3, wk_y2_4,  wk_y2_5, wk_y2_6, wk_y2_7, wk_y2_8), dim=1)
 
         # print (wk_x1.shape)
 
 
         ## old attention
-        wq_x1 = wq_x1.view(N, 1, self.dim_k) 
-        wq_y1 = wq_y1.view(N, 1, self.dim_k) 
-        wq_x2 = wq_x2.view(N, 1, self.dim_k) 
-        wq_y2 = wq_y2.view(N, 1, self.dim_k) 
+        # wq_x1 = wq_x1.view(N, 1, self.dim_k) 
+        # wq_y1 = wq_y1.view(N, 1, self.dim_k) 
+        # wq_x2 = wq_x2.view(N, 1, self.dim_k) 
+        # wq_y2 = wq_y2.view(N, 1, self.dim_k) 
 
         # scale_dot_x1 = torch.sum((wk_x1 * wq_x1), -1)
         # scale_dot_x1 = scale_dot_x1 / np.sqrt(self.dim_k)
@@ -657,20 +714,22 @@ class RelationUnit(nn.Module):
         # w_y2 = torch.nn.Softmax(dim=1)(scale_dot_y2)
         ## end old attention
         ## new predict weight from features
-        scale_dot_x1 = wk_x1 
-        # print (scale_dot_x1.shape)
-        scale_dot_y1 = wk_y1 
-        scale_dot_x2 = wk_x2 
-        scale_dot_y2 = wk_y2 
+        # scale_dot_x1 = wk_x1 
+        # scale_dot_y1 = wk_y1 
+        # scale_dot_x2 = wk_x2 
+        # scale_dot_y2 = wk_y2 
 
-        w_x1 = torch.nn.Softmax(dim=1)(scale_dot_x1)
-        w_y1 = torch.nn.Softmax(dim=1)(scale_dot_y1)
-        w_x2 = torch.nn.Softmax(dim=1)(scale_dot_x2)
-        w_y2 = torch.nn.Softmax(dim=1)(scale_dot_y2)
-        w_x1 = w_x1.view(N, w_x1.size(1)* w_x1.size(2)) 
-        w_y1 = w_y1.view(N, w_y1.size(1)* w_y1.size(2)) 
-        w_x2 = w_x2.view(N, w_x2.size(1)* w_x2.size(2)) 
-        w_y2 = w_y2.view(N, w_y2.size(1)* w_y2.size(2)) 
+        # w_x1 = torch.nn.Softmax(dim=1)(scale_dot_x1)
+        # w_y1 = torch.nn.Softmax(dim=1)(scale_dot_y1)
+        # w_x2 = torch.nn.Softmax(dim=1)(scale_dot_x2)
+        # w_y2 = torch.nn.Softmax(dim=1)(scale_dot_y2)
+        # w_x1 = w_x1.view(N, w_x1.size(1)* w_x1.size(2)) 
+        # w_y1 = w_y1.view(N, w_y1.size(1)* w_y1.size(2)) 
+        # w_x2 = w_x2.view(N, w_x2.size(1)* w_x2.size(2)) 
+        # w_y2 = w_y2.view(N, w_y2.size(1)* w_y2.size(2)) 
+
+        alpha_softmax = torch.nn.Softmax(dim=0)(alpha)
+        # print (alpha_softmax.shape)
         ## end new predict weight from features
        
         # print (w_x1.shape)
@@ -687,31 +746,37 @@ class RelationUnit(nn.Module):
         # print (delta_rois)
         # exit()
         delta_rois_8 = delta_rois[:,:,1:5]
+        delta_rois_8 = Variable(delta_rois_8)
         # delta_rois_8[0:4, :,:] = delta_rois[0:4,:,:]
         # delta_rois_8[4:8, :,:] = delta_rois[5:9,:,:]
         
         # print (delta_rois_8.shape)
+        delta_pred = (delta_rois_8 + offset) * alpha_softmax
+        # print (delta_pred.shape)
+
+        output = torch.sum(delta_pred, 0)
+        # print (output.shape)
+        # exit()
         ## predicted movement for all 8 boxes 
-        delta_rois_8 = Variable(delta_rois_8)
-        delta_rois_8[0,:,:] = delta_rois_8[0,:,:] + offset_0
-        delta_rois_8[1,:,:] = delta_rois_8[1,:,:] + offset_1
-        delta_rois_8[2,:,:] = delta_rois_8[2,:,:] + offset_2
-        delta_rois_8[3,:,:] = delta_rois_8[3,:,:] + offset_3
-        delta_rois_8[4,:,:] = delta_rois_8[4,:,:] + offset_4
-        delta_rois_8[5,:,:] = delta_rois_8[5,:,:] + offset_5
-        delta_rois_8[6,:,:] = delta_rois_8[6,:,:] + offset_6
-        delta_rois_8[7,:,:] = delta_rois_8[7,:,:] + offset_7
-        delta_rois_8[8,:,:] = delta_rois_8[8,:,:] + offset_8
+        # delta_rois_8[0,:,:] = delta_rois_8[0,:,:] + offset_0
+        # delta_rois_8[1,:,:] = delta_rois_8[1,:,:] + offset_1
+        # delta_rois_8[2,:,:] = delta_rois_8[2,:,:] + offset_2
+        # delta_rois_8[3,:,:] = delta_rois_8[3,:,:] + offset_3
+        # delta_rois_8[4,:,:] = delta_rois_8[4,:,:] + offset_4
+        # delta_rois_8[5,:,:] = delta_rois_8[5,:,:] + offset_5
+        # delta_rois_8[6,:,:] = delta_rois_8[6,:,:] + offset_6
+        # delta_rois_8[7,:,:] = delta_rois_8[7,:,:] + offset_7
+        # delta_rois_8[8,:,:] = delta_rois_8[8,:,:] + offset_8
         # print (delta_rois_8.shape)
         # exit()
         # print (delta_rois_8)
         # exit()
         
         # output the target
-        delta_x1 = torch.t(delta_rois_8[:,:,0])
-        delta_y1 = torch.t(delta_rois_8[:,:,1])
-        delta_x2 = torch.t(delta_rois_8[:,:,2])
-        delta_y2 = torch.t(delta_rois_8[:,:,3])
+        # delta_x1 = torch.t(delta_rois_8[:,:,0])
+        # delta_y1 = torch.t(delta_rois_8[:,:,1])
+        # delta_x2 = torch.t(delta_rois_8[:,:,2])
+        # delta_y2 = torch.t(delta_rois_8[:,:,3])
         # print (delta_x1.shape)
         # print (delta_x1)
         # delta_x1 = Variable(delta_x1)
@@ -725,10 +790,10 @@ class RelationUnit(nn.Module):
         
 
         ##  
-        output_x1_before =  w_x1 * (delta_x1)
-        output_y1_before =  w_y1 * (delta_y1)
-        output_x2_before =  w_x2 * (delta_x2)
-        output_y2_before =  w_y2 * (delta_y2)
+        # output_x1_before =  w_x1 * (delta_x1)
+        # output_y1_before =  w_y1 * (delta_y1)
+        # output_x2_before =  w_x2 * (delta_x2)
+        # output_y2_before =  w_y2 * (delta_y2)
 
         ## old delta
         # output_x1_before =  w_x1 * delta_x1
@@ -743,20 +808,20 @@ class RelationUnit(nn.Module):
         # output_y2_before = 3 * w_y2 * delta_y2
 
         # print (output_x1.shape)        
-        output_x1 = torch.sum(output_x1_before, -1)
-        output_y1 = torch.sum(output_y1_before, -1)
-        output_x2 = torch.sum(output_x2_before, -1)
-        output_y2 = torch.sum(output_y2_before, -1)
+        # output_x1 = torch.sum(output_x1_before, -1)
+        # output_y1 = torch.sum(output_y1_before, -1)
+        # output_x2 = torch.sum(output_x2_before, -1)
+        # output_y2 = torch.sum(output_y2_before, -1)
 
-        output_x1 = output_x1.view(output_x1.size(0), 1)
-        output_y1 = output_y1.view(output_y1.size(0), 1)
-        output_x2 = output_x2.view(output_x2.size(0), 1)
-        output_y2 = output_y2.view(output_y2.size(0), 1)
-        # print (output_y2[0,:])
-        # exit()
+        # output_x1 = output_x1.view(output_x1.size(0), 1)
+        # output_y1 = output_y1.view(output_y1.size(0), 1)
+        # output_x2 = output_x2.view(output_x2.size(0), 1)
+        # output_y2 = output_y2.view(output_y2.size(0), 1)
+        # # print (output_y2[0,:])
+        # # exit()
 
-        # print (output_x1.shape)        
-        output = torch.cat((output_x1, output_y1,output_x2, output_y2), dim=1)
+        # # print (output_x1.shape)        
+        # output = torch.cat((output_x1, output_y1,output_x2, output_y2), dim=1)
         # print (output)        
 
         # exit()
@@ -789,6 +854,7 @@ class RelationUnit(nn.Module):
 
         # output = torch.sum(output,-2)
         # return output
-        return output, w_x1, w_y1, w_x2, w_y2, delta_x1, delta_y1, delta_x2, delta_y2, output_x1_before,  output_y1_before, output_x2_before, output_y2_before
+        # return output, w_x1, w_y1, w_x2, w_y2, delta_x1, delta_y1, delta_x2, delta_y2, output_x1_before,  output_y1_before, output_x2_before, output_y2_before
+        return output
 
 
