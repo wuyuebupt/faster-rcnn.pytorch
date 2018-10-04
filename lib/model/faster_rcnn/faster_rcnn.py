@@ -150,24 +150,27 @@ class _fasterRCNN(nn.Module):
         # exit()
 
         ### for gt rois
-        if cfg.POOLING_MODE == 'crop':
-            # pdb.set_trace()
-            # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
-            grid_xy = _affine_grid_gen(gt_rois.view(-1, 5), base_feat.size()[2:], self.grid_size)
-            grid_yx = torch.stack([grid_xy.data[:,:,:,1], grid_xy.data[:,:,:,0]], 3).contiguous()
-            pooled_feat_gt = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
-            if cfg.CROP_RESIZE_WITH_MAX_POOL:
-                pooled_feat_gt = F.max_pool2d(pooled_feat_gt, 2, 2)
-        elif cfg.POOLING_MODE == 'align':
-            pooled_feat_gt = self.RCNN_roi_align(base_feat, gt_rois.view(-1, 5))
-        elif cfg.POOLING_MODE == 'pool':
-            pooled_feat_gt = self.RCNN_roi_pool(base_feat, gt_rois.view(-1,5))
+        if self.training:
+            if cfg.POOLING_MODE == 'crop':
+                # pdb.set_trace()
+                # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
+                grid_xy = _affine_grid_gen(gt_rois.view(-1, 5), base_feat.size()[2:], self.grid_size)
+                grid_yx = torch.stack([grid_xy.data[:,:,:,1], grid_xy.data[:,:,:,0]], 3).contiguous()
+                pooled_feat_gt = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
+                if cfg.CROP_RESIZE_WITH_MAX_POOL:
+                    pooled_feat_gt = F.max_pool2d(pooled_feat_gt, 2, 2)
+            elif cfg.POOLING_MODE == 'align':
+                pooled_feat_gt = self.RCNN_roi_align(base_feat, gt_rois.view(-1, 5))
+            elif cfg.POOLING_MODE == 'pool':
+                pooled_feat_gt = self.RCNN_roi_pool(base_feat, gt_rois.view(-1,5))
 
-        # feed pooled features to top model
-        # print (pooled_feat.shape) # 512x1024x7x7
-        pooled_feat_gt = self._head_to_tail(pooled_feat_gt)
-        pooled_attention_feat_gt = self.RCNN_attention_feat(pooled_feat_gt)
-        pooled_attention_feat_gt = self.relu(pooled_attention_feat_gt)
+            # feed pooled features to top model
+            # print (pooled_feat.shape) # 512x1024x7x7
+            pooled_feat_gt = self._head_to_tail(pooled_feat_gt)
+            pooled_attention_feat_gt = self.RCNN_attention_feat(pooled_feat_gt)
+            pooled_attention_feat_gt = self.relu(pooled_attention_feat_gt)
+        else:
+            pooled_attention_feat_gt=None
 
         ## do the attention prediction
         # bbox_pred = attention_regression(rois_attention_candidates, rois_attention_pooled_feat)
@@ -202,6 +205,8 @@ class _fasterRCNN(nn.Module):
 
         RCNN_loss_cls = 0
         RCNN_loss_bbox = 0
+        RCNN_loss_bbox_beta = 0
+        KL_loss = 0
 
         if self.training:
             # classification loss
@@ -530,27 +535,31 @@ class RelationUnit(nn.Module):
 
         ################## gt attention for beta
         # print (gt_features.shape)
-        query_dot =  all_features_attention * self.w_q
-        query_out = torch.sum(query_dot, -3)
-        # print (query_dot.shape)
-        # print (query_out.shape)
-        gt_features_attention = gt_features.view(1, N, self.dim_feat, 1, 1)
-        key_dot = gt_features_attention * self.w_k 
-        key_out = torch.sum(key_dot, -3)
-        # print (key_dot.shape)
-        # print (key_out.shape)
+        if self.training:
+            query_dot =  all_features_attention * self.w_q
+            query_out = torch.sum(query_dot, -3)
+            # print (query_dot.shape)
+            # print (query_out.shape)
+            gt_features_attention = gt_features.view(1, N, self.dim_feat, 1, 1)
+            key_dot = gt_features_attention * self.w_k 
+            key_out = torch.sum(key_dot, -3)
+            # print (key_dot.shape)
+            # print (key_out.shape)
 
-        beta_dot = query_out * key_out
-        beta_out = torch.sum(beta_dot, -2)
-        beta_out = beta_out / np.sqrt(self.dim_k)
-        # print (beta_dot.shape)
-        # print (beta_out.shape)
-        
-        beta_softmax = torch.nn.Softmax(dim=0) (beta_out)
-        # print (beta_softmax.shape)
-        beta_delta_pred = (delta_rois_8 + offset) * beta_softmax
-        output_beta = torch.sum(beta_delta_pred, 0)
-        # print (output_beta.shape)
+            beta_dot = query_out * key_out
+            beta_out = torch.sum(beta_dot, -2)
+            beta_out = beta_out / np.sqrt(self.dim_k)
+            # print (beta_dot.shape)
+            # print (beta_out.shape)
+            
+            beta_softmax = torch.nn.Softmax(dim=0) (beta_out)
+            # print (beta_softmax.shape)
+            beta_delta_pred = (delta_rois_8 + offset) * beta_softmax
+            output_beta = torch.sum(beta_delta_pred, 0)
+            # print (output_beta.shape)
+        else:
+            beta_softmax = None
+            output_beta = None
 
 
  

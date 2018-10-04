@@ -242,7 +242,7 @@ if __name__ == '__main__':
   print('Evaluating detections')
   imdb.evaluate_detections(all_boxes, output_dir)
   exit()
-  ###
+  #
 
 
   fasterRCNN.eval()
@@ -263,9 +263,11 @@ if __name__ == '__main__':
       rpn_loss_cls, rpn_loss_box, \
       RCNN_loss_cls, RCNN_loss_bbox, \
       rois_label, \
-      wx1, wy1, wx2, wy2, \
-      dx1, dy1, dx2, dy2, \
-      ox1, oy1, ox2, oy2 = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+      RCNN_loss_bbox_beta, kl_loss  = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+      # wx1, wy1, wx2, wy2, \
+      # dx1, dy1, dx2, dy2, \
+      # ox1, oy1, ox2, oy2 = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+
       # print (oy2[0,:])
       # print (ox2[0,:])
       # print (bbox_pred[0,0,:])
