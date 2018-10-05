@@ -218,7 +218,8 @@ class _fasterRCNN(nn.Module):
             RCNN_loss_bbox = _smooth_l1_loss(bbox_pred, rois_target, rois_inside_ws, rois_outside_ws)
 
             ## from gt training for beta
-            RCNN_loss_bbox_beta = _smooth_l1_loss(bbox_pred_beta, rois_target, rois_inside_ws, rois_outside_ws)
+            # RCNN_loss_bbox_beta = _smooth_l1_loss(bbox_pred_beta, rois_target, rois_inside_ws, rois_outside_ws)
+            RCNN_loss_bbox_beta = None
 
             ## KL loss between beta and alpha
             # KL_loss = F.kl_div(alpha_softmax, beta_softmax)
@@ -479,7 +480,7 @@ class RelationUnit(nn.Module):
 
         all_features = torch.stack(features)
         all_features_offset = all_features.view(9, N, self.dim_feat, 1)
-        all_features_attention = all_features.view(9, N, self.dim_feat, 1, 1)
+        all_features_attention = all_features.view(9, N, self.dim_feat, 1)
         # print (all_features_offset.shape)
         ################## predict weight for alpha
         ## new version
@@ -536,16 +537,27 @@ class RelationUnit(nn.Module):
         ################## gt attention for beta
         # print (gt_features.shape)
         if self.training:
-            query_dot =  all_features_attention * self.w_q
-            query_out = torch.sum(query_dot, -3)
+            # v0.2
+            # query_dot =  all_features_attention * self.w_q
+            # query_out = torch.sum(query_dot, -3)
+            # query_dot = all_features_attention
+            query_out = all_features_attention
+
             # print (query_dot.shape)
             # print (query_out.shape)
-            gt_features_attention = gt_features.view(1, N, self.dim_feat, 1, 1)
-            key_dot = gt_features_attention * self.w_k 
-            key_out = torch.sum(key_dot, -3)
+            gt_features_attention = gt_features.view(1, N, self.dim_feat, 1)
+
+            # v0.2
+            # key_dot = gt_features_attention * self.w_k 
+            # key_out = torch.sum(key_dot, -3)
+
+            # v0.3
+            # key_dot = gt_features_attention
+            key_out = gt_features_attention
             # print (key_dot.shape)
             # print (key_out.shape)
 
+            # v0.2
             beta_dot = query_out * key_out
             beta_out = torch.sum(beta_dot, -2)
             beta_out = beta_out / np.sqrt(self.dim_k)
@@ -554,8 +566,15 @@ class RelationUnit(nn.Module):
             
             beta_softmax = torch.nn.Softmax(dim=0) (beta_out)
             # print (beta_softmax.shape)
-            beta_delta_pred = (delta_rois_8 + offset) * beta_softmax
-            output_beta = torch.sum(beta_delta_pred, 0)
+            
+            ## v0.1 : same input with alpha
+            # beta_delta_pred = (delta_rois_8 + offset) * beta_softmax
+            ## v0.2 : using original delta
+            # beta_delta_pred = delta_rois_8 * beta_softmax
+            beta_delta_pred = None
+
+            # output_beta = torch.sum(beta_delta_pred, 0)
+            output_beta = None
             # print (output_beta.shape)
         else:
             beta_softmax = None
