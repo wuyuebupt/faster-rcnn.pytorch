@@ -339,8 +339,10 @@ if __name__ == '__main__':
 
       loss = rpn_loss_cls.mean() + rpn_loss_box.mean() \
            + RCNN_loss_cls.mean() + 10 * RCNN_loss_bbox.mean() \
-           + kl_loss.mean()
-           # + 10 * RCNN_loss_bbox_beta.mean() + kl_loss.mean()
+           + 50 * RCNN_loss_bbox_beta.mean() + kl_loss.mean()
+      #     + 10 * RCNN_loss_bbox_beta.mean() + kl_loss.mean()
+      #      + kl_loss.mean()
+      #      + 10 * RCNN_loss_bbox_beta.mean() + kl_loss.mean()
       #      + RCNN_loss_cls.mean() + 15 * RCNN_loss_bbox.mean()
       #      + RCNN_loss_cls.mean() + 10 * RCNN_loss_bbox.mean()
       #      + RCNN_loss_cls.mean() +  RCNN_loss_bbox.mean()
@@ -371,6 +373,9 @@ if __name__ == '__main__':
           loss_rpn_box = rpn_loss_box.mean().data[0]
           loss_rcnn_cls = RCNN_loss_cls.mean().data[0]
           loss_rcnn_box = RCNN_loss_bbox.mean().data[0]
+          ## v0.2
+          loss_rcnn_box_beta = RCNN_loss_bbox_beta.mean().data[0]
+          ## v0.3
           # loss_rcnn_box_beta = RCNN_loss_bbox_beta.mean().data[0]
           loss_kl = kl_loss.mean().data[0]
 
@@ -381,6 +386,9 @@ if __name__ == '__main__':
           loss_rpn_box = rpn_loss_box.data[0]
           loss_rcnn_cls = RCNN_loss_cls.data[0]
           loss_rcnn_box = RCNN_loss_bbox.data[0]
+          ## v0.2
+          loss_rcnn_box_beta = RCNN_loss_bbox_beta.data[0]
+          ## v0.3
           # loss_rcnn_box_beta = RCNN_loss_bbox_beta.data[0]
           loss_kl = kl_loss.data[0]
 
@@ -391,8 +399,8 @@ if __name__ == '__main__':
                                 % (args.session, epoch, step, iters_per_epoch, loss_temp, lr))
         print("\t\t\tfg/bg=(%d/%d), time cost: %f" % (fg_cnt, bg_cnt, end-start))
         print("\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f, bbox_beta %.4f, kl %.4f" \
-                      % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, 0.0, loss_kl))
-        #              % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, loss_rcnn_box_beta, loss_kl))
+                      % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, loss_rcnn_box_beta, loss_kl))
+        #              % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, 0.0, loss_kl))
         if args.use_tfboard:
           info = {
             'loss': loss_temp,
