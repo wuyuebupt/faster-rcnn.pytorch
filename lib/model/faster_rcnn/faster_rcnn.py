@@ -75,10 +75,24 @@ class _fasterRCNN(nn.Module):
             # print (gt_rois.shape)
             # exit()
 
+            ## v0.5
+            # print (rois_target.size(2))
+            rois_target     = rois_target.view(-1, rois_target.size(2))
+            rois_inside_ws  = rois_inside_ws.view(-1, rois_inside_ws.size(2))
+            rois_outside_ws = rois_outside_ws.view(-1, rois_outside_ws.size(2))           
+            neighbor_num = 9
+            neighbor_rois_target     = rois_target.expand(neighbor_num, rois_target.shape[0], rois_target.shape[1])
+            neighbor_rois_inside_ws  = rois_inside_ws.expand(neighbor_num, rois_inside_ws.shape[0], rois_inside_ws.shape[1])
+            neighbor_rois_outside_ws = rois_outside_ws.expand(neighbor_num, rois_outside_ws.shape[0], rois_outside_ws.shape[1] )
+            # print (neighbor_target)
+            neighbor_rois_target = Variable(neighbor_rois_target)
+            neighbor_rois_inside_ws = Variable(neighbor_rois_inside_ws)
+            neighbor_rois_outside_ws = Variable(neighbor_rois_outside_ws)
+            ## end v0.5:
             rois_label = Variable(rois_label.view(-1).long())
-            rois_target = Variable(rois_target.view(-1, rois_target.size(2)))
-            rois_inside_ws = Variable(rois_inside_ws.view(-1, rois_inside_ws.size(2)))
-            rois_outside_ws = Variable(rois_outside_ws.view(-1, rois_outside_ws.size(2)))
+            rois_target = Variable(rois_target)
+            rois_inside_ws = Variable(rois_inside_ws)
+            rois_outside_ws = Variable(rois_outside_ws)
             # gt_rois = Variable(gt_rois.view(-1, gt_rois.size(2)))
 
             # print (gt_rois.shape)
@@ -96,7 +110,8 @@ class _fasterRCNN(nn.Module):
         ## 
         # print (im_info)
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.5)
-        rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.1)
+        # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.1)
+        rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.3)
         # print (rois_attention_candidates.shape)
 
         rois_attention_candidates = Variable(rois_attention_candidates)
@@ -187,10 +202,14 @@ class _fasterRCNN(nn.Module):
 
         # bbox_pred, wx1, wy1, wx2, wy2, dx1, dy1, dx2, dy2, ox1, oy1, ox2, oy2 = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat) 
         # bbox_pred, bbox_pred_beta, alpha_softmax, beta_softmax = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat, pooled_attention_feat_gt) 
-        bbox_pred, bbox_pred_beta, alpha_softmax, beta_softmax = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat, gt_attention_pooled_feat) 
+        # bbox_pred, bbox_pred_beta, alpha_softmax, beta_softmax = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat, gt_attention_pooled_feat) 
+        bbox_pred, bbox_pred_beta, alpha_softmax, beta_softmax, bbox_pred_offset = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat, gt_attention_pooled_feat) 
 
         # print (bbox_pred)
         # print (bbox_pred.shape)
+        # print (bbox_pred_offset.shape)
+        # print (alpha_softmax.shape)
+
         # print (wx1.shape)
         # exit()
         ## 
@@ -223,7 +242,14 @@ class _fasterRCNN(nn.Module):
             # bounding box regression L1 loss
             # print (bbox_pred)
             # print (rois_target)
-            RCNN_loss_bbox = _smooth_l1_loss(bbox_pred, rois_target, rois_inside_ws, rois_outside_ws)
+            # RCNN_loss_bbox = _smooth_l1_loss(bbox_pred, rois_target, rois_inside_ws, rois_outside_ws)
+            ## v0.4
+            # RCNN_loss_bbox = _smooth_l1_loss(bbox_pred, rois_target, rois_inside_ws, rois_outside_ws)
+            # print (RCNN_loss_bbox.shape)
+            ## v0.5
+            RCNN_loss_bbox = _smooth_l1_loss_alpha(bbox_pred, neighbor_rois_target, neighbor_rois_inside_ws, neighbor_rois_outside_ws, bbox_pred_offset, alpha_softmax)
+            # print (RCNN_loss_bbox.shape)
+            # exit()
 
             ## from gt training for beta
             ## v0.2
@@ -622,13 +648,19 @@ class RelationUnit(nn.Module):
         # delta_rois_8[4:8, :,:] = delta_rois[5:9,:,:]
         
         # print (delta_rois_8.shape)
+
+        ## v0.4 offset first then alpha
         delta_pred = (delta_rois_8 + offset) * alpha_softmax
         # print (delta_pred.shape)
-
         output = torch.sum(delta_pred, 0)
-
         # print (output.shape)
 
+        ## v0.5 
+        delta_pred_offset = delta_rois_8 + offset
+        # print (delta_pred_offset.shape)
+        # print (delta_pred_offset)
+        ##
+        # output = torch.sum(delta_pred, 0)
 
 
         ################## gt attention for beta
@@ -691,6 +723,46 @@ class RelationUnit(nn.Module):
             output_beta = None
 
         # return output, w_x1, w_y1, w_x2, w_y2, delta_x1, delta_y1, delta_x2, delta_y2, output_x1_before,  output_y1_before, output_x2_before, output_y2_before
-        return output, output_beta, alpha_softmax, beta_softmax
+        return output, output_beta, alpha_softmax, beta_softmax, delta_pred_offset
 
 
+def _smooth_l1_loss_alpha(bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_weights, neighbor_pred, alpha, sigma=1.0, dim=[1]):
+    # print(bbox_pred.shape)
+    # print(bbox_targets.shape)
+    # print(bbox_inside_weights.shape)
+    # print(neighbor_pred.shape)
+    # print(alpha.shape)
+
+    ## this is the key part, if the predict changed or unchanged
+    neighbor_num = neighbor_pred.shape[0]
+
+    ## print (neighbor_num)
+
+    sigma_2 = sigma ** 2
+    # box_diff = bbox_pred - bbox_targets
+    box_diff = neighbor_pred - bbox_targets
+    # print (box_diff)
+    in_box_diff = bbox_inside_weights * box_diff
+    # print (in_box_diff)
+    abs_in_box_diff = torch.abs(in_box_diff)
+    # print (abs_in_box_diff.shape)
+    smoothL1_sign = (abs_in_box_diff < 1. / sigma_2).detach().float()
+    # print (smoothL1_sign)
+    in_loss_box = torch.pow(in_box_diff, 2) * (sigma_2 / 2.) * smoothL1_sign \
+                  + (abs_in_box_diff - (0.5 / sigma_2)) * (1. - smoothL1_sign)
+
+    # print (in_loss_box)
+    out_loss_box = bbox_outside_weights * in_loss_box
+    # print (out_loss_box)
+
+    ## x alpha 
+    loss_box_alpha = alpha * out_loss_box
+    loss_box = torch.sum(loss_box_alpha, 0)
+    # print (loss_box.shape)
+    # print (dim)
+    for i in sorted(dim, reverse=True):
+      loss_box = loss_box.sum(i)
+    # print (loss_box.shape)
+    loss_box = loss_box.mean()
+    # print (loss_box) 
+    return loss_box
