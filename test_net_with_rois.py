@@ -30,6 +30,8 @@ from model.rpn.bbox_transform import bbox_transform_inv
 from model.utils.net_utils import save_net, load_net, vis_detections
 from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
+## 
+from model.rpn.bbox_transform import bbox_overlaps_batch
 
 import pdb
 
@@ -211,8 +213,14 @@ if __name__ == '__main__':
 
   save_name = 'faster_rcnn_10'
   num_images = len(imdb.image_index)
+
   all_boxes = [[[] for _ in xrange(num_images)]
                for _ in xrange(imdb.num_classes)]
+
+  all_boxes_rois = [[[] for _ in xrange(num_images)]
+               for _ in xrange(imdb.num_classes)]
+
+
 
   output_dir = get_output_dir(imdb, save_name)
   dataset = roibatchLoader(roidb, ratio_list, ratio_index, 1, \
@@ -225,16 +233,23 @@ if __name__ == '__main__':
 
   _t = {'im_detect': time.time(), 'misc': time.time()}
   det_file = os.path.join(output_dir, 'detections.pkl')
+  det_file_rois = os.path.join(output_dir, 'detections_rois.pkl')
+  det_file_ious = os.path.join(output_dir, 'detections_ious.pkl')
 
-  with open(det_file, 'rb') as f:
-      all_boxes = pickle.load(f)
-  print('Evaluating detections')
-  imdb.evaluate_detections(all_boxes, output_dir)
-  exit()
+  ### evaluate results
+  # with open(det_file, 'rb') as f:
+  #     all_boxes = pickle.load(f)
+  # print('Evaluating detections')
+  # imdb.evaluate_detections(all_boxes, output_dir)
+  # exit()
+  ###
 
 
   fasterRCNN.eval()
   empty_array = np.transpose(np.array([[],[],[],[],[]]), (1,0))
+  iou_pairs = []
+
+  # for i in range(10):
   for i in range(num_images):
 
       data = next(data_iter)
@@ -248,6 +263,11 @@ if __name__ == '__main__':
       rpn_loss_cls, rpn_loss_box, \
       RCNN_loss_cls, RCNN_loss_bbox, \
       rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+      # print (oy2[0,:])
+      # print (ox2[0,:])
+      # print (bbox_pred[0,0,:])
+      # wx1, dx1, ox1 = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+      # rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
 
       scores = cls_prob.data
       boxes = rois.data[:, :, 1:5]
@@ -257,6 +277,9 @@ if __name__ == '__main__':
           box_deltas = bbox_pred.data
           if cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
           # Optionally normalize targets by a precomputed mean and stdev
+            # box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
+            #            + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
+            # box_deltas = box_deltas.view(1, -1, 4)
             if args.class_agnostic:
                 box_deltas = box_deltas.view(-1, 4) * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
                            + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
@@ -267,6 +290,7 @@ if __name__ == '__main__':
                 box_deltas = box_deltas.view(1, -1, 4 * len(imdb.classes))
 
           pred_boxes = bbox_transform_inv(boxes, box_deltas, 1)
+          # pred_boxes = bbox_transform_inv_attention(boxes, box_deltas, 1)
           pred_boxes = clip_boxes(pred_boxes, im_info.data, 1)
       else:
           # Simply repeat the boxes, once for each class
@@ -274,10 +298,20 @@ if __name__ == '__main__':
 
       roi_boxes = boxes / data[1][0][2]
       pred_boxes /= data[1][0][2]
+      gt_boxes[:, :, :4] = gt_boxes[:, :, :4] / data[1][0][2]
 
       scores = scores.squeeze()
       pred_boxes = pred_boxes.squeeze()
       roi_boxes = roi_boxes.squeeze()
+      box_deltas = box_deltas.squeeze()
+
+      # wx1 = wx1.squeeze()
+      # dx1 = dx1.squeeze()
+      # ox1 = ox1.view(ox1.size(0),1)
+      #print (ox1.shape)
+      # ox1 = ox1.squeeze()
+      # print (ox1.shape)
+
       det_toc = time.time()
       detect_time = det_toc - det_tic
       misc_tic = time.time()
@@ -290,36 +324,113 @@ if __name__ == '__main__':
           if inds.numel() > 0:
             cls_scores = scores[:,j][inds]
             _, order = torch.sort(cls_scores, 0, True)
-            if args.class_agnostic:
-              cls_boxes = pred_boxes[inds, :]
-              cls_roi_boxes = roi_boxes[inds, :]
-            else:
-              cls_boxes = pred_boxes[inds][:, j * 4:(j + 1) * 4]
-              cls_roi_boxes = roi_boxes[inds][:, j * 4:(j + 1) * 4]
 
+            cls_boxes = pred_boxes[inds, :]
+            cls_roi_boxes = roi_boxes[inds, :]
+            # if vis:
+            #     roi_wx1 = wx1[inds, :]
+            #     roi_wy1 = wy1[inds, :]
+            #     roi_wx2 = wx2[inds, :]
+            #     roi_wy2 = wy2[inds, :]
+
+            #     roi_dx1 = dx1[inds, :]
+            #     roi_dy1 = dy1[inds, :]
+            #     roi_dx2 = dx2[inds, :]
+            #     roi_dy2 = dy2[inds, :]
+
+            #     roi_ox1 = ox1[inds, :]
+            #     roi_oy1 = oy1[inds, :]
+            #     roi_ox2 = ox2[inds, :]
+            #     roi_oy2 = oy2[inds, :]
+
+            #     # roi_dx1 = dx1[inds, :]
+            #     # roi_ox1 = ox1[inds, :]
+            #     roi_box_deltas = box_deltas[inds, :]
+
+            # if args.class_agnostic:
+            #   cls_boxes = pred_boxes[inds, :]
+            # else:
+            #   cls_boxes = pred_boxes[inds][:, j * 4:(j + 1) * 4]
             
-            # print (cls_boxes.shape)
             cls_dets = torch.cat((cls_boxes, cls_scores.unsqueeze(1)), 1)
-
-            # print (cls_scores.shape)
-            # print (cls_roi_boxes.shape)
-
             cls_roi_dets = torch.cat((cls_roi_boxes, cls_scores.unsqueeze(1)), 1)
-
             # cls_dets = torch.cat((cls_boxes, cls_scores), 1)
             cls_dets = cls_dets[order]
             cls_roi_dets = cls_roi_dets[order]
+            # if vis:
+            #     roi_wx1 = roi_wx1[order]
+            #     roi_wy1 = roi_wy1[order]
+            #     roi_wx2 = roi_wx2[order]
+            #     roi_wy2 = roi_wy2[order]
+
+            #     roi_dx1 = roi_dx1[order]
+            #     roi_dy1 = roi_dy1[order]
+            #     roi_dx2 = roi_dx2[order]
+            #     roi_dy2 = roi_dy2[order]
+
+            #     roi_ox1 = roi_ox1[order]
+            #     roi_oy1 = roi_oy1[order]
+            #     roi_ox2 = roi_ox2[order]
+            #     roi_oy2 = roi_oy2[order]
+            #     # roi_dx1 = roi_dx1[order]
+            #     # roi_ox1 = roi_ox1[order]
+            #     roi_box_deltas = roi_box_deltas[order]
 
             keep = nms(cls_dets, cfg.TEST.NMS)
+
             cls_dets = cls_dets[keep.view(-1).long()]
             cls_roi_dets = cls_roi_dets[keep.view(-1).long()]
             if vis:
-              # im2show = vis_detections(im2show, imdb.classes[, :j], cls_dets.cpu().numpy(), 0.3, (0,204,0))
+                roi_wx1 = roi_wx1[keep.view(-1).long()]
+                roi_wy1 = roi_wy1[keep.view(-1).long()]
+                roi_wx2 = roi_wx2[keep.view(-1).long()]
+                roi_wy2 = roi_wy2[keep.view(-1).long()]
+
+                roi_dx1 = roi_dx1[keep.view(-1).long()]
+                roi_dy1 = roi_dy1[keep.view(-1).long()]
+                roi_dx2 = roi_dx2[keep.view(-1).long()]
+                roi_dy2 = roi_dy2[keep.view(-1).long()]
+
+                roi_ox1 = roi_ox1[keep.view(-1).long()]
+                roi_oy1 = roi_oy1[keep.view(-1).long()]
+                roi_ox2 = roi_ox2[keep.view(-1).long()]
+                roi_oy2 = roi_oy2[keep.view(-1).long()]
+                # roi_dx1 = roi_dx1[keep.view(-1).long()]
+                # roi_ox1 = roi_ox1[keep.view(-1).long()]
+                roi_box_deltas = roi_box_deltas[keep.view(-1).long()]
+            if vis:
               im2show = vis_detections(im2show, imdb.classes[j], cls_dets.cpu().numpy(), 0.3, (0,204,0))
               im2show = vis_detections(im2show, imdb.classes[j], cls_roi_dets.cpu().numpy(), 0.3, ( 0,255, 255))
+              
+              # print (j)
+              # print ('x1', roi_wx1)
+              # print ('y1', roi_wy1)
+              # print ('x2', roi_wx2)
+              # print ('y2', roi_wy2)
+
+              # # print ('dx1', roi_dx1)
+              # # print ('dy1', roi_dy1)
+              # # print ('dx2', roi_dx2)
+              # # print ('dy2', roi_dy2)
+
+              # print ('ox1', roi_ox1)
+              # print ('oy1', roi_oy1)
+              # print ('ox2', roi_ox2)
+              # print ('oy2', roi_oy2)
+              # print (cls_dets)
+
+              # print (j)
+              # print (roi_wx1)
+              # print (roi_dx1)
+              # print (roi_ox1)
+              # print (roi_box_deltas)
+              # print (cls_dets)
+              # print (cls_roi_dets)
             all_boxes[j][i] = cls_dets.cpu().numpy()
+            all_boxes_rois[j][i] = cls_roi_dets.cpu().numpy()
           else:
             all_boxes[j][i] = empty_array
+            all_boxes_rois[j][i] = empty_array
 
       # Limit to max_per_image detections *over all classes*
       if max_per_image > 0:
@@ -330,7 +441,116 @@ if __name__ == '__main__':
               for j in xrange(1, imdb.num_classes):
                   keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
                   all_boxes[j][i] = all_boxes[j][i][keep, :]
+                  all_boxes_rois[j][i] = all_boxes_rois[j][i][keep, :]
 
+      ### analyze
+      # load gt boxes
+      # print (gt_boxes)
+      # get overlaps
+      bboxes_all_classes = []
+      bboxes_rois_all_classes = []
+      classes_pred = []
+      for j in xrange(1, imdb.num_classes):
+          bboxes_all_classes.extend(all_boxes[j][i])
+          bboxes_rois_all_classes.extend(all_boxes_rois[j][i])
+          classes_pred.extend([j for tmp in range(len(all_boxes[j][i]))])
+      # print (classes_pred)
+      # exit()
+
+      # print (bboxes_all_classes)
+      bboxes_all = np.array(bboxes_all_classes)
+      bboxes_rois_all = np.array(bboxes_rois_all_classes)
+      # print (bboxes_all.shape)
+      # exit()
+          
+      # overlap_boxes = torch.from_numpy(all_boxes[j][i][:,:4])
+      overlap_boxes = torch.from_numpy(bboxes_all[:,:4])
+      overlap_boxes = Variable(overlap_boxes)
+      overlap_boxes = overlap_boxes.contiguous().cuda()
+
+      overlap_boxes_rois = torch.from_numpy(bboxes_rois_all[:,:4])
+      overlap_boxes_rois = Variable(overlap_boxes_rois)
+      overlap_boxes_rois = overlap_boxes_rois.contiguous().cuda()
+
+
+      # print (overlap_boxes)
+      # print (overlap_boxes.shape)
+
+      # print (all_boxes[j][i])
+      # print (all_boxes[j][i].shape)
+
+      ## overlap_boxes N x 4
+      ## gt boxes 1 x K x 4
+      overlaps = bbox_overlaps_batch(overlap_boxes, gt_boxes)
+      overlaps_rois = bbox_overlaps_batch(overlap_boxes_rois, gt_boxes)
+      # print (gt_boxes)
+
+      ## overlaps N x K
+      # print (overlaps)
+      # print (overlaps_rois)
+      max_overlaps, gt_assignment = torch.max(overlaps, 2)
+      # print (max_overlaps)
+      # print (max_overlaps[0])
+      # print (max_overlaps.shape)
+      # print (gt_assignment)
+      ## 
+      threshold = 0.0
+      above_thres_inds = torch.nonzero(max_overlaps[0] >= threshold).view(-1)
+      above_thres_inds = torch.nonzero(max_overlaps[0] >= threshold).view(-1)
+      # print (above_thres_inds.shape)
+      # print (above_thres_inds.size())
+      # print (len(above_thres_inds.shape))
+      # exit()
+
+      if len(above_thres_inds.shape) == 0:
+          continue
+      keep_inds = above_thres_inds
+      # print (keep_inds)
+     
+      # number_boxes = overlap_boxes.shape[0]
+      # number_boxes = overlap_boxes.shape[0]
+      number_boxes = above_thres_inds.shape[0]
+      # print (number_boxes)
+      # print (overlaps.shape)
+      # print (overlaps[0].shape)
+      for k in range(number_boxes):
+          ## two iou
+          # print (gt_assignment[0][keep_inds])
+          # print (gt_assignment[0][keep_inds][i])
+          # print (keep_inds[i])
+          # print (overlaps[0].shape)
+          # print (overlaps[0][keep_inds[i]])
+          # print (overlaps[0][keep_inds[i]][0, gt_assignment[0][keep_inds][i].data[0]])
+          # print (overlaps_rois[0][keep_inds[i]][0, gt_assignment[0][keep_inds][i].data[0]])
+          pred_iou = overlaps[0][keep_inds[k]][0, gt_assignment[0][keep_inds][k].data[0]].data[0]
+          roi_iou  = overlaps_rois[0][keep_inds[k]][0, gt_assignment[0][keep_inds][k].data[0]].data[0]
+
+          pred_score = bboxes_all[keep_inds[k]][4]
+          pred_class = classes_pred[int(keep_inds[k].data[0])]
+
+          # print (pred_iou, roi_iou)
+          # print (roi_iou, pred_iou, pred_class, ) 
+          k_bbox = overlap_boxes[keep_inds[k]].data.cpu().numpy()
+          k_roi  = overlap_boxes_rois[keep_inds[k]].data.cpu().numpy()
+          k_gt   = gt_boxes[0, gt_assignment[0][keep_inds][k].data[0]].data.cpu().numpy()
+          # print (k_bbox, k_roi, k_gt)
+          iou_pairs.append([roi_iou, pred_iou, pred_score, pred_class, k_bbox, k_roi, k_gt]) 
+          # over_i = overlaps[0][keep# _inds[i]][0, gt_assignment[0][keep_inds][i].data[0]]
+          # print (over_i[0, gt_assignment[0][keep_inds][i].data[0]])
+
+          # exit()
+
+          # print (overlaps[0][keep_inds[i]])
+          # print (overlaps_rois[0][gt_assignment[0][keep_inds][i]])
+          # exit()
+          
+          # print (overlaps[0][gt_assignment[0][keep_inds]])
+          # print (overlaps_rois[0][keep_inds])
+
+      # gt_boxes[i][gt_assignment[i][keep_inds]]
+      # exit()
+
+      ### analyze
       misc_toc = time.time()
       nms_time = misc_toc - misc_tic
 
@@ -340,19 +560,28 @@ if __name__ == '__main__':
 
       if vis:
           output_file = 'logs/testOutput/{:05d}.png'.format(i)
-          cv2.imwrite(output_file, im2show)
+          # cv2.imwrite(output_file, im2show)
 
           # cv2.imwrite('result.png', im2show)
           # pdb.set_trace()
 
-          #cv2.imshow('test', im2show)
-          #cv2.waitKey(0)
+          # cv2.imshow('test', im2show)
+          # cv2.waitKey(0)
 
   with open(det_file, 'wb') as f:
       pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
+  with open(det_file_rois, 'wb') as f:
+      pickle.dump( all_boxes_rois, f, pickle.HIGHEST_PROTOCOL)
+
+      # pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
+
+  # print (iou_pairs)
+  with open(det_file_ious, 'wb') as f:
+      pickle.dump( iou_pairs, f, pickle.HIGHEST_PROTOCOL)
 
   print('Evaluating detections')
   imdb.evaluate_detections(all_boxes, output_dir)
+  # imdb.evaluate_detections(all_boxes_rois, output_dir)
 
   end = time.time()
   print("test time: %0.4fs" % (end - start))

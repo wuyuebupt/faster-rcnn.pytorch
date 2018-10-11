@@ -287,7 +287,7 @@ class pascal_voc(imdb):
                                        dets[k, 0] + 1, dets[k, 1] + 1,
                                        dets[k, 2] + 1, dets[k, 3] + 1))
 
-    def _do_python_eval(self, output_dir='output'):
+    def _do_python_eval(self, output_dir='output', ovthresh=0.5):
         annopath = os.path.join(
             self._devkit_path,
             'VOC' + self._year,
@@ -311,26 +311,27 @@ class pascal_voc(imdb):
                 continue
             filename = self._get_voc_results_file_template().format(cls)
             rec, prec, ap = voc_eval(
-                filename, annopath, imagesetfile, cls, cachedir, ovthresh=0.5,
+                filename, annopath, imagesetfile, cls, cachedir, ovthresh=ovthresh,
                 use_07_metric=use_07_metric)
+                # filename, annopath, imagesetfile, cls, cachedir, ovthresh=0.5,
             aps += [ap]
-            print('AP for {} = {:.4f}'.format(cls, ap))
+            # print('AP for {} = {:.4f}'.format(cls, ap))
             with open(os.path.join(output_dir, cls + '_pr.pkl'), 'wb') as f:
                 pickle.dump({'rec': rec, 'prec': prec, 'ap': ap}, f)
         print('Mean AP = {:.4f}'.format(np.mean(aps)))
         print('~~~~~~~~')
         print('Results:')
-        for ap in aps:
-            print('{:.3f}'.format(ap))
+        # for ap in aps:
+        #     print('{:.3f}'.format(ap))
         print('{:.3f}'.format(np.mean(aps)))
         print('~~~~~~~~')
-        print('')
-        print('--------------------------------------------------------------')
-        print('Results computed with the **unofficial** Python eval code.')
-        print('Results should be very close to the official MATLAB eval code.')
-        print('Recompute with `./tools/reval.py --matlab ...` for your paper.')
-        print('-- Thanks, The Management')
-        print('--------------------------------------------------------------')
+        # print('')
+        # print('--------------------------------------------------------------')
+        # print('Results computed with the **unofficial** Python eval code.')
+        # print('Results should be very close to the official MATLAB eval code.')
+        # print('Recompute with `./tools/reval.py --matlab ...` for your paper.')
+        # print('-- Thanks, The Management')
+        # print('--------------------------------------------------------------')
 
     def _do_matlab_eval(self, output_dir='output'):
         print('-----------------------------------------------------')
@@ -349,7 +350,11 @@ class pascal_voc(imdb):
 
     def evaluate_detections(self, all_boxes, output_dir):
         self._write_voc_results_file(all_boxes)
-        self._do_python_eval(output_dir)
+        for i in range(10):
+            ovthresh = 0.5 + 0.05 * i
+            print (ovthresh)
+            self._do_python_eval(output_dir, ovthresh)
+
         if self.config['matlab_eval']:
             self._do_matlab_eval(output_dir)
         if self.config['cleanup']:
