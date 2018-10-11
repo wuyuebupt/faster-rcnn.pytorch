@@ -53,6 +53,7 @@ class pascal_voc(imdb):
                          'sheep', 'sofa', 'train', 'tvmonitor')
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
         self._image_ext = '.jpg'
+        self._proposal_ext = '.mat'
         self._image_index = self._load_image_set_index()
         # Default to roidb handler
         # self._roidb_handler = self.selective_search_roidb
@@ -72,6 +73,25 @@ class pascal_voc(imdb):
             'VOCdevkit path does not exist: {}'.format(self._devkit_path)
         assert os.path.exists(self._data_path), \
             'Path does not exist: {}'.format(self._data_path)
+
+
+    def image_offline_proposal_at(self, i):
+        """
+        Return the absolute path to image i in the image sequence.
+        """
+        return self.image_offline_proposal_from_index(self._image_index[i])
+
+    def image_offline_proposal_from_index(self, index):
+        """
+        Construct an image path from the image's "index" identifier.
+        """
+        proposal_path = os.path.join(self._data_path, 'Proposals',
+                                  index + self._proposal_ext)
+        assert os.path.exists(proposal_path), \
+            'Path does not exist: {}'.format(proposal_path)
+        # image_path = os.path.join(self._data_path, 'Data', 'DET', self._image_set, index + self._image_ext[0])
+        # assert os.path.exists(proposal_path), 'path does not exist: {}'.format(proposal_path)
+        return proposal_path
 
     def image_path_at(self, i):
         """

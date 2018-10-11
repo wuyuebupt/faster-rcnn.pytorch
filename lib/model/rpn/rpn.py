@@ -55,7 +55,8 @@ class _RPN(nn.Module):
         )
         return x
 
-    def forward(self, base_feat, im_info, gt_boxes, num_boxes):
+    # def forward(self, base_feat, im_info, gt_boxes, num_boxes):
+    def forward(self, base_feat, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals):
 
         batch_size = base_feat.size(0)
 
@@ -77,8 +78,13 @@ class _RPN(nn.Module):
         rois = self.RPN_proposal((rpn_cls_prob.data, rpn_bbox_pred.data,
                                  im_info, cfg_key))
 
+        rois = proposal_boxes
+        # print (rois.shape)
+
         self.rpn_loss_cls = 0
         self.rpn_loss_box = 0
+
+        return rois, self.rpn_loss_cls, self.rpn_loss_box
 
         # generating training labels and build the rpn loss
         if self.training:

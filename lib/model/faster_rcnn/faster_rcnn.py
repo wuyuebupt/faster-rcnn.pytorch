@@ -49,18 +49,22 @@ class _fasterRCNN(nn.Module):
         self.grid_size = cfg.POOLING_SIZE * 2 if cfg.CROP_RESIZE_WITH_MAX_POOL else cfg.POOLING_SIZE
         self.RCNN_roi_crop = _RoICrop()
 
-    def forward(self, im_data, im_info, gt_boxes, num_boxes):
+    # def forward(self, im_data, im_info, gt_boxes, num_boxes):
+    def forward(self, im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals):
         batch_size = im_data.size(0)
 
         im_info = im_info.data
         gt_boxes = gt_boxes.data
         num_boxes = num_boxes.data
+        proposal_boxes = proposal_boxes.data
+        num_proposals = num_proposals.data
 
         # feed image data to base model to obtain base feature map
         base_feat = self.RCNN_base(im_data)
 
         # feed base feature map tp RPN to obtain rois
-        rois, rpn_loss_cls, rpn_loss_bbox = self.RCNN_rpn(base_feat, im_info, gt_boxes, num_boxes)
+        # rois, rpn_loss_cls, rpn_loss_bbox = self.RCNN_rpn(base_feat, im_info, gt_boxes, num_boxes)
+        rois, rpn_loss_cls, rpn_loss_bbox = self.RCNN_rpn(base_feat, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals)
 
         # if it is training phrase, then use ground trubut bboxes for refining
         if self.training:
@@ -112,7 +116,8 @@ class _fasterRCNN(nn.Module):
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.5)
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.1)
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.3)
-        rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.1)
+        # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.1)
+        rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.3)
         # print (rois_attention_candidates.shape)
 
         rois_attention_candidates = Variable(rois_attention_candidates)
@@ -281,7 +286,8 @@ class _fasterRCNN(nn.Module):
         # return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label
 
         ## adding beta, and kl divergency
-        return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_bbox_beta, KL_loss
+        return rois, cls_prob, bbox_pred, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_bbox_beta, KL_loss
+        # return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_bbox_beta, KL_loss
 
     def _init_weights(self):
         def normal_init(m, mean, stddev, truncated=False):

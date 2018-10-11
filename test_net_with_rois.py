@@ -181,6 +181,8 @@ if __name__ == '__main__':
   im_info = torch.FloatTensor(1)
   num_boxes = torch.LongTensor(1)
   gt_boxes = torch.FloatTensor(1)
+  num_proposals = torch.LongTensor(1)
+  proposal_boxes = torch.FloatTensor(1)
 
   # ship to cuda
   if args.cuda:
@@ -188,12 +190,17 @@ if __name__ == '__main__':
     im_info = im_info.cuda()
     num_boxes = num_boxes.cuda()
     gt_boxes = gt_boxes.cuda()
+    num_proposals = num_proposals.cuda()
+    proposal_boxes = proposal_boxes.cuda()
+
 
   # make variable
   im_data = Variable(im_data, volatile=True)
   im_info = Variable(im_info, volatile=True)
   num_boxes = Variable(num_boxes, volatile=True)
   gt_boxes = Variable(gt_boxes, volatile=True)
+  num_proposals = Variable(num_proposals)
+  proposal_boxes = Variable(proposal_boxes)
 
   if args.cuda:
     cfg.CUDA = True
@@ -257,13 +264,16 @@ if __name__ == '__main__':
       im_info.data.resize_(data[1].size()).copy_(data[1])
       gt_boxes.data.resize_(data[2].size()).copy_(data[2])
       num_boxes.data.resize_(data[3].size()).copy_(data[3])
+      proposal_boxes.data.resize_(data[4].size()).copy_(data[4])
+      num_proposals.data.resize_(data[5].size()).copy_(data[5])
 
       det_tic = time.time()
       rois, cls_prob, bbox_pred, \
       rpn_loss_cls, rpn_loss_box, \
       RCNN_loss_cls, RCNN_loss_bbox, \
       rois_label, \
-      RCNN_loss_bbox_beta, kl_loss  = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
+      RCNN_loss_bbox_beta, kl_loss  = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals)
+
       # wx1, wy1, wx2, wy2, \
       # dx1, dy1, dx2, dy2, \
       # ox1, oy1, ox2, oy2 = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
