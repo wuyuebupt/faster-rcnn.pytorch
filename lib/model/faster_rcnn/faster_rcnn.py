@@ -111,7 +111,8 @@ class _fasterRCNN(nn.Module):
         # print (im_info)
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.5)
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.1)
-        rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.3)
+        # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.3)
+        rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.1)
         # print (rois_attention_candidates.shape)
 
         rois_attention_candidates = Variable(rois_attention_candidates)
@@ -306,8 +307,7 @@ class _fasterRCNN(nn.Module):
         normal_init(self.RCNN_rpn.RPN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
         normal_init(self.RCNN_rpn.RPN_bbox_pred, 0, 0.01, cfg.TRAIN.TRUNCATED)
         normal_init(self.RCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
-        normal_init(self.RCNN_bbox_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)
-
+        normal_init(self.RCNN_bbox_pred, 0, 0.01, cfg.TRAIN.TRUNCATED)
         normal_init(self.RCNN_attention_feat, 0, 0.01, cfg.TRAIN.TRUNCATED)
         # normal_init(self.RCNN_attention_feat, 0, 0.01, cfg.TRAIN.TRUNCATED)
         
