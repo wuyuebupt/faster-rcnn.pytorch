@@ -226,11 +226,11 @@ if __name__ == '__main__':
   _t = {'im_detect': time.time(), 'misc': time.time()}
   det_file = os.path.join(output_dir, 'detections.pkl')
 
-  with open(det_file, 'rb') as f:
-      all_boxes = pickle.load(f)
-  print('Evaluating detections')
-  imdb.evaluate_detections(all_boxes, output_dir)
-  exit()
+  # with open(det_file, 'rb') as f:
+  #     all_boxes = pickle.load(f)
+  # print('Evaluating detections')
+  # imdb.evaluate_detections(all_boxes, output_dir)
+  # exit()
 
 
   fasterRCNN.eval()

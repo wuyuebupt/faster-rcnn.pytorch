@@ -131,7 +131,8 @@ if __name__ == '__main__':
   np.random.seed(cfg.RNG_SEED)
   if args.dataset == "pascal_voc":
       args.imdb_name = "voc_2007_trainval"
-      args.imdbval_name = "voc_2007_test"
+      # args.imdbval_name = "voc_2007_test"
+      args.imdbval_name = "voc_2007_trainval"
       args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]']
   elif args.dataset == "pascal_voc_0712":
       args.imdb_name = "voc_2007_trainval+voc_2012_trainval"
@@ -295,8 +296,8 @@ if __name__ == '__main__':
       # print (rois)
       # print (rois.shape)
       # print (im_info)
-      rois[:,:,1:5] = rois[:,:,1:5] / data[1][0][2]
       print (imdb.image_path_at(i))
+      rois[:,:,1:5] = rois[:,:,1:5] / data[1][0][2]
       rpn_save_file = jpeg_to_mat(imdb.image_path_at(i))
       save_matfile(rpn_save_file, rois)
       continue
