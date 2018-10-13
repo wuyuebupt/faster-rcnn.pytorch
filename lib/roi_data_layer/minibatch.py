@@ -48,8 +48,16 @@ def get_minibatch(roidb, num_classes):
   gt_boxes = np.empty((len(gt_inds), 5), dtype=np.float32)
 
   offline_proposal_boxes = np.empty((len(im_offline_proposals[0]), 5), dtype=np.float32)
+  # print (im_offline_proposals)
+  # print (im_offline_proposals.shape)
+  ## change from  0  x1 y1 x2 y2
+  ##          to  x1 y1 x2 y2 0
   offline_proposal_boxes[:, 0:4] = im_offline_proposals[0][:, 1:5] * im_scales[0]
   offline_proposal_boxes[:, 4] = im_offline_proposals[0][:, 0] 
+  # print (im_scales[0])
+  # print (offline_proposal_boxes.shape)
+  # print (offline_proposal_boxes)
+  # exit()
 
 
   gt_boxes[:, 0:4] = roidb[0]['boxes'][gt_inds, :] * im_scales[0]
@@ -87,13 +95,20 @@ def _get_image_blob(roidb, scale_inds):
 
     offline_proposal_bbox = sio.loadmat(roidb[i]['offline_proposal'])['boxes']
 
+    # print (offline_proposal_bbox)
+    # exit()
     if roidb[i]['flipped']:
       im = im[:, ::-1, :]
       im_width = im.shape[1]
-      oldx1 = offline_proposal_bbox[:, 0].copy()
-      oldx2 = offline_proposal_bbox[:, 2].copy()
-      offline_proposal_bbox[:, 0] = im_width - oldx2 - 1
-      offline_proposal_bbox[:, 2] = im_width - oldx1 - 1
+      # oldx1 = offline_proposal_bbox[:, 0].copy()
+      # oldx2 = offline_proposal_bbox[:, 2].copy()
+      # offline_proposal_bbox[:, 0] = im_width - oldx2 - 1
+      # offline_proposal_bbox[:, 2] = im_width - oldx1 - 1
+      ## flip with 0 x1 y1 x2 y2
+      oldx1 = offline_proposal_bbox[:, 1].copy()
+      oldx2 = offline_proposal_bbox[:, 3].copy()
+      offline_proposal_bbox[:, 1] = im_width - oldx2 - 1
+      offline_proposal_bbox[:, 3] = im_width - oldx1 - 1
 
 
     target_size = cfg.TRAIN.SCALES[scale_inds[i]]

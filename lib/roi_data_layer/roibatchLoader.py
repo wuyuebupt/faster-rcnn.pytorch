@@ -223,7 +223,8 @@ class roibatchLoader(data.Dataset):
             num_proposals = min(proposal_boxes.size(0), 2000)
             # proposal_boxes_padding[:num_proposals,:] = proposal_boxes[:num_proposals]
             proposal_boxes_padding[:num_proposals,1:5] = proposal_boxes[:num_proposals,:4]
-            proposal_boxes_padding[:num_proposals, 0] = proposal_boxes[:num_proposals, 4]
+            ## comment this line for unknow issues.....
+            # proposal_boxes_padding[:num_proposals, 0] = proposal_boxes[:num_proposals, 4]
         else:
             num_proposals = 0
 
@@ -254,7 +255,7 @@ class roibatchLoader(data.Dataset):
             num_proposals = min(proposal_boxes.size(0), 300)
             # proposal_boxes_padding[:num_proposals,:] = proposal_boxes[:num_proposals]
             proposal_boxes_padding[:num_proposals,1:5] = proposal_boxes[:num_proposals,:4]
-            proposal_boxes_padding[:num_proposals, 0] = proposal_boxes[:num_proposals, 4]
+            # proposal_boxes_padding[:num_proposals, 0] = proposal_boxes[:num_proposals, 4]
         else:
             num_proposals = 0
  
