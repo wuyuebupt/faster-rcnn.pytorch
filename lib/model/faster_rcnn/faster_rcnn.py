@@ -117,7 +117,8 @@ class _fasterRCNN(nn.Module):
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.1)
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.3)
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.1)
-        rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.3)
+        # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.3)
+        rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.5)
         # print (rois_attention_candidates.shape)
 
         rois_attention_candidates = Variable(rois_attention_candidates)
