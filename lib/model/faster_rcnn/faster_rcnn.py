@@ -118,8 +118,13 @@ class _fasterRCNN(nn.Module):
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.3)
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.1)
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.3)
-        rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.5)
+        boundary_move_scale = 0.5
+        rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.5, boundary_move_scale)
         # print (rois_attention_candidates.shape)
+        # print (rois_attention_candidates)
+        # print (delta_rois.shape)
+        # print (delta_rois)
+        # exit()
 
         rois_attention_candidates = Variable(rois_attention_candidates)
         # delta_rois = Variable(delta_rois)
@@ -127,7 +132,7 @@ class _fasterRCNN(nn.Module):
 
         ## gt rois
         if self.training:
-            gt_attention_candidates = self._gt_to_candidates(gt_rois, im_info, 0.5)
+            gt_attention_candidates = self._gt_to_candidates(gt_rois, im_info, boundary_move_scale)
             gt_attention_candidates = Variable(gt_attention_candidates) 
             gt_rois = Variable(gt_rois.view(-1, gt_rois.size(2)))
         else:
@@ -166,24 +171,28 @@ class _fasterRCNN(nn.Module):
         rois_attention_pooled_feat = []
         # print (rois_attention_pooled_feat.shape)
 
-        for i in range(9):
-            # print (i)
-            # only do the roi align now
-            assert(cfg.POOLING_MODE == 'align')
-            # print (self.RCNN_roi_align(base_feat, rois_attention_candidates[i,:,:,:].view(-1, 5)).shape)
-            pooled_feat_tmp = self.RCNN_roi_align(base_feat, rois_attention_candidates[i,:,:,:].view(-1, 5))
-            pooled_feat_tmp = self._head_to_tail(pooled_feat_tmp)
-            # v1
-            # rois_attention_pooled_feat.append(pooled_feat_tmp)
-
-            # v2
-            pooled_attention_feat = self.RCNN_attention_feat(pooled_feat_tmp)
-            pooled_attention_feat = self.relu(pooled_attention_feat)
-            rois_attention_pooled_feat.append(pooled_attention_feat)
-        # print (rois_attention_pooled_feat)
+        for j in range(5):
+            for i in range(9):
+                # print (i)
+                # only do the roi align now
+                assert(cfg.POOLING_MODE == 'align')
+                # print (self.RCNN_roi_align(base_feat, rois_attention_candidates[i,:,:,:].view(-1, 5)).shape)
+                pooled_feat_tmp = self.RCNN_roi_align(base_feat, rois_attention_candidates[j, i, :, :, :].view(-1, 5))
+                pooled_feat_tmp = self._head_to_tail(pooled_feat_tmp)
+                # v1
+                # rois_attention_pooled_feat.append(pooled_feat_tmp)
+                # v2
+                pooled_attention_feat = self.RCNN_attention_feat(pooled_feat_tmp)
+                pooled_attention_feat = self.relu(pooled_attention_feat)
+                rois_attention_pooled_feat.append(pooled_attention_feat)
+        # print (len(rois_attention_pooled_feat))
         # exit()
 
         gt_attention_pooled_feat = []
+
+        # import pdb
+        # pdb.set_trace()
+
         ### for gt rois
         if self.training:
             for i in range(4):
@@ -406,7 +415,7 @@ class _fasterRCNN(nn.Module):
         # exit()
         return attention_candidates
  
-    def _rois_to_candidates(self, rois, im_info, scale):
+    def _rois_to_candidates(self, rois, im_info, scale, sale_move):
         # rois [batchsize x 128 x5]
         ##
         ##
@@ -419,7 +428,10 @@ class _fasterRCNN(nn.Module):
         number_rois = rois.size(1)
         # print (rois)
         # exit()
-	attention_candidates = rois.new(9, batchsize, number_rois, 5).zero_()
+        ## [0, 1, 2, 3] left, top, bottom, right -> original [4] original
+        ##  
+
+	attention_candidates = rois.new(5, 9, batchsize, number_rois, 5).zero_()
         # print (attention_candidates.shape)
 
 # w = box(1,3) - box(1,1);
@@ -442,11 +454,25 @@ class _fasterRCNN(nn.Module):
             for j in range(3):
                 # print (i,j)
                 index = i * 3 + j 
-                attention_candidates[index, :, :, 0] = rois[:, :, 0]  
-                attention_candidates[index, :, :, 1] = rois[:, :, 1] + (rois[:, :, 3] - rois[:, :, 1]) * scale * (i - 1)
-                attention_candidates[index, :, :, 2] = rois[:, :, 2] + (rois[:, :, 4] - rois[:, :, 2]) * scale * (j - 1)
-                attention_candidates[index, :, :, 3] = rois[:, :, 3] + (rois[:, :, 3] - rois[:, :, 1]) * scale * (i - 1)
-                attention_candidates[index, :, :, 4] = rois[:, :, 4] + (rois[:, :, 4] - rois[:, :, 2]) * scale * (j - 1)
+                attention_candidates[4, index, :, :, 0] = rois[:, :, 0]  
+                attention_candidates[4, index, :, :, 1] = rois[:, :, 1] + (rois[:, :, 3] - rois[:, :, 1]) * scale * (i - 1)
+                attention_candidates[4, index, :, :, 2] = rois[:, :, 2] + (rois[:, :, 4] - rois[:, :, 2]) * scale * (j - 1)
+                attention_candidates[4, index, :, :, 3] = rois[:, :, 3] + (rois[:, :, 3] - rois[:, :, 1]) * scale * (i - 1)
+                attention_candidates[4, index, :, :, 4] = rois[:, :, 4] + (rois[:, :, 4] - rois[:, :, 2]) * scale * (j - 1)
+
+                ## move compared to the neighbor
+                for k in range(4):
+                    # print (i,j)
+                    tar_index = k*2 + 1
+                    index_k = k 
+                    i_transform = tar_index / 3
+                    j_transform = tar_index % 3 
+                    # print (i_transform, j_transform)
+                    attention_candidates[index_k, index, :, :, 0] = rois[:, :, 0]  
+                    attention_candidates[index_k, index, :, :, 1] = attention_candidates[4, index, :, :, 1] + (rois[:, :, 3] - rois[:, :, 1]) * scale * (i_transform - 1)
+                    attention_candidates[index_k, index, :, :, 2] = attention_candidates[4, index, :, :, 2] + (rois[:, :, 4] - rois[:, :, 2]) * scale * (j_transform - 1)
+                    attention_candidates[index_k, index, :, :, 3] = attention_candidates[4, index, :, :, 3] + (rois[:, :, 3] - rois[:, :, 1]) * scale * (i_transform - 1)
+                    attention_candidates[index_k, index, :, :, 4] = attention_candidates[4, index, :, :, 4] + (rois[:, :, 4] - rois[:, :, 2]) * scale * (j_transform - 1)
 
         ## v1: boundary clamp
         # attention_candidates[:,:,:,1].clamp_(0, img_w)
@@ -456,26 +482,27 @@ class _fasterRCNN(nn.Module):
 
         ## v2: boundary offset move inside if the boxes is out
         # calcualte delta
-        offset_x1 = 0 - attention_candidates[:,:,:,1] 
+        offset_x1 = 0 - attention_candidates[:, :,:,:,1] 
         offset_x1 = offset_x1.clamp_(0, img_w)
-        attention_candidates[:,:,:,1] = attention_candidates[:,:,:,1] + offset_x1
+        attention_candidates[:,:,:,:,1] = attention_candidates[:,:,:,:,1] + offset_x1
 
-        offset_y1 = 0 - attention_candidates[:,:,:,2] 
+        offset_y1 = 0 - attention_candidates[:,:,:,:,2] 
         offset_y1 = offset_y1.clamp_(0, img_h)
-        attention_candidates[:,:,:,2] = attention_candidates[:,:,:,2] + offset_y1
+        attention_candidates[:,:,:,:,2] = attention_candidates[:,:,:,:,2] + offset_y1
 
 
-        offset_x2 = attention_candidates[:,:,:,3] - img_w
+        offset_x2 = attention_candidates[:,:,:,:,3] - img_w
         offset_x2 = offset_x2.clamp_(0, img_w)
-        attention_candidates[:,:,:,3] = attention_candidates[:,:,:,3] - offset_x2
+        attention_candidates[:,:,:,:,3] = attention_candidates[:,:,:,:,3] - offset_x2
 
-        offset_y2 = attention_candidates[:,:,:,4] - img_h 
+        offset_y2 = attention_candidates[:,:,:,:,4] - img_h 
         offset_y2 = offset_y2.clamp_(0, img_h)
-        attention_candidates[:,:,:,4] = attention_candidates[:,:,:,4] - offset_y2
+        attention_candidates[:,:,:,:,4] = attention_candidates[:,:,:,:,4] - offset_y2
 
-  
         ## get the delta_x 
-        query_roi = attention_candidates[4,:,:,:]
+        ## center proposal
+
+        query_roi = attention_candidates[4, 4,:,:,:]
         # print (query_roi.shape)       
         query_roi = query_roi.view(-1,5)
         # print (query_roi.shape)       
@@ -484,7 +511,7 @@ class _fasterRCNN(nn.Module):
 
         ## process the rois to generate the delta_x, y
         for i in range(9):
-            roi_tmp = attention_candidates[i,:,:,:]
+            roi_tmp = attention_candidates[4,i,:,:,:]
             roi_tmp = roi_tmp.view(-1,5)
             # print (roi_tmp.shape)
             delta_rois[i, :, 0] = query_roi[:, 0]
@@ -601,13 +628,21 @@ class RelationUnit(nn.Module):
         
         # wq * q: 128
 
-        q_feat = features[4]
-        N = q_feat.size(0)
+        tmp_feat = features[0]
+        N = tmp_feat.size(0)
 
+        # print (len(features))
         all_features = torch.stack(features)
-        all_features_offset = all_features.view(9, N, self.dim_feat, 1)
+        all_features_offset_pre = all_features.view(5, 9, N, self.dim_feat, 1)
+        all_features_offset = all_features_offset_pre[4, :, :, :, :]
+        # print (all_features_offset.shape)
         ## v0.2
-        all_features_attention = all_features.view(9, N, self.dim_feat, 1, 1)
+        # all_features_attention = all_features.view(5, 9, N, self.dim_feat, 1, 1)
+        all_features_attention =  all_features_offset_pre[0:4, :, :, :, :]
+        # print (all_features_attention.shape)
+        all_features_attention = all_features_attention.permute([1, 2, 3, 4, 0])
+        # print (all_features_attention.shape)
+        
         ## v0.3
         # all_features_attention = all_features.view(9, N, self.dim_feat, 1)
 
@@ -674,6 +709,8 @@ class RelationUnit(nn.Module):
         # print (gt_features.shape)
         if self.training:
             # v0.2
+            # print (self.w_q.shape)
+            # print (all_features_attention.shape)
             query_dot =  all_features_attention * self.w_q
             query_out = torch.sum(query_dot, -3)
             # v0.3
