@@ -111,8 +111,8 @@ class _ProposalTargetLayer(nn.Module):
         # print ("enter bbox_transform_batch")
         # print (ex_rois.shape)
         # print (gt_rois.shape)
-        # targets = bbox_transform_batch(ex_rois, gt_rois)
-        targets = bbox_transform_batch_attention(ex_rois, gt_rois)
+        targets = bbox_transform_batch(ex_rois, gt_rois)
+        # targets = bbox_transform_batch_attention(ex_rois, gt_rois)
 
         if cfg.TRAIN.BBOX_NORMALIZE_TARGETS_PRECOMPUTED:
             # Optionally normalize targets by a precomputed mean and stdev

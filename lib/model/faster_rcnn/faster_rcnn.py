@@ -550,14 +550,22 @@ class RelationUnit(nn.Module):
         bias = False
         
         #################### for gt attention
-        # self.w_k = Parameter(torch.Tensor(1, 1, appearance_feature_dim, self.dim_k, 4))
-        self.w_k = Parameter(torch.Tensor(4, 1, appearance_feature_dim, self.dim_k, 1))
-        self.w_q = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.dim_k, 4))
+        ## c4
+        # self.w_k = Parameter(torch.Tensor(4, 1, appearance_feature_dim, self.dim_k, 1))
+        # self.w_q = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.dim_k, 4))
+
+        ## c1
+        self.w_k = Parameter(torch.Tensor(1, 1, appearance_feature_dim, self.dim_k, 1))
+        self.w_q = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.dim_k, 1))
 
         #################### for predicted alplha
         ## neighbors number: 9
         # self.alpha_w = Parameter(torch.Tensor(9, key_feature_dim, appearance_feature_dim, 4))
-        self.alpha_w = Parameter(torch.Tensor(9, 1, appearance_feature_dim, 4))
+
+        ## unshared alpha
+        # self.alpha_w = Parameter(torch.Tensor(9, 1, appearance_feature_dim, 4))
+        ## shared alpha
+        self.alpha_w = Parameter(torch.Tensor(9, 1, appearance_feature_dim, 1))
 
         # print (self.alpha_w.shape)
         # exit()
@@ -638,7 +646,10 @@ class RelationUnit(nn.Module):
         # print (len(features))
         # print (features[0])
         # print (features[0].shape)
+
+        # print (all_features_offset.shape)
         # print (self.alpha_w.shape)
+
         alpha_dot = all_features_offset * self.alpha_w
         # print (alpha_dot.shape)
         alpha = torch.sum(alpha_dot, -2)
@@ -676,6 +687,7 @@ class RelationUnit(nn.Module):
         # delta_rois_8[4:8, :,:] = delta_rois[5:9,:,:]
         
         # print (delta_rois_8.shape)
+        # print (alpha_softmax.shape)
 
         ## v0.4 offset first then alpha
         delta_pred = (delta_rois_8 + offset) * alpha_softmax
@@ -750,10 +762,15 @@ class RelationUnit(nn.Module):
             # v0.3
             # output_beta = None
             # print (output_beta.shape)
+            # exit()
+
+
         else:
             beta_softmax = None
             output_beta = None
             delta_pred_offset_beta = None
+
+
 
         # return output, w_x1, w_y1, w_x2, w_y2, delta_x1, delta_y1, delta_x2, delta_y2, output_x1_before,  output_y1_before, output_x2_before, output_y2_before
         return output, output_beta, alpha_softmax, beta_softmax, delta_pred_offset, delta_pred_offset_beta
