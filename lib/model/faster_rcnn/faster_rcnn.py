@@ -740,8 +740,13 @@ class RelationUnit(nn.Module):
             ## v0.1 : same input with alpha
             # beta_delta_pred = (delta_rois_8 + offset) * beta_softmax
             ## v0.2 : using original delta
-            delta_pred_offset_beta = delta_rois_8
-            beta_delta_pred = delta_rois_8 * beta_softmax
+            # delta_pred_offset_beta = delta_rois_8
+
+            ## b4-att0
+            # beta_delta_pred = delta_rois_8 * beta_softmax
+            ## b4-att0-reg
+            delta_pred_offset_beta = delta_pred_offset 
+            beta_delta_pred = delta_pred_offset_beta * beta_softmax
             ## v0.3 
             # beta_delta_pred = None
 
