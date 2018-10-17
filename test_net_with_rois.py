@@ -304,8 +304,8 @@ if __name__ == '__main__':
             #                + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
             #     box_deltas = box_deltas.view(1, -1, 4 * len(imdb.classes))
 
-          # pred_boxes = bbox_transform_inv(boxes, box_deltas, 1)
-          pred_boxes = bbox_transform_inv_attention(boxes, box_deltas, 1)
+          pred_boxes = bbox_transform_inv(boxes, box_deltas, 1)
+          # pred_boxes = bbox_transform_inv_attention(boxes, box_deltas, 1)
           pred_boxes = clip_boxes(pred_boxes, im_info.data, 1)
       else:
           # Simply repeat the boxes, once for each class
@@ -343,20 +343,20 @@ if __name__ == '__main__':
             cls_boxes = pred_boxes[inds, :]
             cls_roi_boxes = roi_boxes[inds, :]
             if vis:
-                roi_wx1 = wx1[inds, :]
-                roi_wy1 = wy1[inds, :]
-                roi_wx2 = wx2[inds, :]
-                roi_wy2 = wy2[inds, :]
+                # roi_wx1 = wx1[inds, :]
+                # roi_wy1 = wy1[inds, :]
+                # roi_wx2 = wx2[inds, :]
+                # roi_wy2 = wy2[inds, :]
 
-                roi_dx1 = dx1[inds, :]
-                roi_dy1 = dy1[inds, :]
-                roi_dx2 = dx2[inds, :]
-                roi_dy2 = dy2[inds, :]
+                # roi_dx1 = dx1[inds, :]
+                # roi_dy1 = dy1[inds, :]
+                # roi_dx2 = dx2[inds, :]
+                # roi_dy2 = dy2[inds, :]
 
-                roi_ox1 = ox1[inds, :]
-                roi_oy1 = oy1[inds, :]
-                roi_ox2 = ox2[inds, :]
-                roi_oy2 = oy2[inds, :]
+                # roi_ox1 = ox1[inds, :]
+                # roi_oy1 = oy1[inds, :]
+                # roi_ox2 = ox2[inds, :]
+                # roi_oy2 = oy2[inds, :]
 
                 # roi_dx1 = dx1[inds, :]
                 # roi_ox1 = ox1[inds, :]
@@ -373,20 +373,20 @@ if __name__ == '__main__':
             cls_dets = cls_dets[order]
             cls_roi_dets = cls_roi_dets[order]
             if vis:
-                roi_wx1 = roi_wx1[order]
-                roi_wy1 = roi_wy1[order]
-                roi_wx2 = roi_wx2[order]
-                roi_wy2 = roi_wy2[order]
+                # roi_wx1 = roi_wx1[order]
+                # roi_wy1 = roi_wy1[order]
+                # roi_wx2 = roi_wx2[order]
+                # roi_wy2 = roi_wy2[order]
 
-                roi_dx1 = roi_dx1[order]
-                roi_dy1 = roi_dy1[order]
-                roi_dx2 = roi_dx2[order]
-                roi_dy2 = roi_dy2[order]
+                # roi_dx1 = roi_dx1[order]
+                # roi_dy1 = roi_dy1[order]
+                # roi_dx2 = roi_dx2[order]
+                # roi_dy2 = roi_dy2[order]
 
-                roi_ox1 = roi_ox1[order]
-                roi_oy1 = roi_oy1[order]
-                roi_ox2 = roi_ox2[order]
-                roi_oy2 = roi_oy2[order]
+                # roi_ox1 = roi_ox1[order]
+                # roi_oy1 = roi_oy1[order]
+                # roi_ox2 = roi_ox2[order]
+                # roi_oy2 = roi_oy2[order]
                 # roi_dx1 = roi_dx1[order]
                 # roi_ox1 = roi_ox1[order]
                 roi_box_deltas = roi_box_deltas[order]
@@ -396,20 +396,20 @@ if __name__ == '__main__':
             cls_dets = cls_dets[keep.view(-1).long()]
             cls_roi_dets = cls_roi_dets[keep.view(-1).long()]
             if vis:
-                roi_wx1 = roi_wx1[keep.view(-1).long()]
-                roi_wy1 = roi_wy1[keep.view(-1).long()]
-                roi_wx2 = roi_wx2[keep.view(-1).long()]
-                roi_wy2 = roi_wy2[keep.view(-1).long()]
+                # roi_wx1 = roi_wx1[keep.view(-1).long()]
+                # roi_wy1 = roi_wy1[keep.view(-1).long()]
+                # roi_wx2 = roi_wx2[keep.view(-1).long()]
+                # roi_wy2 = roi_wy2[keep.view(-1).long()]
 
-                roi_dx1 = roi_dx1[keep.view(-1).long()]
-                roi_dy1 = roi_dy1[keep.view(-1).long()]
-                roi_dx2 = roi_dx2[keep.view(-1).long()]
-                roi_dy2 = roi_dy2[keep.view(-1).long()]
+                # roi_dx1 = roi_dx1[keep.view(-1).long()]
+                # roi_dy1 = roi_dy1[keep.view(-1).long()]
+                # roi_dx2 = roi_dx2[keep.view(-1).long()]
+                # roi_dy2 = roi_dy2[keep.view(-1).long()]
 
-                roi_ox1 = roi_ox1[keep.view(-1).long()]
-                roi_oy1 = roi_oy1[keep.view(-1).long()]
-                roi_ox2 = roi_ox2[keep.view(-1).long()]
-                roi_oy2 = roi_oy2[keep.view(-1).long()]
+                # roi_ox1 = roi_ox1[keep.view(-1).long()]
+                # roi_oy1 = roi_oy1[keep.view(-1).long()]
+                # roi_ox2 = roi_ox2[keep.view(-1).long()]
+                # roi_oy2 = roi_oy2[keep.view(-1).long()]
                 # roi_dx1 = roi_dx1[keep.view(-1).long()]
                 # roi_ox1 = roi_ox1[keep.view(-1).long()]
                 roi_box_deltas = roi_box_deltas[keep.view(-1).long()]
@@ -574,11 +574,11 @@ if __name__ == '__main__':
       sys.stdout.flush()
 
       if vis:
-          output_file = 'logs/testOutput/{:05d}.png'.format(i)
+          # output_file = 'logs/testOutput/{:05d}.png'.format(i)
           # cv2.imwrite(output_file, im2show)
 
-          # cv2.imwrite('result.png', im2show)
-          # pdb.set_trace()
+          cv2.imwrite('result.png', im2show)
+          pdb.set_trace()
 
           # cv2.imshow('test', im2show)
           # cv2.waitKey(0)
