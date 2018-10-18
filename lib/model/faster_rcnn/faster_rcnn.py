@@ -120,7 +120,13 @@ class _fasterRCNN(nn.Module):
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.3)
         boundary_move_scale = 0.3
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.5, boundary_move_scale)
-        rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info, boundary_move_scale)
+
+        ## square false
+        # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info, boundary_move_scale, False)
+
+        ## circle true
+        rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info, boundary_move_scale, True)
+
         # print (rois_attention_candidates.shape)
         # print (rois_attention_candidates)
         # print (delta_rois.shape)
@@ -417,7 +423,7 @@ class _fasterRCNN(nn.Module):
         # exit()
         return attention_candidates
  
-    def _rois_to_candidates(self, rois, im_info, scale):
+    def _rois_to_candidates(self, rois, im_info, scale, CN=False):
         # rois [batchsize x 128 x5]
         ##
         ##
@@ -451,15 +457,36 @@ class _fasterRCNN(nn.Module):
 #         newbox((i-1)*3+j, 5)  = box(1,5) ;
 #     end
 # end
-        for i in range(3):
-            for j in range(3):
+        if CN:
+            ## circle neighbor
+            pi = math.pi
+            for i in range(8):
+                delta_x = scale * math.cos(i * pi / 4)
+                delta_y = scale * math.sin(i * pi / 4)
                 # print (i,j)
-                index = i * 3 + j 
+                index = i
                 attention_candidates[index, :, :, 0] = rois[:, :, 0]  
-                attention_candidates[index, :, :, 1] = rois[:, :, 1] + (rois[:, :, 3] - rois[:, :, 1]) * scale * (i - 1)
-                attention_candidates[index, :, :, 2] = rois[:, :, 2] + (rois[:, :, 4] - rois[:, :, 2]) * scale * (j - 1)
-                attention_candidates[index, :, :, 3] = rois[:, :, 3] + (rois[:, :, 3] - rois[:, :, 1]) * scale * (i - 1)
-                attention_candidates[index, :, :, 4] = rois[:, :, 4] + (rois[:, :, 4] - rois[:, :, 2]) * scale * (j - 1)
+                attention_candidates[index, :, :, 1] = rois[:, :, 1] + (rois[:, :, 3] - rois[:, :, 1]) * delta_x 
+                attention_candidates[index, :, :, 2] = rois[:, :, 2] + (rois[:, :, 4] - rois[:, :, 2]) * delta_y
+                attention_candidates[index, :, :, 3] = rois[:, :, 3] + (rois[:, :, 3] - rois[:, :, 1]) * delta_x
+                attention_candidates[index, :, :, 4] = rois[:, :, 4] + (rois[:, :, 4] - rois[:, :, 2]) * delta_y
+            ## put original center in
+            index = 8
+            attention_candidates[index, :, :, 0] = rois[:, :, 0]  
+            attention_candidates[index, :, :, 1] = rois[:, :, 1] 
+            attention_candidates[index, :, :, 2] = rois[:, :, 2] 
+            attention_candidates[index, :, :, 3] = rois[:, :, 3] 
+            attention_candidates[index, :, :, 4] = rois[:, :, 4] 
+        else:
+            for i in range(3):
+                for j in range(3):
+                    # print (i,j)
+                    index = i * 3 + j 
+                    attention_candidates[index, :, :, 0] = rois[:, :, 0]  
+                    attention_candidates[index, :, :, 1] = rois[:, :, 1] + (rois[:, :, 3] - rois[:, :, 1]) * scale * (i - 1)
+                    attention_candidates[index, :, :, 2] = rois[:, :, 2] + (rois[:, :, 4] - rois[:, :, 2]) * scale * (j - 1)
+                    attention_candidates[index, :, :, 3] = rois[:, :, 3] + (rois[:, :, 3] - rois[:, :, 1]) * scale * (i - 1)
+                    attention_candidates[index, :, :, 4] = rois[:, :, 4] + (rois[:, :, 4] - rois[:, :, 2]) * scale * (j - 1)
 
         ## v1: boundary clamp
         # attention_candidates[:,:,:,1].clamp_(0, img_w)
@@ -488,8 +515,11 @@ class _fasterRCNN(nn.Module):
 
         ## get the delta_x 
         ## center proposal
-
-        query_roi = attention_candidates[4,:,:,:]
+        if CN:
+            query_roi = attention_candidates[8,:,:,:]
+        else:
+            query_roi = attention_candidates[4,:,:,:]
+            
         # print (query_roi.shape)       
         query_roi = query_roi.view(-1,5)
         # print (query_roi.shape)       
@@ -506,13 +536,16 @@ class _fasterRCNN(nn.Module):
             delta_rois[i, :, 2] = (roi_tmp[:, 2] - query_roi[:, 2]) / (query_roi[:, 4] - query_roi[:, 2] +1)
             delta_rois[i, :, 3] = (roi_tmp[:, 3] - query_roi[:, 3]) / (query_roi[:, 3] - query_roi[:, 1] +1)
             delta_rois[i, :, 4] = (roi_tmp[:, 4] - query_roi[:, 4]) / (query_roi[:, 4] - query_roi[:, 2] +1)
-        # print (delta_rois)
 
+
+        # print (delta_rois)
         # print (attention_candidates)
         # exit()
         # print (attention_candidates[:,0,0,:])
-
         # exit()
+
+
+
         return attention_candidates, delta_rois
                 
         
