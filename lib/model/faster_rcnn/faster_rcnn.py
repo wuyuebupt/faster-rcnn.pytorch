@@ -221,7 +221,8 @@ class _fasterRCNN(nn.Module):
         # bbox_pred, wx1, wy1, wx2, wy2, dx1, dy1, dx2, dy2, ox1, oy1, ox2, oy2 = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat) 
         # bbox_pred, bbox_pred_beta, alpha_softmax, beta_softmax = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat, pooled_attention_feat_gt) 
         # bbox_pred, bbox_pred_beta, alpha_softmax, beta_softmax = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat, gt_attention_pooled_feat) 
-        bbox_pred, bbox_pred_beta, alpha_softmax, beta_softmax, bbox_pred_offset, bbox_pred_offset_beta = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat, gt_attention_pooled_feat) 
+        bbox_pred, bbox_pred_beta, alpha_softmax, beta_softmax, bbox_pred_offset, bbox_pred_offset_beta, alpha, beta = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat, gt_attention_pooled_feat) 
+
 
         # print (bbox_pred)
         # print (bbox_pred.shape)
@@ -280,7 +281,8 @@ class _fasterRCNN(nn.Module):
             # KL_loss = F.kl_div(alpha_softmax, beta_softmax)
             # KL_distance = torch.distributions.kl.kl_divergence(alpha_softmax, beta_softmax)
             # print (KL_distance)
-            KL_loss = _kl_divergence_loss(alpha_softmax, beta_softmax)
+            # KL_loss = _kl_divergence_loss(alpha_softmax, beta_softmax)
+            KL_loss = _kl_divergence_loss(alpha, beta)
             # print (RCNN_loss_bbox_beta, KL_loss)
             # exit()
             
@@ -523,12 +525,13 @@ def _kl_divergence_loss(distribution_p, distribution_q):
         ## kl distance of two input 
         # print (distribution_p.shape)
         # print (distribution_q.shape)
-        log_p = torch.log(distribution_p)
-        log_q = torch.log(distribution_q)
+        log_p = F.log_softmax(distribution_p, dim=0)
+        log_q = F.log_softmax(distribution_q, dim=0)
+        softmax_p = F.softmax(distribution_p, dim=0)
         # print (log_p.shape)
         # print (log_q.shape)
        
-        kl_distance = distribution_p * (log_p - log_q)
+        kl_distance = softmax_p * (log_p - log_q)
         # print (kl_distance.shape)
         kl_distance_mean = torch.sum(kl_distance, 0)
         # print (kl_distance_mean.shape)
@@ -550,14 +553,16 @@ class RelationUnit(nn.Module):
         bias = False
         
         #################### for gt attention
-        # self.w_k = Parameter(torch.Tensor(1, 1, appearance_feature_dim, self.dim_k, 4))
-        self.w_k = Parameter(torch.Tensor(4, 1, appearance_feature_dim, self.dim_k, 1))
+        self.w_k = Parameter(torch.Tensor(1, 1, appearance_feature_dim, self.dim_k, 4))
         self.w_q = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.dim_k, 4))
+        # self.w_k = Parameter(torch.Tensor(1, 1, appearance_feature_dim, self.dim_k, 1))
+        # self.w_q = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.dim_k, 1))
 
         #################### for predicted alplha
         ## neighbors number: 9
         # self.alpha_w = Parameter(torch.Tensor(9, key_feature_dim, appearance_feature_dim, 4))
         self.alpha_w = Parameter(torch.Tensor(9, 1, appearance_feature_dim, 4))
+        # self.alpha_w = Parameter(torch.Tensor(9, 1, appearance_feature_dim, 1))
 
         # print (self.alpha_w.shape)
         # exit()
@@ -719,7 +724,7 @@ class RelationUnit(nn.Module):
             # print (self.w_k.shape)
             key_dot = gt_features_attention * self.w_k 
             key_out = torch.sum(key_dot, -3)
-            key_out = key_out.permute([3,1,2,0])
+            # key_out = key_out.permute([3,1,2,0])
             # v0.3
             # key_out = gt_features_attention
             # print (key_dot.shape)
@@ -759,9 +764,10 @@ class RelationUnit(nn.Module):
             beta_softmax = None
             output_beta = None
             delta_pred_offset_beta = None
+            beta_out = None
 
         # return output, w_x1, w_y1, w_x2, w_y2, delta_x1, delta_y1, delta_x2, delta_y2, output_x1_before,  output_y1_before, output_x2_before, output_y2_before
-        return output, output_beta, alpha_softmax, beta_softmax, delta_pred_offset, delta_pred_offset_beta
+        return output, output_beta, alpha_softmax, beta_softmax, delta_pred_offset, delta_pred_offset_beta, alpha, beta_out
 
 
 def _smooth_l1_loss_alpha(bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_weights, neighbor_pred, alpha, sigma=1.0, dim=[1]):
