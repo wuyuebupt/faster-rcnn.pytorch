@@ -1,5 +1,13 @@
 # A *Faster* Pytorch Implementation of Faster R-CNN
 
+## cmd
+
+cmd to run bs-att0-reg
+```
+python trainval_net.py --dataset pascal_voc --net res101 --bs 4 --nw 8 --lr 4e-3 --lr_decay_step 8 --cuda --epochs 10 --cag   --mGPUs
+```
+
+
 ## Introduction
 
 This project is a *faster* pytorch implementation of faster R-CNN, aimed to accelerating the training of faster R-CNN object detection models. Recently, there are a number of good implementations:
