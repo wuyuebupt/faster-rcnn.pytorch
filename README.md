@@ -1,5 +1,24 @@
 # A *Faster* Pytorch Implementation of Faster R-CNN
 
+## cmd to run coco resnet 50
+
+on my own 4 gpu machine, I run the command:
+```
+python trainval_net.py --dataset coco --net res50 --bs 4 --nw 4 --lr 4e-3 --lr_decay_step 4 --epochs 10 --cuda --mGPUs 1>log 2>&1
+```
+
+On the 8 gpu machine, the repo suggests: 
+```
+python trainval_net.py --dataset coco --net res50 --bs 24 --nw 16 --lr 1e-2 --lr_decay_step 4 --epochs 10 --cuda --mGPUs 1>log 2>&1
+```
+
+I would like also try 
+```
+python trainval_net.py --dataset coco --net res50 --bs 8 --nw 16 --lr 4e-3 --lr_decay_step 4 --epochs 10 --cuda --mGPUs 1>log 2>&1
+```
+
+
+
 ## Introduction
 
 This project is a *faster* pytorch implementation of faster R-CNN, aimed to accelerating the training of faster R-CNN object detection models. Recently, there are a number of good implementations:

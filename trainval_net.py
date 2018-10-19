@@ -343,17 +343,25 @@ if __name__ == '__main__':
           loss_temp /= args.disp_interval
 
         if args.mGPUs:
-          loss_rpn_cls = rpn_loss_cls.mean().data[0]
-          loss_rpn_box = rpn_loss_box.mean().data[0]
-          loss_rcnn_cls = RCNN_loss_cls.mean().data[0]
-          loss_rcnn_box = RCNN_loss_bbox.mean().data[0]
+          # Loss_rpn_cls = rpn_loss_cls.mean().data[0]
+          # Loss_rpn_box = rpn_loss_box.mean().data[0]
+          # Loss_rcnn_cls = RCNN_loss_cls.mean().data[0]
+          # Loss_rcnn_box = RCNN_loss_bbox.mean().data[0]
+          loss_rpn_cls = rpn_loss_cls.mean().data.item()
+          loss_rpn_box = rpn_loss_box.mean().data.item()
+          loss_rcnn_cls = RCNN_loss_cls.mean().data.item()
+          loss_rcnn_box = RCNN_loss_bbox.mean().data.item()
           fg_cnt = torch.sum(rois_label.data.ne(0))
           bg_cnt = rois_label.data.numel() - fg_cnt
         else:
-          loss_rpn_cls = rpn_loss_cls.data[0]
-          loss_rpn_box = rpn_loss_box.data[0]
-          loss_rcnn_cls = RCNN_loss_cls.data[0]
-          loss_rcnn_box = RCNN_loss_bbox.data[0]
+          # loss_rpn_cls = rpn_loss_cls.data[0]
+          # loss_rpn_box = rpn_loss_box.data[0]
+          # loss_rcnn_cls = RCNN_loss_cls.data[0]
+          # loss_rcnn_box = RCNN_loss_bbox.data[0]
+          loss_rpn_cls = rpn_loss_cls.data.item()
+          loss_rpn_box = rpn_loss_box.data.item()
+          loss_rcnn_cls = RCNN_loss_cls.data.item()
+          loss_rcnn_box = RCNN_loss_bbox.data.item()
           fg_cnt = torch.sum(rois_label.data.ne(0))
           bg_cnt = rois_label.data.numel() - fg_cnt
 
