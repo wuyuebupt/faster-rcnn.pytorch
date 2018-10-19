@@ -370,7 +370,8 @@ if __name__ == '__main__':
 
       # loss = RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
 
-      loss_temp += loss.data[0]
+      # loss_temp += loss.data[0]
+      loss_temp += loss.data.item()
 
       # backward
       optimizer.zero_grad()
@@ -389,13 +390,17 @@ if __name__ == '__main__':
           # loss_rpn_box = rpn_loss_box.mean().data[0]
           loss_rpn_cls = 0
           loss_rpn_box = 0
-          loss_rcnn_cls = RCNN_loss_cls.mean().data[0]
-          loss_rcnn_box = RCNN_loss_bbox.mean().data[0]
+          # loss_rcnn_cls = RCNN_loss_cls.mean().data[0]
+          # loss_rcnn_box = RCNN_loss_bbox.mean().data[0]
+          loss_rcnn_cls = RCNN_loss_cls.mean().data.item()
+          loss_rcnn_box = RCNN_loss_bbox.mean().data.item()
           ## v0.2
-          loss_rcnn_box_beta = RCNN_loss_bbox_beta.mean().data[0]
+          # loss_rcnn_box_beta = RCNN_loss_bbox_beta.mean().data[0]
+          loss_rcnn_box_beta = RCNN_loss_bbox_beta.mean().data.item()
           ## v0.3
           # loss_rcnn_box_beta = RCNN_loss_bbox_beta.mean().data[0]
-          loss_kl = kl_loss.mean().data[0]
+          # loss_kl = kl_loss.mean().data[0]
+          loss_kl = kl_loss.mean().data.item()
 
           fg_cnt = torch.sum(rois_label.data.ne(0))
           bg_cnt = rois_label.data.numel() - fg_cnt
@@ -404,13 +409,17 @@ if __name__ == '__main__':
           # loss_rpn_box = rpn_loss_box.data[0]
           loss_rpn_cls = 0
           loss_rpn_box = 0
-          loss_rcnn_cls = RCNN_loss_cls.data[0]
-          loss_rcnn_box = RCNN_loss_bbox.data[0]
+          # loss_rcnn_cls = RCNN_loss_cls.data[0]
+          # loss_rcnn_box = RCNN_loss_bbox.data[0]
+          loss_rcnn_cls = RCNN_loss_cls.data.item()
+          loss_rcnn_box = RCNN_loss_bbox.data.item()
           ## v0.2
-          loss_rcnn_box_beta = RCNN_loss_bbox_beta.data[0]
+          # loss_rcnn_box_beta = RCNN_loss_bbox_beta.data[0]
+          loss_rcnn_box_beta = RCNN_loss_bbox_beta.data.item()
           ## v0.3
           # loss_rcnn_box_beta = RCNN_loss_bbox_beta.data[0]
-          loss_kl = kl_loss.data[0]
+          # loss_kl = kl_loss.data[0]
+          loss_kl = kl_loss.data.item()
 
           fg_cnt = torch.sum(rois_label.data.ne(0))
           bg_cnt = rois_label.data.numel() - fg_cnt

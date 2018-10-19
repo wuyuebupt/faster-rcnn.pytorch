@@ -122,10 +122,10 @@ class _fasterRCNN(nn.Module):
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.5, boundary_move_scale)
 
         ## square false
-        # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info, boundary_move_scale, False)
+        rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info, boundary_move_scale, False)
 
         ## circle true
-        rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info, boundary_move_scale, True)
+        # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info, boundary_move_scale, True)
 
         # print (rois_attention_candidates.shape)
         # print (rois_attention_candidates)
@@ -355,7 +355,7 @@ class _fasterRCNN(nn.Module):
         number_rois = rois.size(1)
         # print (rois)
         # exit()
-	attention_candidates = rois.new(1, batchsize, number_rois, 5).zero_()
+        attention_candidates = rois.new(1, batchsize, number_rois, 5).zero_()
 
         # print (attention_candidates.shape)
         # exit()
@@ -438,7 +438,7 @@ class _fasterRCNN(nn.Module):
         # exit()
         ## [0, 1, 2, 3] left, top, bottom, right -> original [4] original
         ##  
-	attention_candidates = rois.new(9, batchsize, number_rois, 5).zero_()
+        attention_candidates = rois.new(9, batchsize, number_rois, 5).zero_()
         # print (attention_candidates.shape)
 
 # w = box(1,3) - box(1,1);
