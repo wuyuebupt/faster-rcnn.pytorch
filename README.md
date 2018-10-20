@@ -8,6 +8,12 @@ python trainval_net.py --dataset pascal_voc --net res101 --bs 4 --nw 8 --lr 4e-3
 ```
 
 
+test cmd
+```
+python test_net_with_rois.py --dataset pascal_voc --net res101 --checksession 1 --checkepoch 10 --checkpoint 2504 --cuda --load_dir save_dir  --cag
+```
+
+
 ## Introduction
 
 This project is a *faster* pytorch implementation of faster R-CNN, aimed to accelerating the training of faster R-CNN object detection models. Recently, there are a number of good implementations:
