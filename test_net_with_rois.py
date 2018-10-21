@@ -539,8 +539,8 @@ if __name__ == '__main__':
           # print (overlaps_rois[0][keep_inds[i]][0, gt_assignment[0][keep_inds][i].data[0]])
           pred_iou = overlaps[0][keep_inds[k]][0, gt_assignment[0][keep_inds][k].data[0]].data[0]
           roi_iou  = overlaps_rois[0][keep_inds[k]][0, gt_assignment[0][keep_inds][k].data[0]].data[0]
-
-          pred_score = bboxes_all[keep_inds[k]][4]
+          pred_score = bboxes_all[int(keep_inds[k])][4]
+          # pred_score = bboxes_all[keep_inds[k]][4]
           pred_class = classes_pred[int(keep_inds[k].data[0])]
 
           # print (pred_iou, roi_iou)
