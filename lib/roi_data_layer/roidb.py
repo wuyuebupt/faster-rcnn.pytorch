@@ -20,17 +20,26 @@ def prepare_roidb(imdb):
 
   roidb = imdb.roidb
   if not (imdb.name.startswith('coco')):
-    sizes = [PIL.Image.open(imdb.image_path_at(i)).size
+    sizes = [imdb.image_h5object_at(i).shape 
          for i in range(imdb.num_images)]
+    ## old
+    # sizes = [PIL.Image.open(imdb.image_path_at(i)).size
+    #      for i in range(imdb.num_images)]
          
   for i in range(len(imdb.image_index)):
     roidb[i]['img_id'] = imdb.image_id_at(i)
-    roidb[i]['image'] = imdb.image_path_at(i)
-    roidb[i]['offline_proposal'] = imdb.image_offline_proposal_at(i)
+    # roidb[i]['image'] = imdb.image_path_at(i)
+    # roidb[i]['offline_proposal'] = imdb.image_offline_proposal_at(i)
+    roidb[i]['image'] = imdb.image_at(i)
+    roidb[i]['offline_proposal'] = imdb.image_offline_proposal_content_at(i)
 
     if not (imdb.name.startswith('coco')):
-      roidb[i]['width'] = sizes[i][0]
-      roidb[i]['height'] = sizes[i][1]
+      ## for pil image
+      # roidb[i]['width'] = sizes[i][0]
+      # roidb[i]['height'] = sizes[i][1]
+      ## as we are using cv2 not pil image
+      roidb[i]['width'] = sizes[i][1]
+      roidb[i]['height'] = sizes[i][0]
     # need gt_overlaps as a dense array for argmax
     gt_overlaps = roidb[i]['gt_overlaps'].toarray()
     # max overlap with gt over classes (columns)

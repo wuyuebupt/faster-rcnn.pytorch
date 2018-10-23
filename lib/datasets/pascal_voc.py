@@ -29,6 +29,10 @@ from .voc_eval import voc_eval
 # >>>> obsolete, because it depends on sth outside of this project
 from model.utils.config import cfg
 
+import h5py
+
+
+
 try:
     xrange          # Python 2
 except NameError:
@@ -54,7 +58,10 @@ class pascal_voc(imdb):
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
         self._image_ext = '.jpg'
         self._proposal_ext = '.mat'
+        self._h5_folder = 'h5data_gt'
         self._image_index = self._load_image_set_index()
+        self._images_proposals_h5 = self._load_images_proposals_h5()
+        print (len(self._images_proposals_h5.keys()))
         # Default to roidb handler
         # self._roidb_handler = self.selective_search_roidb
         self._roidb_handler = self.gt_roidb
@@ -75,9 +82,38 @@ class pascal_voc(imdb):
             'Path does not exist: {}'.format(self._data_path)
 
 
-    def image_offline_proposal_at(self, i):
+    def cache_path(self):
+        ## from h5
+        cache_path = os.path.abspath(os.path.join(cfg.DATA_DIR, 'h5data_gt'))
+        assert (os.path.exists(cache_path)), 'should have the folder data/h5data_gt'
+        print (cache_path)
+        return cache_path
+
+    def image_h5object_at(self, i):
         """
         Return the absolute path to image i in the image sequence.
+        """
+        return self._images_proposals_h5[self._image_index[i]]
+
+ 
+
+    def _load_images_proposals_h5(self):
+        """
+        Load the indexes listed in this dataset's image set file.
+        """
+        # Example path to image set file:
+        # self._devkit_path + /VOCdevkit2007/VOC2007/ImageSets/Main/val.txt
+        h5_file = os.path.join(cfg.DATA_DIR, self._h5_folder, 'trainval.h5')
+        assert os.path.exists(h5_file), \
+            'Path does not exist: {}'.format(h5_file)
+
+        f = h5py.File(h5_file, 'r')['trainval']
+        return f
+
+
+    def image_offline_proposal_at(self, i):
+        """
+        return the absolute path to image i in the image sequence.
         """
         return self.image_offline_proposal_from_index(self._image_index[i])
 
@@ -87,11 +123,35 @@ class pascal_voc(imdb):
         """
         proposal_path = os.path.join(self._data_path, 'Proposals',
                                   index + self._proposal_ext)
-        assert os.path.exists(proposal_path), \
-            'Path does not exist: {}'.format(proposal_path)
+        # assert os.path.exists(proposal_path), \
+        #     'Path does not exist: {}'.format(proposal_path)
         # image_path = os.path.join(self._data_path, 'Data', 'DET', self._image_set, index + self._image_ext[0])
         # assert os.path.exists(proposal_path), 'path does not exist: {}'.format(proposal_path)
         return proposal_path
+
+    def image_at(self, i):
+        """
+        Return the absolute path to image i in the image sequence.
+        """
+        # print (self.image_h5object_at(i))
+        # image = self.image_h5object_at(i).value
+        # print (image.shape)
+        # exit()
+
+        return self.image_h5object_at(i).value
+
+    def image_offline_proposal_content_at(self, i):
+        """
+        return the absolute path to image i in the image sequence.
+        """
+        # print (self.image_h5object_at(i).attrs['proposals'])
+        # print (self.image_h5object_at(i).attrs['proposals'].shape)
+        # exit()
+        return self.image_h5object_at(i).attrs['proposals'] 
+
+
+
+
 
     def image_path_at(self, i):
         """
@@ -111,8 +171,8 @@ class pascal_voc(imdb):
         """
         image_path = os.path.join(self._data_path, 'JPEGImages',
                                   index + self._image_ext)
-        assert os.path.exists(image_path), \
-            'Path does not exist: {}'.format(image_path)
+        # assert os.path.exists(image_path), \
+        #     'Path does not exist: {}'.format(image_path)
         return image_path
 
     def _load_image_set_index(self):
@@ -141,13 +201,16 @@ class pascal_voc(imdb):
 
         This function loads/saves from/to a cache file to speed up future calls.
         """
-        cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
+        # cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
+        # cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
+        cache_file = os.path.join(cfg.DATA_DIR, self._h5_folder, self.name + '_gt_roidb.pkl')
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 roidb = pickle.load(fid)
             print('{} gt roidb loaded from {}'.format(self.name, cache_file))
             return roidb
 
+        # assert(False), 'should not read any annotation'
         gt_roidb = [self._load_pascal_annotation(index)
                     for index in self.image_index]
         with open(cache_file, 'wb') as fid:
