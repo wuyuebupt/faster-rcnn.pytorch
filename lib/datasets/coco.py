@@ -24,6 +24,8 @@ from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 from pycocotools import mask as COCOmask
 
+import h5py
+
 class coco(imdb):
   def __init__(self, image_set, year):
     imdb.__init__(self, 'coco_' + year + '_' + image_set)
@@ -37,11 +39,15 @@ class coco(imdb):
     # load COCO API, classes, class <-> id mappings
     self._COCO = COCO(self._get_ann_file())
     cats = self._COCO.loadCats(self._COCO.getCatIds())
+
+    self._h5_folder = 'h5data_gt'
+
     self._classes = tuple(['__background__'] + [c['name'] for c in cats])
     self._class_to_ind = dict(list(zip(self.classes, list(range(self.num_classes)))))
     self._class_to_coco_cat_id = dict(list(zip([c['name'] for c in cats],
                                                self._COCO.getCatIds())))
     self._image_index = self._load_image_set_index()
+    
     # Default to roidb handler
     self.set_proposal_method('gt')
     self.competition_mode(False)
@@ -64,6 +70,34 @@ class coco(imdb):
     # Dataset splits that have ground-truth annotations (test splits
     # do not have gt annotations)
     self._gt_splits = ('train', 'val', 'minival')
+
+
+    self._images_proposals_h5 = self._load_images_proposals_h5()
+    print (len(self._images_proposals_h5.keys()))
+
+
+  def image_h5object_at(self, i):
+     """
+     Return the absolute path to image i in the image sequence.
+     """
+     key = str(self._image_index[i]).zfill(12)
+     return self._images_proposals_h5[key]
+
+
+  def _load_images_proposals_h5(self):
+    """
+    Load the indexes listed in this dataset's image set file.
+    """
+    # Example path to image set file:
+    # self._devkit_path + /VOCdevkit2007/VOC2007/ImageSets/Main/val.txt
+    h5name = self._data_name + '.h5'
+    h5_file = os.path.join(cfg.DATA_DIR, self._h5_folder, h5name)
+
+    assert os.path.exists(h5_file), \
+        'Path does not exist: {}'.format(h5_file)
+    f = h5py.File(h5_file, 'r')['trainval']
+    return f
+
 
   def _get_ann_file(self):
     prefix = 'instances' if self._image_set.find('test') == -1 \
@@ -111,6 +145,24 @@ class coco(imdb):
       # # assert os.path.exists(proposal_path), 'path does not exist: {}'.format(proposal_path)
       # return proposal_path
 
+  def image_at(self, i):
+      """
+      Return the absolute path to image i in the image sequence.
+      """
+      # print (self.image_h5object_at(i))
+      # image = self.image_h5object_at(i).value
+      # print (image.shape)
+      # exit()
+      return self.image_h5object_at(i).value
+
+  def image_offline_proposal_content_at(self, i):
+      """
+      return the absolute path to image i in the image sequence.
+      """
+      # print (self.image_h5object_at(i).attrs['proposals'])
+      # print (self.image_h5object_at(i).attrs['proposals'].shape)
+      # exit()
+      return self.image_h5object_at(i).attrs['proposals'] 
 
   def image_path_at(self, i):
     """
@@ -134,8 +186,8 @@ class coco(imdb):
                  str(index).zfill(12) + '.jpg')
     image_path = osp.join(self._data_path, 'images',
                           self._data_name, file_name)
-    assert osp.exists(image_path), \
-      'Path does not exist: {}'.format(image_path)
+    # assert osp.exists(image_path), \
+    #   'Path does not exist: {}'.format(image_path)
     return image_path
 
   def gt_roidb(self):

@@ -20,15 +20,21 @@ def prepare_roidb(imdb):
 
   roidb = imdb.roidb
   if not (imdb.name.startswith('coco')):
-    sizes = [PIL.Image.open(imdb.image_path_at(i)).size
+    assert (False), 'should start with coco'
+    # sizes = [PIL.Image.open(imdb.image_path_at(i)).size
+    #      for i in range(imdb.num_images)]
+    sizes = [imdb.image_h5object_at(i).shape
          for i in range(imdb.num_images)]
          
   for i in range(len(imdb.image_index)):
     roidb[i]['img_id'] = imdb.image_id_at(i)
-    roidb[i]['image'] = imdb.image_path_at(i)
-    roidb[i]['offline_proposal'] = imdb.image_offline_proposal_at(i)
+    # roidb[i]['image'] = imdb.image_path_at(i)
+    # roidb[i]['offline_proposal'] = imdb.image_offline_proposal_at(i)
+    roidb[i]['image'] = imdb.image_at(i)    
+    roidb[i]['offline_proposal'] = imdb.image_offline_proposal_content_at(i)
 
     if not (imdb.name.startswith('coco')):
+      assert (False), 'should start with coco'
       roidb[i]['width'] = sizes[i][0]
       roidb[i]['height'] = sizes[i][1]
     # need gt_overlaps as a dense array for argmax

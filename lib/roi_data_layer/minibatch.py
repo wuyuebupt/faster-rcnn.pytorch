@@ -84,7 +84,8 @@ def _get_image_blob(roidb, scale_inds):
 
   for i in range(num_images):
     #im = cv2.imread(roidb[i]['image'])
-    im = imread(roidb[i]['image'])
+    # im = imread(roidb[i]['image'])
+    im = roidb[i]['image']
 
     if len(im.shape) == 2:
       im = im[:,:,np.newaxis]
@@ -93,7 +94,8 @@ def _get_image_blob(roidb, scale_inds):
     # rgb -> bgr
     im = im[:,:,::-1]
 
-    offline_proposal_bbox = sio.loadmat(roidb[i]['offline_proposal'])['boxes']
+    # offline_proposal_bbox = sio.loadmat(roidb[i]['offline_proposal'])['boxes']
+    offline_proposal_bbox = roidb[i]['offline_proposal']
 
     # print (offline_proposal_bbox)
     # exit()
