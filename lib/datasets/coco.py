@@ -83,6 +83,35 @@ class coco(imdb):
     widths = [ann['width'] for ann in anns]
     return widths
 
+
+  def image_offline_proposal_at(self, i):
+      """
+      Return the absolute path to image i in the image sequence.
+      """
+      return self.image_offline_proposal_from_index(self._image_index[i])
+
+  def image_offline_proposal_from_index(self, index):
+      """
+      Construct an image path from the image's "index" identifier.
+      """
+      # proposal_path = os.path.join(self._data_path, 'Proposals',
+      #                           index + self._proposal_ext)
+
+      file_name = ('COCO_' + self._data_name + '_' +
+                   str(index).zfill(12) + '.mat')
+      image_path = osp.join(self._data_path, 'images',
+                            'Proposals', file_name)
+      assert osp.exists(image_path), \
+        'Path does not exist: {}'.format(image_path)
+      return image_path
+  
+      # assert os.path.exists(proposal_path), \
+      #     'Path does not exist: {}'.format(proposal_path)
+      # # image_path = os.path.join(self._data_path, 'Data', 'DET', self._image_set, index + self._image_ext[0])
+      # # assert os.path.exists(proposal_path), 'path does not exist: {}'.format(proposal_path)
+      # return proposal_path
+
+
   def image_path_at(self, i):
     """
     Return the absolute path to image i in the image sequence.
