@@ -4,10 +4,12 @@
 
 
 --config: yml file  \
---datafolder: pointed to the original data folder \ 
+--data_dir: dir with all files, e.g. h5, pkl, txt \
 --save_dir: save dir, not changed \
+--pretrained_model: path to the pth model file \
+
 ```
-python trainval_net.py --dataset pascal_voc --net res101 --bs 1 --lr 1e-3 --nw 8 --lr_decay_step 4 --epochs 10  --cuda --config  cfgs/res101.yml --datafolder /work/data --save_dir /work/save_dir/
+python trainval_net.py --dataset pascal_voc --net res101 --bs 1 --lr 1e-3 --nw 8 --lr_decay_step 4 --epochs 10  --cuda --config  cfgs/res101.yml --data_dir /work/tmp/h5data_gt/ --save_dir /work/save_dir/ --pretrained_model /work/tmp/pretrained_model/resnet101_caffe.pth
 ```
 
 
