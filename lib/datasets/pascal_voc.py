@@ -76,10 +76,10 @@ class pascal_voc(imdb):
                        'rpn_file': None,
                        'min_size': 2}
 
-        assert os.path.exists(self._devkit_path), \
-            'VOCdevkit path does not exist: {}'.format(self._devkit_path)
-        assert os.path.exists(self._data_path), \
-            'Path does not exist: {}'.format(self._data_path)
+        # assert os.path.exists(self._devkit_path), \
+        #     'VOCdevkit path does not exist: {}'.format(self._devkit_path)
+        # assert os.path.exists(self._data_path), \
+        #     'Path does not exist: {}'.format(self._data_path)
 
 
     def cache_path(self):
@@ -103,7 +103,8 @@ class pascal_voc(imdb):
         """
         # Example path to image set file:
         # self._devkit_path + /VOCdevkit2007/VOC2007/ImageSets/Main/val.txt
-        h5_file = os.path.join(cfg.DATA_DIR, self._h5_folder, 'trainval.h5')
+        # h5_file = os.path.join(cfg.DATA_DIR, self._h5_folder, 'trainval.h5')
+        h5_file = os.path.join(cfg.DATA_DIR, 'trainval.h5')
         assert os.path.exists(h5_file), \
             'Path does not exist: {}'.format(h5_file)
 
@@ -182,8 +183,9 @@ class pascal_voc(imdb):
         """
         # Example path to image set file:
         # self._devkit_path + /VOCdevkit2007/VOC2007/ImageSets/Main/val.txt
-        image_set_file = os.path.join(self._data_path, 'ImageSets', 'Main',
-                                      self._image_set + '.txt')
+        # image_set_file = os.path.join(self._data_path, 'ImageSets', 'Main',
+        #                               self._image_set + '.txt')
+        image_set_file = os.path.join(cfg.DATA_DIR, self._image_set + '.txt')
         assert os.path.exists(image_set_file), \
             'Path does not exist: {}'.format(image_set_file)
         with open(image_set_file) as f:
@@ -204,7 +206,8 @@ class pascal_voc(imdb):
         """
         # cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
         # cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
-        cache_file = os.path.join(cfg.DATA_DIR, self._h5_folder, self.name + '_gt_roidb.pkl')
+        # cache_file = os.path.join(cfg.DATA_DIR, self._h5_folder, self.name + '_gt_roidb.pkl')
+        cache_file = os.path.join(cfg.DATA_DIR, self.name + '_gt_roidb.pkl')
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 roidb = pickle.load(fid)

@@ -123,8 +123,12 @@ def parse_args():
                       help='confg like res101.yml',
                       default="", type=str)
   
-  parser.add_argument('--datafolder', dest='data_folder',
-                      help='confg like data/',
+  parser.add_argument('--data_dir', dest='data_folder',
+                      help='confg like data/h5data_gt/',
+                      default="", type=str)
+
+  parser.add_argument('--pretrained_model', dest='pretrained_model',
+                      help='confg like model_dir/resnet-101.pth',
                       default="", type=str)
 
   args = parser.parse_args()
@@ -228,6 +232,8 @@ if __name__ == '__main__':
   
   cfg.DATA_DIR = args.data_folder
   print (cfg.DATA_DIR)
+  cfg.MODEL_PATH = args.pretrained_model
+  print (cfg.MODEL_PATH)
 
   imdb, roidb, ratio_list, ratio_index = combined_roidb(args.imdb_name)
   train_size = len(roidb)
