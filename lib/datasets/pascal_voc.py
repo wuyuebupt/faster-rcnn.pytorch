@@ -107,6 +107,7 @@ class pascal_voc(imdb):
         assert os.path.exists(h5_file), \
             'Path does not exist: {}'.format(h5_file)
 
+        print ("load h5 data from {}".format(h5_file))
         f = h5py.File(h5_file, 'r')['trainval']
         return f
 
