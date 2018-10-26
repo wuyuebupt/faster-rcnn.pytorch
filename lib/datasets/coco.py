@@ -91,7 +91,8 @@ class coco(imdb):
     # Example path to image set file:
     # self._devkit_path + /VOCdevkit2007/VOC2007/ImageSets/Main/val.txt
     h5name = self._data_name + '.h5'
-    h5_file = os.path.join(cfg.DATA_DIR, self._h5_folder, h5name)
+    # h5_file = os.path.join(cfg.DATA_DIR, self._h5_folder, h5name)
+    h5_file = os.path.join(cfg.DATA_DIR, h5name)
 
     assert os.path.exists(h5_file), \
         'Path does not exist: {}'.format(h5_file)
@@ -102,8 +103,7 @@ class coco(imdb):
   def _get_ann_file(self):
     prefix = 'instances' if self._image_set.find('test') == -1 \
       else 'image_info'
-    return osp.join(self._data_path, 'annotations',
-                    prefix + '_' + self._image_set + self._year + '.json')
+    return osp.join(cfg.DATA_DIR, prefix + '_' + self._image_set + self._year + '.json')
 
   def _load_image_set_index(self):
     """
@@ -195,7 +195,8 @@ class coco(imdb):
     Return the database of ground-truth regions of interest.
     This function loads/saves from/to a cache file to speed up future calls.
     """
-    cache_file = osp.join(self.cache_path, self.name + '_gt_roidb.pkl')
+    # cache_file = osp.join(self.cache_path, self.name + '_gt_roidb.pkl')
+    cache_file = osp.join(cfg.DATA_DIR, self.name + '_gt_roidb.pkl')
     if osp.exists(cache_file):
       with open(cache_file, 'rb') as fid:
         roidb = pickle.load(fid)

@@ -117,6 +117,22 @@ def parse_args():
                       help='whether use tensorflow tensorboard',
                       default=False, type=bool)
 
+
+# new for absolut paht for loading any file
+  parser.add_argument('--config', dest='config_file',
+                      help='confg like res101.yml',
+                      default="", type=str)
+  
+  parser.add_argument('--data_dir', dest='data_folder',
+                      help='confg like data/h5data_gt/',
+                      default="", type=str)
+
+  parser.add_argument('--pretrained_model', dest='pretrained_model',
+                      help='confg like model_dir/resnet-101.pth',
+                      default="", type=str)
+
+
+
   args = parser.parse_args()
   return args
 
@@ -186,7 +202,13 @@ if __name__ == '__main__':
       args.imdbval_name = "vg_150-50-50_minival"
       args.set_cfgs = ['ANCHOR_SCALES', '[4, 8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '50']
 
-  args.cfg_file = "cfgs/{}_ls.yml".format(args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
+  # args.cfg_file = "cfgs/{}_ls.yml".format(args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
+
+  args.cfg_file = args.config_file
+  # args.data_folder = args.data_folder
+  print (args.cfg_file)
+  print (args.data_folder)
+
 
   if args.cfg_file is not None:
     cfg_from_file(args.cfg_file)
@@ -208,6 +230,15 @@ if __name__ == '__main__':
   # fix blocks
   cfg.RESNET.FIXED_BLOCKS = 1
   cfg.RESNET.FIXED_TOPS = False
+
+
+
+
+  cfg.DATA_DIR = args.data_folder
+  print (cfg.DATA_DIR)
+  cfg.MODEL_PATH = args.pretrained_model
+  print (cfg.MODEL_PATH)
+
 
   
 
