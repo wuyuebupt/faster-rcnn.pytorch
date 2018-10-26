@@ -104,7 +104,8 @@ class pascal_voc(imdb):
         # Example path to image set file:
         # self._devkit_path + /VOCdevkit2007/VOC2007/ImageSets/Main/val.txt
         # h5_file = os.path.join(cfg.DATA_DIR, self._h5_folder, 'trainval.h5')
-        h5_file = os.path.join(cfg.DATA_DIR, 'trainval.h5')
+        # h5_file = os.path.join(cfg.DATA_DIR, 'trainval.h5')
+        h5_file = os.path.join(cfg.DATA_DIR, self.name + '.h5')
         assert os.path.exists(h5_file), \
             'Path does not exist: {}'.format(h5_file)
 
@@ -185,7 +186,8 @@ class pascal_voc(imdb):
         # self._devkit_path + /VOCdevkit2007/VOC2007/ImageSets/Main/val.txt
         # image_set_file = os.path.join(self._data_path, 'ImageSets', 'Main',
         #                               self._image_set + '.txt')
-        image_set_file = os.path.join(cfg.DATA_DIR, self._image_set + '.txt')
+        # image_set_file = os.path.join(cfg.DATA_DIR, self._image_set + '.txt')
+        image_set_file = os.path.join(cfg.DATA_DIR, self.name + '.txt')
         assert os.path.exists(image_set_file), \
             'Path does not exist: {}'.format(image_set_file)
         with open(image_set_file) as f:
