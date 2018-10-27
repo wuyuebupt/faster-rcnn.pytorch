@@ -75,12 +75,21 @@ class coco(imdb):
     self._images_proposals_h5 = self._load_images_proposals_h5()
     print (len(self._images_proposals_h5.keys()))
 
+  def image_key_at(self, i):
+     """
+     Return the absolute path to image i in the image sequence.
+     """
+     key = str(self._image_index[i]).zfill(12)
+     # print (key)
+     return key
+
 
   def image_h5object_at(self, i):
      """
      Return the absolute path to image i in the image sequence.
      """
      key = str(self._image_index[i]).zfill(12)
+     # print (key)
      return self._images_proposals_h5[key]
 
 

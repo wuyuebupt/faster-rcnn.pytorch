@@ -369,6 +369,7 @@ if __name__ == '__main__':
       num_boxes.data.resize_(data[3].size()).copy_(data[3])
       proposal_boxes.data.resize_(data[4].size()).copy_(data[4])
       num_proposals.data.resize_(data[5].size()).copy_(data[5])
+      # print (im_data.shape)
 
 
       # rpn_loss_cls, rpn_loss_box, \

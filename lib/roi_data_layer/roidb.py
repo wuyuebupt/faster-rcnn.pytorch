@@ -28,10 +28,18 @@ def prepare_roidb(imdb):
          
   for i in range(len(imdb.image_index)):
     roidb[i]['img_id'] = imdb.image_id_at(i)
+    # print (roidb[i]['img_id'])
     # roidb[i]['image'] = imdb.image_path_at(i)
     # roidb[i]['offline_proposal'] = imdb.image_offline_proposal_at(i)
-    roidb[i]['image'] = imdb.image_at(i)    
+    # roidb[i]['image'] = imdb.image_at(i)    
+    roidb[i]['image'] = imdb.image_key_at(i)    
+    roidb[i]['h5'] = imdb._images_proposals_h5
+    # roidb[i]['image'] = imdb.image_at(i)    
+    # roidb[i]['image'] = imdb.image_key_at(i)    
+    # print (roidb[i]['image'].shape, roidb[i]['width'])
+    # assert (roidb[i]['image'].shape[1] == roidb[i]['width'])
     roidb[i]['offline_proposal'] = imdb.image_offline_proposal_content_at(i)
+    # exit()
 
     if not (imdb.name.startswith('coco')):
       assert (False), 'should start with coco'
