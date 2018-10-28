@@ -458,10 +458,10 @@ if __name__ == '__main__':
           bg_cnt = rois_label.data.numel() - fg_cnt
 
         print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e" \
-                                % (args.session, epoch, step, iters_per_epoch, loss_temp, lr))
-        print("\t\t\tfg/bg=(%d/%d), time cost: %f" % (fg_cnt, bg_cnt, end-start))
+                                % (args.session, epoch, step, iters_per_epoch, loss_temp, lr), flush=True)
+        print("\t\t\tfg/bg=(%d/%d), time cost: %f" % (fg_cnt, bg_cnt, end-start), flush=True)
         print("\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f, bbox_beta %.4f, kl %.4f" \
-                      % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, loss_rcnn_box_beta, loss_kl))
+                      % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, loss_rcnn_box_beta, loss_kl), flush=True)
         #              % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, 0.0, loss_kl))
         if args.use_tfboard:
           info = {
@@ -497,7 +497,7 @@ if __name__ == '__main__':
         'pooling_mode': cfg.POOLING_MODE,
         'class_agnostic': args.class_agnostic,
       }, save_name)
-    print('save model: {}'.format(save_name))
+    print('save model: {}'.format(save_name), flush=True)
 
     end = time.time()
     print(end - start)
