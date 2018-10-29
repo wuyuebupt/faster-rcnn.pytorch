@@ -7,10 +7,21 @@
 --data_dir: dir with all files, e.g. h5, pkl, txt \
 --save_dir: save dir, not changed \
 --pretrained_model: path to the pth model file \
+--neighbor_move:  0.3 \
+--cls_weight 1 \
+--bbox_alpha_weight 10 \
+--bbox_beta_weight 50 \
+--kl_weight 1 \
+--circle \
+For circle neighbor 
 
 ```
-python trainval_net.py --dataset pascal_voc_0712  --net res101 --bs 1 --lr 1e-3 --nw 8 --lr_decay_step 4 --epochs 10  --cuda --config  cfgs/res101.yml --data_dir /work/dataforYinpeng/voc0712h5/ --save_dir /work/save_dir/ --pretrained_model /work/tmp/pretrained_model/resnet101_caffe.pth
+python trainval_net.py --dataset pascal_voc_0712  --net res101 --bs 1 --lr 1e-3 --nw 8 --lr_decay_step 8 --epochs 10  --cuda --config  cfgs/res101.yml --data_dir /work/dataforYinpeng/voc0712h5/ --save_dir /work/save_dir/ --pretrained_model /work/tmp/pretrained_model/resnet101_caffe.pth --neighbor_move 0.3 --cls_weight 1 --bbox_alpha_weight 10 --bbox_beta_weight 50 --kl_weight 1 --circle
 ```
+For square neighbor, remove --circle
+```
+python trainval_net.py --dataset pascal_voc_0712  --net res101 --bs 1 --lr 1e-3 --nw 8 --lr_decay_step 8 --epochs 10  --cuda --config  cfgs/res101.yml --data_dir /work/dataforYinpeng/voc0712h5/ --save_dir /work/save_dir/ --pretrained_model /work/tmp/pretrained_model/resnet101_caffe.pth --neighbor_move 0.3 --cls_weight 1 --bbox_alpha_weight 10 --bbox_beta_weight 50 --kl_weight 1 
+``
 
 
 ## Introduction
