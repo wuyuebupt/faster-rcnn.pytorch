@@ -131,7 +131,26 @@ def parse_args():
                       help='confg like model_dir/resnet-101.pth',
                       default="", type=str)
 
+# codes for satan on philly
+  parser.add_argument('--neighbor_move', dest='neighbor_move',
+                      help='confg like 0.3',
+                      default="0.0", type=float)
+  parser.add_argument('--cls_weight', dest='cls_weight',
+                      help='confg like 1.0',
+                      default="1.0", type=float)
+  parser.add_argument('--bbox_alpha_weight', dest='bbox_alpha_weight',
+                      help='confg like 10.0',
+                      default="10.0", type=float)
+  parser.add_argument('--bbox_beta_weight', dest='bbox_beta_weight',
+                      help='confg like 1.0',
+                      default="50.0", type=float)
+  parser.add_argument('--kl_weight', dest='kl_weight',
+                      help='confg like 1.0',
+                      default="1.0", type=float)
 
+  parser.add_argument('--circle', dest='circle',
+                      help='True of False',
+                      action='store_true')
 
   args = parser.parse_args()
   return args
@@ -239,8 +258,16 @@ if __name__ == '__main__':
   cfg.MODEL_PATH = args.pretrained_model
   print (cfg.MODEL_PATH)
 
+  cfg.NEIGHBOR_MOVE = args.neighbor_move
+  cfg.CIRCLE = args.circle
+  print ("neighbor_move     : ", args.neighbor_move)
+  print ("cls_weight        : ", args.cls_weight)
+  print ("bbox_alpha_weight : ", args.bbox_alpha_weight)
+  print ("bbox_beta_weight  : ", args.bbox_beta_weight)
+  print ("kl_weight         : ", args.kl_weight)
+  print ("Circle            : ", args.circle)
 
-  
+
 
 
   imdb, roidb, ratio_list, ratio_index = combined_roidb(args.imdb_name)
@@ -387,8 +414,15 @@ if __name__ == '__main__':
 
       # loss = rpn_loss_cls.mean() + rpn_loss_box.mean() \
       #      + RCNN_loss_cls.mean() + 10 * RCNN_loss_bbox.mean() \
-      loss = RCNN_loss_cls.mean() + 10 * RCNN_loss_bbox.mean() \
-           + 50 * RCNN_loss_bbox_beta.mean() + kl_loss.mean()
+      # loss = RCNN_loss_cls.mean() + 10 * RCNN_loss_bbox.mean() \
+      #      + 50 * RCNN_loss_bbox_beta.mean() + kl_loss.mean()
+
+      loss = args.cls_weight        * RCNN_loss_cls.mean() + \
+             args.bbox_alpha_weight * RCNN_loss_bbox.mean() + \
+             args.bbox_beta_weight  * RCNN_loss_bbox_beta.mean() + \
+             args.kl_weight         * kl_loss.mean()
+
+
       #     + 10 * RCNN_loss_bbox_beta.mean() + kl_loss.mean()
       #      + kl_loss.mean()
       #      + 10 * RCNN_loss_bbox_beta.mean() + kl_loss.mean()
