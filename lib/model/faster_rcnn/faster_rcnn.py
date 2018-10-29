@@ -39,7 +39,9 @@ class _fasterRCNN(nn.Module):
         # new linear prediction
         self.attention_regression = RelationUnit(512, 32) 
         self.boundary_scale = cfg.NEIGHBOR_MOVE 
-        print (self.boundary_scale)
+        self.circle_neighbor = cfg.CIRCLE
+        print ("boundary move: ",self.boundary_scale)
+        print ("circle       : ",self.circle_neighbor)
 
         # self.attention_regression = RelationUnit(2048, 32) 
         # self.attention_regression = RelationUnit(512, 32) 
@@ -124,8 +126,9 @@ class _fasterRCNN(nn.Module):
         boundary_move_scale = self.boundary_scale
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.5, boundary_move_scale)
 
+        rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info, boundary_move_scale, self.circle_neighbor)
         ## square false
-        rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info, boundary_move_scale, False)
+        # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info, boundary_move_scale, False)
 
         ## circle true
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info, boundary_move_scale, True)

@@ -149,6 +149,11 @@ def parse_args():
   parser.add_argument('--kl_weight', dest='kl_weight',
                       help='confg like 1.0',
                       default="1.0", type=float)
+
+  parser.add_argument('--circle', dest='circle',
+                      help='True of False',
+                      action='store_true')
+                      # default=False, type=bool)
 #      loss = RCNN_loss_cls.mean() + 10 * RCNN_loss_bbox.mean() \
 #           + 50 * RCNN_loss_bbox_beta.mean() + kl_loss.mean()
   args = parser.parse_args()
@@ -257,11 +262,13 @@ if __name__ == '__main__':
 
   ## satan
   cfg.NEIGHBOR_MOVE = args.neighbor_move
+  cfg.CIRCLE = args.circle
   print ("neighbor_move     : ", args.neighbor_move)
   print ("cls_weight        : ", args.cls_weight)
   print ("bbox_alpha_weight : ", args.bbox_alpha_weight)
   print ("bbox_beta_weight  : ", args.bbox_beta_weight)
   print ("kl_weight         : ", args.kl_weight)
+  print ("Circle            : ", args.circle)
 
   # parser.add_argument('--neighbor_move', dest='neighbor_move',
   #                     help='confg like 0.3',
