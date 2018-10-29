@@ -18,6 +18,7 @@ from model.utils.net_utils import _smooth_l1_loss, _crop_pool_layer, _affine_gri
 
 from torch.nn.parameter import Parameter
 import math
+import sys
 
 class _fasterRCNN(nn.Module):
     """ faster RCNN """
@@ -37,7 +38,7 @@ class _fasterRCNN(nn.Module):
         self.RCNN_roi_align = RoIAlignAvg(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
 
         # new linear prediction
-        self.attention_regression = RelationUnit(512, 32) 
+        self.attention_regression = RelationUnit(512, 32, self.n_classes) 
         self.boundary_scale = cfg.NEIGHBOR_MOVE 
         self.circle_neighbor = cfg.CIRCLE
         print ("boundary move: ",self.boundary_scale)
@@ -233,7 +234,10 @@ class _fasterRCNN(nn.Module):
         # bbox_pred, wx1, wy1, wx2, wy2, dx1, dy1, dx2, dy2, ox1, oy1, ox2, oy2 = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat) 
         # bbox_pred, bbox_pred_beta, alpha_softmax, beta_softmax = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat, pooled_attention_feat_gt) 
         # bbox_pred, bbox_pred_beta, alpha_softmax, beta_softmax = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat, gt_attention_pooled_feat) 
-        bbox_pred, bbox_pred_beta, alpha_softmax, beta_softmax, bbox_pred_offset, bbox_pred_offset_beta, alpha, beta = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat, gt_attention_pooled_feat) 
+        bbox_pred, bbox_pred_beta, alpha_softmax, beta_softmax, bbox_pred_offset, bbox_pred_offset_beta, alpha, beta, \
+        bbox_cls, alpha_cls_softmax, beta_cls_softmax, alpha_cls, beta_cls = self.attention_regression(rois, delta_rois, rois_attention_pooled_feat, gt_attention_pooled_feat) 
+        # print (bbox_cls.shape)
+        # exit()
 
 
         # print (bbox_pred)
@@ -258,17 +262,30 @@ class _fasterRCNN(nn.Module):
         # exit()
 
         # compute object classification probability
-        cls_score = self.RCNN_cls_score(pooled_feat)
-        cls_prob = F.softmax(cls_score)
+        # cls_score = self.RCNN_cls_score(pooled_feat)
+        # cls_prob = F.softmax(cls_score)
+
+        cls_prob = bbox_cls * alpha_cls_softmax
+        cls_prob = torch.sum(cls_prob, 0)
+       
 
         RCNN_loss_cls = 0
         RCNN_loss_bbox = 0
         RCNN_loss_bbox_beta = 0
         KL_loss = 0
 
+        RCNN_loss_cls_alpha = 0
+
         if self.training:
             # classification loss
-            RCNN_loss_cls = F.cross_entropy(cls_score, rois_label)
+            # RCNN_loss_cls = F.cross_entropy(cls_score, rois_label)
+            # RCNN_loss_cls = F.cross_entropy(cls_score, rois_label)
+            RCNN_loss_cls_alpha =  _cross_entropy_neighbor(bbox_cls, alpha_cls_softmax, rois_label)
+            RCNN_loss_cls_beta  = _cross_entropy_neighbor(bbox_cls, beta_cls_softmax, rois_label)
+            # print (RCNN_loss_cls_alpha.shape)
+            # print (RCNN_loss_cls_beta.shape)
+            # sys.exit(0)
+           
 
             # bounding box regression L1 loss
             # print (bbox_pred)
@@ -295,6 +312,7 @@ class _fasterRCNN(nn.Module):
             # print (KL_distance)
             # KL_loss = _kl_divergence_loss(alpha_softmax, beta_softmax)
             KL_loss = _kl_divergence_loss(alpha, beta)
+            KL_loss_cls = _kl_divergence_loss(alpha_cls, beta_cls)
             # print (RCNN_loss_bbox_beta, KL_loss)
             # exit()
             
@@ -313,8 +331,9 @@ class _fasterRCNN(nn.Module):
         # return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label
 
         ## adding beta, and kl divergency
-        return rois, cls_prob, bbox_pred, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_bbox_beta, KL_loss
+        # return rois, cls_prob, bbox_pred, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_bbox_beta, KL_loss
         # return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_bbox_beta, KL_loss
+        return rois, cls_prob, bbox_pred, RCNN_loss_cls_alpha, RCNN_loss_bbox, rois_label, RCNN_loss_bbox_beta, KL_loss
 
     def _init_weights(self):
         def normal_init(m, mean, stddev, truncated=False):
@@ -583,10 +602,11 @@ def _kl_divergence_loss(distribution_p, distribution_q):
 
 
 class RelationUnit(nn.Module):
-    def __init__(self, appearance_feature_dim=2048, key_feature_dim = 64):
+    def __init__(self, appearance_feature_dim=2048, key_feature_dim = 64, n_classes=1):
         super(RelationUnit, self).__init__()
         self.dim_k = key_feature_dim
         self.dim_feat = appearance_feature_dim
+        self.n_classes = n_classes
 
         # bias = True
         bias = False
@@ -609,13 +629,19 @@ class RelationUnit(nn.Module):
         # stdv = 1. / math.sqrt(self.WK_x1.size(1))
         # self.WK_x1.data.uniform_(-stdv, stdv)
 
-
         ## bbox regression
         ## 
         # self.bbox_regress = Parameter(torch.Tensor(appearance_feature_dim, 4, 9))
         self.bbox_regress = Parameter(torch.Tensor(9, 1, appearance_feature_dim, 4))
         #  print (self.bbox_regress.shape)
         #  exit()
+
+        ################### for classification
+        ## 
+        self.cls_score = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.n_classes))
+        self.w_k_cls = Parameter(torch.Tensor(1, 1, appearance_feature_dim, self.dim_k, 1)) 
+        self.w_q_cls = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.dim_k, 1)) 
+        self.alpha_w_cls = Parameter(torch.Tensor(9, 1, appearance_feature_dim, 1))
 
         # self.WV = nn.Linear(appearance_feature_dim, key_feature_dim, bias=False)
         self.relu = nn.ReLU(inplace=True)
@@ -634,15 +660,27 @@ class RelationUnit(nn.Module):
          mean = 0
          stddev = 0.01
          if cfg.TRAIN.TRUNCATED:
-             self.alpha_w.data.normal_().fmod_(2).mul_(stddev).add_(mean)
              self.bbox_regress.data.normal_().fmod_(2).mul_(stddev).add_(mean)
+             self.cls_score.data.normal_().fmod_(2).mul_(stddev).add_(mean)
+
              self.w_k.data.normal_().fmod_(2).mul_(stddev).add_(mean)
              self.w_q.data.normal_().fmod_(2).mul_(stddev).add_(mean)
+             self.alpha_w.data.normal_().fmod_(2).mul_(stddev).add_(mean)
+
+             self.w_k_cls.data.normal_().fmod_(2).mul_(stddev).add_(mean)
+             self.w_q_cls.data.normal_().fmod_(2).mul_(stddev).add_(mean)
+             self.alpha_w_cls.data.normal_().fmod_(2).mul_(stddev).add_(mean)
          else:
-             self.alpha_w.data.normal_(mean, stddev)
              self.bbox_regress.data.normal_(mean, stddev)
+             self.cls_score.data.normal_(mean, stddev)
+
              self.w_k.data.normal_(mean, stddev)
              self.w_q.data.normal_(mean, stddev)
+             self.alpha_w.data.normal_(mean, stddev)
+
+             self.w_k_cls.data.normal_(mean, stddev)
+             self.w_q_cls.data.normal_(mean, stddev)
+             self.alpha_w_cls.data.normal_(mean, stddev)
 
 
 
@@ -654,9 +692,6 @@ class RelationUnit(nn.Module):
         #     gt_features    : bs x 128 x 512??
         # output:
         #  bs x 128 x 4
-        
-        # wq * q: 128
-
         tmp_feat = features[0]
         N = tmp_feat.size(0)
 
@@ -734,6 +769,23 @@ class RelationUnit(nn.Module):
         ##
         # output = torch.sum(delta_pred, 0)
 
+        ################# cls alpha
+
+        cls_score_dot = all_features_offset * self.cls_score
+        # print (offset_dot.shape)
+        cls_score = torch.sum(cls_score_dot, -2)
+        # print (cls_score.shape)
+        ### [9, 128, 21]
+        cls_score_softmax = torch.nn.Softmax(dim=2)(cls_score)
+
+
+        alpha_dot_cls = all_features_offset * self.alpha_w_cls
+        # print (alpha_dot_cls.shape)
+        alpha_cls = torch.sum(alpha_dot_cls, -2)
+        # print (alpha_cls.shape)
+        alpha_softmax_cls = torch.nn.Softmax(dim=0)(alpha_cls)
+        # print (alpha_softmax_cls.shape)
+        # sys.exit(0)
 
         ################## gt attention for beta
         # print (gt_features.shape)
@@ -743,6 +795,9 @@ class RelationUnit(nn.Module):
             # print (all_features_attention.shape)
             query_dot =  all_features_attention * self.w_q
             query_out = torch.sum(query_dot, -3)
+
+            query_dot_cls =  all_features_attention * self.w_q_cls
+            query_out_cls = torch.sum(query_dot_cls, -3)
             # v0.3
             # query_out = all_features_attention
 
@@ -763,6 +818,10 @@ class RelationUnit(nn.Module):
             # print (self.w_k.shape)
             key_dot = gt_features_attention * self.w_k 
             key_out = torch.sum(key_dot, -3)
+
+            key_dot_cls = gt_features_attention * self.w_k_cls
+            key_out_cls = torch.sum(key_dot_cls, -3)
+
             # key_out = key_out.permute([3,1,2,0])
             # v0.3
             # key_out = gt_features_attention
@@ -780,6 +839,14 @@ class RelationUnit(nn.Module):
             
             beta_softmax = torch.nn.Softmax(dim=0) (beta_out)
             # print (beta_softmax.shape)
+
+            beta_dot_cls = query_out_cls * key_out_cls
+            beta_out_cls = torch.sum(beta_dot_cls, -2)
+            beta_out_cls = beta_out_cls / np.sqrt(self.dim_k)
+            beta_softmax_cls = torch.nn.Softmax(dim=0) (beta_out_cls)
+            # print (beta_softmax_cls.shape)
+            # sys.exit(0)
+
             
             ## v0.1 : same input with alpha
             # beta_delta_pred = (delta_rois_8 + offset) * beta_softmax
@@ -806,8 +873,45 @@ class RelationUnit(nn.Module):
             beta_out = None
 
         # return output, w_x1, w_y1, w_x2, w_y2, delta_x1, delta_y1, delta_x2, delta_y2, output_x1_before,  output_y1_before, output_x2_before, output_y2_before
-        return output, output_beta, alpha_softmax, beta_softmax, delta_pred_offset, delta_pred_offset_beta, alpha, beta_out
+        return output, output_beta, alpha_softmax, beta_softmax, delta_pred_offset, delta_pred_offset_beta, alpha, beta_out, \
+               cls_score_softmax, alpha_softmax_cls, beta_softmax_cls, alpha_cls, beta_out_cls
+               
 
+# bbox_cls, alpha_cls_softmax, beta_cls_softmax, alpha_cls, beta_cls
+def _cross_entropy_neighbor(cls, cls_weights, labels):
+    ## 
+    # print (cls.shape)
+    # print (cls_weights.shape)
+    # print (labels.shape)
+    # cls_permute = cls.permute(1, 2, 0)
+    # key_out = key_out.permute([3,1,2,0])
+    # print (cls_permute.shape)
+
+    # labels_extend = labels.expand(cls.shape[0], labels.shape[0])
+    # # print (labels_extend.shape)
+    # labels_extend_permute = labels_extend.permute(1,0)
+    # loss = F.cross_entropy(cls_permute, labels_extend_permute, reduce=False)
+    # print (loss.shape)
+    # print (labels_extend_permute.shape)
+    # neighbor_rois_target     = rois_target.expand(neighbor_num, rois_target.shape[0], rois_target.shape[1])
+
+    loss_cls = []
+    for i in range(9):
+        loss_cls_tmp = F.cross_entropy(cls[i,:,:], labels, reduce=False) 
+        # print (loss_cls_tmp.shape)
+        loss_cls.append(loss_cls_tmp)
+    loss_cls_tensor = torch.stack(loss_cls)
+    # print (loss_cls_tensor.shape)
+    cls_weights = cls_weights.view(cls_weights.shape[0], cls_weights.shape[1])
+
+    loss = loss_cls_tensor * cls_weights
+    # print (loss.shape)
+    loss = torch.sum(loss, 0)
+    # print (loss.shape)
+    loss = torch.mean(loss)
+    # print (loss.shape)
+    # print (loss_cls.shape)
+    return loss
 
 def _smooth_l1_loss_alpha(bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_weights, neighbor_pred, alpha, sigma=1.0, dim=[1]):
     # print(bbox_pred.shape)
