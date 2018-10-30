@@ -88,6 +88,14 @@ def parse_args():
   parser.add_argument('--vis', dest='vis',
                       help='visualization mode',
                       action='store_true')
+
+  parser.add_argument('--neighbor_move', dest='neighbor_move',
+                      help='confg like 0.3',
+                      default="0.0", type=float)
+  parser.add_argument('--circle', dest='circle',
+                      help='True of False',
+                      action='store_true')
+
   args = parser.parse_args()
   return args
 
@@ -144,6 +152,14 @@ if __name__ == '__main__':
   cfg.TRAIN.USE_FLIPPED = False
   imdb, roidb, ratio_list, ratio_index = combined_roidb(args.imdbval_name, False)
   imdb.competition_mode(on=True)
+
+  cfg.NEIGHBOR_MOVE = args.neighbor_move
+  cfg.CIRCLE = args.circle
+  print ("neighbor_move     : ", args.neighbor_move)
+  print ("Circle            : ", args.circle)
+
+
+
 
   print('{:d} roidb entries'.format(len(roidb)))
 
