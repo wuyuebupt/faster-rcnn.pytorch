@@ -240,7 +240,10 @@ class roibatchLoader(data.Dataset):
 
  
         np.random.shuffle(blobs['gt_boxes'])
-        gt_boxes = torch.from_numpy(blobs['gt_boxes'])
+        # gt_boxes = torch.from_numpy(blobs['gt_boxes'])
+        # gt_boxes = None
+        gt_boxes = torch.FloatTensor([1,1,1,1,1])
+        gt_boxes = gt_boxes.view(1,5)
         num_boxes = 0
         proposal_boxes = torch.from_numpy(blobs['offline_proposals'])
         ## old fake gt boxes

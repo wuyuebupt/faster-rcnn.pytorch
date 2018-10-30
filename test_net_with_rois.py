@@ -313,6 +313,7 @@ if __name__ == '__main__':
 
       roi_boxes = boxes / data[1][0][2]
       pred_boxes /= data[1][0][2]
+      # print (gt_boxes)
       gt_boxes[:, :, :4] = gt_boxes[:, :, :4] / data[1][0][2]
 
       scores = scores.squeeze()
