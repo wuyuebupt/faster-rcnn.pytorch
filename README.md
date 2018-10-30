@@ -4,12 +4,12 @@
 
 coco test with 0.3 and circle neighbor
 ```
-test_net_with_rois.py --dataset coco --net res50 --checksession 1 --checkepoch 7 --checkpoint 58632 --load_dir save_dir/ --cuda --cag --neighbor_move 0.3 --circle
+python test_net_with_rois.py --dataset coco --net res50 --checksession 1 --checkepoch 7 --checkpoint 58632 --load_dir save_dir/ --cuda --cag --neighbor_move 0.3 --circle
 ```
 
 coco test with 0.3 and square neighbor
 ```
-test_net_with_rois.py --dataset coco --net res50 --checksession 1 --checkepoch 7 --checkpoint 58632 --load_dir save_dir/ --cuda --cag --neighbor_move 0.3 
+python test_net_with_rois.py --dataset coco --net res50 --checksession 1 --checkepoch 7 --checkpoint 58632 --load_dir save_dir/ --cuda --cag --neighbor_move 0.3 
 ```
 
 ## Introduction
