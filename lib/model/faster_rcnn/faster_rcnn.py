@@ -118,8 +118,12 @@ class _fasterRCNN(nn.Module):
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.3)
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.1)
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.3)
+        # boundary_move_scale = 0.3
+
         boundary_move_scale = 0.3
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.5, boundary_move_scale)
+
+
 
         ## square false
         rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info, boundary_move_scale, False)
