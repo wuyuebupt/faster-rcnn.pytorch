@@ -244,11 +244,11 @@ if __name__ == '__main__':
   det_file_ious = os.path.join(output_dir, 'detections_ious.pkl')
 
   ### evaluate results
-  with open(det_file, 'rb') as f:
-      all_boxes = pickle.load(f)
-  print('Evaluating detections')
-  imdb.evaluate_detections(all_boxes, output_dir)
-  exit()
+  # with open(det_file, 'rb') as f:
+  #     all_boxes = pickle.load(f)
+  # print('Evaluating detections')
+  # imdb.evaluate_detections(all_boxes, output_dir)
+  # exit()
   #
 
 
