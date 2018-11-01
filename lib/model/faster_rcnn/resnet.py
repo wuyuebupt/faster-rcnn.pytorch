@@ -254,8 +254,8 @@ class resnet(_fasterRCNN):
       self.RCNN_bbox_pred = nn.Linear(2048, 4 * self.n_classes)
 
     # self.RCNN_attention_feat = nn.Linear(2048, 256)
-    self.RCNN_attention_feat = nn.Linear(2048, 512)
-    self.relu = nn.ReLU(inplace=True)
+    # self.RCNN_attention_feat = nn.Linear(2048, 512)
+    # self.relu = nn.ReLU(inplace=True)
     # self.RCNN_attention_feat = nn.Linear(2048, 1024)
     
 
