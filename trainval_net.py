@@ -136,10 +136,14 @@ def parse_args():
                       help='confg like 0.3',
                       default="0.0", type=float)
 
+  parser.add_argument('--cls_beta_weight', dest='cls_beta_weight',
+                      help='confg like 1.0',
+                      default="1.0", type=float)
+
   parser.add_argument('--cls_weight', dest='cls_weight',
                       help='confg like 1.0',
                       default="1.0", type=float)
-  parser.add_argument('--bbox_alpha_weight', dest='bbox_alpha_weight',
+  parser.add_argument('--bbox_weight', dest='bbox_weight',
                       help='confg like 10.0',
                       default="10.0", type=float)
 
@@ -295,7 +299,8 @@ if __name__ == '__main__':
   cfg.REDUCE_DIMENSION = args.reduce_dimension
   print ("neighbor_move     : ", args.neighbor_move)
   print ("cls_weight        : ", args.cls_weight)
-  print ("bbox_alpha_weight : ", args.bbox_alpha_weight)
+  print ("cls_beta_weight   : ", args.cls_beta_weight)
+  print ("bbox_weight       : ", args.bbox_weight)
   print ("bbox_beta_weight  : ", args.bbox_beta_weight)
   print ("kl_weight         : ", args.kl_weight)
   print ("circle            : ", args.circle)
@@ -474,11 +479,11 @@ if __name__ == '__main__':
       #      + 50 * RCNN_loss_bbox_beta.mean() + kl_loss.mean()
 
       loss = args.cls_weight        * RCNN_loss_cls.mean() + \
-             args.bbox_alpha_weight * RCNN_loss_bbox.mean()
+             args.bbox_weight       * RCNN_loss_bbox.mean()
 
       if args.cls_neighbor:
           loss = loss + \
-             args.cls_weight        * RCNN_loss_cls_beta.mean() + \
+             args.cls_beta_weight   * RCNN_loss_cls_beta.mean() + \
              args.kl_weight         * kl_loss_cls.mean()
 
       if args.reg_neighbor:
@@ -602,10 +607,10 @@ if __name__ == '__main__':
           bg_cnt = rois_label.data.numel() - fg_cnt
 
         print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e" \
-                                % (args.session, epoch, step, iters_per_epoch, loss_temp, lr))
-        print("\t\t\tfg/bg=(%d/%d), time cost: %f" % (fg_cnt, bg_cnt, end-start))
+                                % (args.session, epoch, step, iters_per_epoch, loss_temp, lr), flush=True)
+        print("\t\t\tfg/bg=(%d/%d), time cost: %f" % (fg_cnt, bg_cnt, end-start), flush=True)
         print("\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f, bbox_beta %.4f, kl %.4f, cls_beta %.4f, kl_cls %.4f" \
-                      % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, loss_rcnn_box_beta, loss_kl, loss_rcnn_cls_beta, loss_kl_cls))
+                      % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, loss_rcnn_box_beta, loss_kl, loss_rcnn_cls_beta, loss_kl_cls), flush=True)
         #              % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, 0.0, loss_kl))
         if args.use_tfboard:
           info = {
@@ -641,7 +646,7 @@ if __name__ == '__main__':
         'pooling_mode': cfg.POOLING_MODE,
         'class_agnostic': args.class_agnostic,
       }, save_name)
-    print('save model: {}'.format(save_name))
+    print('save model: {}'.format(save_name),flush=True)
 
     end = time.time()
     print(end - start)
