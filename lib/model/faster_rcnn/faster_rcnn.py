@@ -280,8 +280,7 @@ class _fasterRCNN(nn.Module):
             cls_prob = cls_score_softmax * alpha_cls_softmax
             cls_prob = torch.sum(cls_prob, 0)
         else:
-
-            if circle:
+            if self.circle_neighbor:
                 cls_score = bbox_cls[8,:,:]
             else:
                 cls_score = bbox_cls[4,:,:]
