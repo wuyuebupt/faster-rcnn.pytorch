@@ -96,6 +96,26 @@ def parse_args():
                       help='True of False',
                       action='store_true')
 
+
+## for usage of proposal, neighbor, 2048 or 512
+  parser.add_argument('--cls_neighbor', dest='cls_neighbor',
+                      help='True of False',
+                      action='store_true')
+  parser.add_argument('--cls_reduce_d', dest='cls_reduce_d',
+                      help='True of False',
+                      action='store_true')
+  parser.add_argument('--reg_neighbor', dest='reg_neighbor',
+                      help='True of False',
+                      action='store_true')
+  parser.add_argument('--reg_reduce_d', dest='reg_reduce_d',
+                      help='True of False',
+                      action='store_true')
+
+  parser.add_argument('--reduce_dimension', dest='reduce_dimension',
+                      help='reduce_dimension for attention',
+                      default=128, type=int)
+
+
   args = parser.parse_args()
   return args
 
@@ -156,7 +176,20 @@ if __name__ == '__main__':
   cfg.NEIGHBOR_MOVE = args.neighbor_move
   cfg.CIRCLE = args.circle
   print ("neighbor_move     : ", args.neighbor_move)
-  print ("Circle            : ", args.circle)
+  print ("circle            : ", args.circle)
+
+
+  cfg.CLS_NEIGHBOR = args.cls_neighbor
+  cfg.CLS_REDUCE_D = args.cls_reduce_d
+  cfg.REG_NEIGHBOR = args.reg_neighbor
+  cfg.REG_REDUCE_D = args.reg_reduce_d
+  cfg.REDUCE_DIMENSION = args.reduce_dimension
+
+  print ("cls_neighbor      : ", args.cls_neighbor)
+  print ("cls_reduce_d      : ", args.cls_reduce_d)
+  print ("reg_neighbor      : ", args.reg_neighbor)
+  print ("reg_reduce_d      : ", args.reg_reduce_d)
+  print ("reduce_dimension  : ", args.reduce_dimension)
 
 
 
@@ -288,7 +321,8 @@ if __name__ == '__main__':
       rois, cls_prob, bbox_pred, \
       RCNN_loss_cls, RCNN_loss_bbox, \
       rois_label, \
-      RCNN_loss_bbox_beta, kl_loss  = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals)
+      RCNN_loss_bbox_beta, kl_loss,  \
+      RCNN_loss_cls_beta, kl_loss_cls = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals)
 
       # wx1, wy1, wx2, wy2, \
       # dx1, dy1, dx2, dy2, \

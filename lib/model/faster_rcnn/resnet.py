@@ -12,6 +12,7 @@ from torch.autograd import Variable
 import math
 import torch.utils.model_zoo as model_zoo
 import pdb
+import os
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
        'resnet152']
@@ -219,7 +220,10 @@ def resnet152(pretrained=False):
 
 class resnet(_fasterRCNN):
   def __init__(self, classes, num_layers=101, pretrained=False, class_agnostic=False):
-    self.model_path = 'data/pretrained_model/resnet101_caffe.pth'
+    # self.model_path = 'data/pretrained_model/resnet101_caffe.pth'
+    self.model_path = os.path.join(cfg.DATA_DIR, 'pretrained_model', 'resnet101_caffe.pth')
+    # self.model_path = os.path.join(cfg.MODEL_PATH, 'resnet101_caffe.pth')
+    # self.model_path = os.path.join(cfg.MODEL_PATH)
     # self.model_path = 'data/pretrained_model/faster_rcnn_1_10_1251.pth'
     self.dout_base_model = 1024
     self.pretrained = pretrained
@@ -250,8 +254,8 @@ class resnet(_fasterRCNN):
       self.RCNN_bbox_pred = nn.Linear(2048, 4 * self.n_classes)
 
     # self.RCNN_attention_feat = nn.Linear(2048, 256)
-    self.RCNN_attention_feat = nn.Linear(2048, 512)
-    self.relu = nn.ReLU(inplace=True)
+    # self.RCNN_attention_feat = nn.Linear(2048, 512)
+    # self.relu = nn.ReLU(inplace=True)
     # self.RCNN_attention_feat = nn.Linear(2048, 1024)
     
 
