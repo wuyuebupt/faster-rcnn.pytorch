@@ -219,6 +219,10 @@ if __name__ == '__main__':
 
   print("load checkpoint %s" % (load_name))
   checkpoint = torch.load(load_name)
+  # print (checkpoint['model'].keys())
+  for key in checkpoint['model'].keys():
+    if key.split('.')[0] == 'attention_regression':
+        print (key, checkpoint['model'][key].shape)
   fasterRCNN.load_state_dict(checkpoint['model'])
   if 'pooling_mode' in checkpoint.keys():
     cfg.POOLING_MODE = checkpoint['pooling_mode']

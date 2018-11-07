@@ -680,18 +680,27 @@ class RelationUnit(nn.Module):
         ################### for classification
         ## 
         self.w_k_cls = Parameter(torch.Tensor(1, 1, appearance_feature_dim, self.dim_k, 1)) 
+        # self.w_q_cls = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.dim_k, 1)) 
+        # self.w_q_cls = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.dim_k, 1)) 
         self.w_q_cls = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.dim_k, 1)) 
 
         if cls_reduce_d:
+            # self.alpha_w_cls = Parameter(torch.Tensor(9, 1, appearance_feature_dim, 1))
+            # self.cls_score = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.n_classes))
             self.alpha_w_cls = Parameter(torch.Tensor(9, 1, appearance_feature_dim, 1))
             self.cls_score = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.n_classes))
+            # self.cls_score = Parameter(torch.Tensor(1, 1, appearance_feature_dim, self.n_classes))
         else:
+            # self.alpha_w_cls = Parameter(torch.Tensor(9, 1, original_feature_dim, 1))
+            # self.cls_score = Parameter(torch.Tensor(9, 1, original_feature_dim, self.n_classes))
+            # self.alpha_w_cls = Parameter(torch.Tensor(9, 1, original_feature_dim, 1))
+            # self.cls_score = Parameter(torch.Tensor(9, 1, original_feature_dim, self.n_classes))
+            # self.alpha_w_cls = Parameter(torch.Tensor(9, 1, original_feature_dim, 1))
+            # self.cls_score = nn.Linear(2048, self.n_classes)
             # self.alpha_w_cls = Parameter(torch.Tensor(9, 1, original_feature_dim, 1))
             # self.cls_score = Parameter(torch.Tensor(9, 1, original_feature_dim, self.n_classes))
             self.alpha_w_cls = Parameter(torch.Tensor(9, 1, original_feature_dim, 1))
             self.cls_score = Parameter(torch.Tensor(9, 1, original_feature_dim, self.n_classes))
-            # self.alpha_w_cls = Parameter(torch.Tensor(9, 1, original_feature_dim, 1))
-            # self.cls_score = nn.Linear(2048, self.n_classes)
 
         self.relu = nn.ReLU(inplace=True)
     def _init_weights(self):
