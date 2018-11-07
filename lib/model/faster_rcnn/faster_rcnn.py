@@ -61,6 +61,11 @@ class _fasterRCNN(nn.Module):
 
         self.attention_regression = RelationUnit(2048, self.reduce_dimension, 32, self.n_classes, self.cls_reduce_d, self.reg_reduce_d, self.alpha_same_with_beta) 
 
+        self.boundary_scale = cfg.NEIGHBOR_MOVE 
+        self.circle_neighbor = cfg.CIRCLE
+        print ("boundary move: ",self.boundary_scale)
+        print ("circle       : ",self.circle_neighbor)
+
         # self.attention_regression = RelationUnit(2048, 32) 
         # self.attention_regression = RelationUnit(512, 32) 
         # self.attention_regression = RelationUnit(2048, 64) 
@@ -140,7 +145,9 @@ class _fasterRCNN(nn.Module):
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.3)
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.1)
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.3)
+
         # boundary_move_scale = 0.3
+
         boundary_move_scale = self.boundary_scale
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.5, boundary_move_scale)
 

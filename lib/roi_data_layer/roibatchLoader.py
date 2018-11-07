@@ -67,6 +67,8 @@ class roibatchLoader(data.Dataset):
     blobs = get_minibatch(minibatch_db, self._num_classes)
     data = torch.from_numpy(blobs['data'])
     im_info = torch.from_numpy(blobs['im_info'])
+
+    # print (data.shape)
     # we need to random shuffle the bounding box.
     data_height, data_width = data.size(1), data.size(2)
     if self.training:
@@ -134,6 +136,7 @@ class roibatchLoader(data.Dataset):
                 min_x = int(torch.min(gt_boxes[:,0]))
                 max_x = int(torch.max(gt_boxes[:,2]))
                 trim_size = int(np.ceil(data_height * ratio))
+                # trim_size = int(np.floor(data_height * ratio))
                 if trim_size > data_width:
                     trim_size = data_width                
                 box_region = max_x - min_x + 1
@@ -168,6 +171,9 @@ class roibatchLoader(data.Dataset):
                 proposal_boxes[:, 2].clamp_(0, trim_size - 1)
 
 
+        # print (data.shape)
+        # # print (data[0].shape)
+        # print (data_width, data_height)
         # based on the ratio, padding the image.
         if ratio < 1:
             # this means that data_width < data_height
@@ -175,7 +181,7 @@ class roibatchLoader(data.Dataset):
 
             padding_data = torch.FloatTensor(int(np.ceil(data_width / ratio)), \
                                              data_width, 3).zero_()
-
+            # print (data[0].shape)
             padding_data[:data_height, :, :] = data[0]
             # update im_info
             im_info[0, 0] = padding_data.size(0)
@@ -185,6 +191,7 @@ class roibatchLoader(data.Dataset):
             # if the image need to crop.
             padding_data = torch.FloatTensor(data_height, \
                                              int(np.ceil(data_height * ratio)), 3).zero_()
+            # print (data[0].shape)
             padding_data[:, :data_width, :] = data[0]
             im_info[0, 1] = padding_data.size(1)
         else:

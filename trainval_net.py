@@ -147,6 +147,7 @@ def parse_args():
                       help='confg like 10.0',
                       default="10.0", type=float)
 
+
   parser.add_argument('--bbox_beta_weight', dest='bbox_beta_weight',
                       help='confg like 1.0',
                       default="50.0", type=float)
@@ -157,6 +158,7 @@ def parse_args():
   parser.add_argument('--circle', dest='circle',
                       help='True of False',
                       action='store_true')
+
                       # default=False, type=bool)
 
 ## for usage of proposal, neighbor, 2048 or 512
@@ -191,8 +193,7 @@ def parse_args():
                       default=2, type=int)
 
 
-#      loss = RCNN_loss_cls.mean() + 10 * RCNN_loss_bbox.mean() \
-#           + 50 * RCNN_loss_bbox_beta.mean() + kl_loss.mean()
+
   args = parser.parse_args()
   return args
 
@@ -244,6 +245,7 @@ if __name__ == '__main__':
       args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
   elif args.dataset == "coco":
       args.imdb_name = "coco_2014_train+coco_2014_valminusminival"
+      # args.imdb_name = "coco_2014_valminusminival"
       args.imdbval_name = "coco_2014_minival"
       args.set_cfgs = ['ANCHOR_SCALES', '[4, 8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '50']
   elif args.dataset == "imagenet":
@@ -263,7 +265,6 @@ if __name__ == '__main__':
 
   # args.cfg_file = "cfgs/{}_ls.yml".format(args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
 
-## some files to put into args
 
   args.cfg_file = args.config_file
   # args.data_folder = args.data_folder
@@ -291,7 +292,7 @@ if __name__ == '__main__':
   # fix blocks
   cfg.RESNET.FIXED_BLOCKS = 1
   cfg.RESNET.FIXED_TOPS = False
-  
+
   cfg.DATA_DIR = args.data_folder
   print (cfg.DATA_DIR)
   cfg.MODEL_PATH = args.pretrained_model
@@ -351,6 +352,7 @@ if __name__ == '__main__':
   #                     help='confg like 1.0',
   #                     default="50.0", type=float)
   # parser.add_argument('--kl_weight', dest='kl_weight'  
+
 
 
 
@@ -481,6 +483,7 @@ if __name__ == '__main__':
       num_boxes.data.resize_(data[3].size()).copy_(data[3])
       proposal_boxes.data.resize_(data[4].size()).copy_(data[4])
       num_proposals.data.resize_(data[5].size()).copy_(data[5])
+      # print (im_data.shape)
 
 
       # rpn_loss_cls, rpn_loss_box, \
@@ -634,8 +637,10 @@ if __name__ == '__main__':
         print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e" \
                                 % (args.session, epoch, step, iters_per_epoch, loss_temp, lr), flush=True)
         print("\t\t\tfg/bg=(%d/%d), time cost: %f" % (fg_cnt, bg_cnt, end-start), flush=True)
+
         print("\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f, bbox_beta %.4f, kl %.4f, cls_beta %.4f, kl_cls %.4f" \
                       % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, loss_rcnn_box_beta, loss_kl, loss_rcnn_cls_beta, loss_kl_cls), flush=True)
+
         #              % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, 0.0, loss_kl))
         if args.use_tfboard:
           info = {
@@ -671,7 +676,9 @@ if __name__ == '__main__':
         'pooling_mode': cfg.POOLING_MODE,
         'class_agnostic': args.class_agnostic,
       }, save_name)
-    print('save model: {}'.format(save_name),flush=True)
+
+    print('save model: {}'.format(save_name), flush=True)
+
 
     end = time.time()
     print(end - start)

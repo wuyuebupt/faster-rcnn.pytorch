@@ -1,14 +1,24 @@
 # A *Faster* Pytorch Implementation of Faster R-CNN
 
-## new commad
 
-python trainval_net.py --dataset pascal_voc  --net res101 --bs 4 --lr 4e-3 --nw 0 --lr_decay_step 8 --epochs 10  --cuda --config  cfgs/res101.yml --data_dir /work/dataforYinpeng/voc0712h5/ --save_dir /work/save_dir/ --pretrained_model /work/tmp/pretrained_model/resnet101_caffe.pth --neighbor_move 0.3 --cls_weight 0.5 --bbox_weight 10 --cls_beta_weight 0.5 --bbox_beta_weight 50 --kl_weight 1 --reduce_dimension 256  --cag    --reg_neighbor  --mGPUs  --cls_neighbor  --reg_reduce_d --alpha_same_with_beta --sigma_geometry 0.3 --cls_alpha_option 2
+## new cmd
+--neighbor_move: 0.3 \
+--cls_weight 1 \
+--bbox_alpha_weight 10 \
+--bbox_beta_weight 50 \
+--kl_weight 1 \
+--circle \
 
+for circle neighbor
 
+```
+python trainval_net.py --dataset coco --net res50 --bs 4 --lr 4e-3 --nw 0 --lr_decay_step 4 --epochs 10  --cuda --config  cfgs/res50.yml --data_dir /work/tmp/coco/h5data_gt/ --save_dir /work/save_dir/ --pretrained_model /work/tmp/coco/pretrained_model/resnet50-caffe.pth --cag --mGPUs --neighbor_move 0.3 --cls_weight 1 --bbox_alpha_weight 10 --bbox_beta_weight 50 --kl_weight 1 --circle
+```
 
-
-## cmd
-
+for square neighbor, remove --circle
+```
+python trainval_net.py --dataset coco --net res50 --bs 4 --lr 4e-3 --nw 0 --lr_decay_step 4 --epochs 10  --cuda --config  cfgs/res50.yml --data_dir /work/tmp/coco/h5data_gt/ --save_dir /work/save_dir/ --pretrained_model /work/tmp/coco/pretrained_model/resnet50-caffe.pth --cag --mGPUs --neighbor_move 0.3 --cls_weight 1 --bbox_alpha_weight 10 --bbox_beta_weight 50 --kl_weight 1 
+```
 
 --config: yml file  \
 --data_dir: dir with all files, e.g. h5, pkl, txt \
@@ -22,13 +32,17 @@ python trainval_net.py --dataset pascal_voc  --net res101 --bs 4 --lr 4e-3 --nw 
 --circle \
 For circle neighbor 
 
+
+The h5datagt dir is like
 ```
-python trainval_net.py --dataset pascal_voc_0712  --net res101 --bs 1 --lr 1e-3 --nw 8 --lr_decay_step 8 --epochs 10  --cuda --config  cfgs/res101.yml --data_dir /work/dataforYinpeng/voc0712h5/ --save_dir /work/save_dir/ --pretrained_model /work/tmp/pretrained_model/resnet101_caffe.pth --neighbor_move 0.3 --cls_weight 1 --bbox_alpha_weight 10 --bbox_beta_weight 50 --kl_weight 1 --circle
+coco_2014_train_gt_roidb.pkl 
+coco_2014_valminusminival_gt_roidb.pkl 
+instances_train2014.json 
+instances_valminusminival2014.json 
+train2014.h5
+val2014.h5
 ```
-For square neighbor, remove --circle
-```
-python trainval_net.py --dataset pascal_voc_0712  --net res101 --bs 1 --lr 1e-3 --nw 8 --lr_decay_step 8 --epochs 10  --cuda --config  cfgs/res101.yml --data_dir /work/dataforYinpeng/voc0712h5/ --save_dir /work/save_dir/ --pretrained_model /work/tmp/pretrained_model/resnet101_caffe.pth --neighbor_move 0.3 --cls_weight 1 --bbox_alpha_weight 10 --bbox_beta_weight 50 --kl_weight 1 
-```
+
 
 
 ## Introduction

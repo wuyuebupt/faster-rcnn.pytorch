@@ -1,9 +1,12 @@
 data
+log
+data2
 data/*
 output/*
 logs/*
 save_dir/*
-savetoh5/*h5
+
+lib/savetoh5/*h5
 
 
 # READ THIS BEFORE YOU REFACTOR ME
