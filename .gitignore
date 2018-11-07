@@ -5,6 +5,7 @@ data/*
 output/*
 logs/*
 save_dir/*
+
 lib/savetoh5/*h5
 
 

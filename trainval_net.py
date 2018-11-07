@@ -135,12 +135,19 @@ def parse_args():
   parser.add_argument('--neighbor_move', dest='neighbor_move',
                       help='confg like 0.3',
                       default="0.0", type=float)
+
+  parser.add_argument('--cls_beta_weight', dest='cls_beta_weight',
+                      help='confg like 1.0',
+                      default="1.0", type=float)
+
   parser.add_argument('--cls_weight', dest='cls_weight',
                       help='confg like 1.0',
                       default="1.0", type=float)
-  parser.add_argument('--bbox_alpha_weight', dest='bbox_alpha_weight',
+  parser.add_argument('--bbox_weight', dest='bbox_weight',
                       help='confg like 10.0',
                       default="10.0", type=float)
+
+
   parser.add_argument('--bbox_beta_weight', dest='bbox_beta_weight',
                       help='confg like 1.0',
                       default="50.0", type=float)
@@ -151,6 +158,41 @@ def parse_args():
   parser.add_argument('--circle', dest='circle',
                       help='True of False',
                       action='store_true')
+
+                      # default=False, type=bool)
+
+## for usage of proposal, neighbor, 2048 or 512
+  parser.add_argument('--cls_neighbor', dest='cls_neighbor',
+                      help='True of False',
+                      action='store_true')
+  parser.add_argument('--cls_reduce_d', dest='cls_reduce_d',
+                      help='True of False',
+                      action='store_true')
+  parser.add_argument('--reg_neighbor', dest='reg_neighbor',
+                      help='True of False',
+                      action='store_true')
+  parser.add_argument('--reg_reduce_d', dest='reg_reduce_d',
+                      help='True of False',
+                      action='store_true')
+
+  parser.add_argument('--reduce_dimension', dest='reduce_dimension',
+                      help='reduce_dimension for attention',
+                      default=128, type=int)
+
+
+  parser.add_argument('--alpha_same_with_beta', dest='alpha_same_with_beta',
+                      help='True of False',
+                      action='store_true')
+
+  parser.add_argument('--sigma_geometry', dest='sigma_geometry',
+                      help='float',
+                      default='0.3', type=float)
+
+  parser.add_argument('--cls_alpha_option', dest='cls_alpha_option',
+                      help='options {0: logits, 1: softmax , 2: cross entropy}',
+                      default=2, type=int)
+
+
 
   args = parser.parse_args()
   return args
@@ -223,6 +265,7 @@ if __name__ == '__main__':
 
   # args.cfg_file = "cfgs/{}_ls.yml".format(args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
 
+
   args.cfg_file = args.config_file
   # args.data_folder = args.data_folder
   print (args.cfg_file)
@@ -250,26 +293,70 @@ if __name__ == '__main__':
   cfg.RESNET.FIXED_BLOCKS = 1
   cfg.RESNET.FIXED_TOPS = False
 
-
-
-
   cfg.DATA_DIR = args.data_folder
   print (cfg.DATA_DIR)
   cfg.MODEL_PATH = args.pretrained_model
   print (cfg.MODEL_PATH)
 
+  ## satan
   cfg.NEIGHBOR_MOVE = args.neighbor_move
   cfg.CIRCLE = args.circle
-  print ("neighbor_move     : ", args.neighbor_move)
-  print ("cls_weight        : ", args.cls_weight)
-  print ("bbox_alpha_weight : ", args.bbox_alpha_weight)
-  print ("bbox_beta_weight  : ", args.bbox_beta_weight)
-  print ("kl_weight         : ", args.kl_weight)
-  print ("Circle            : ", args.circle)
+
+  # parser.add_argument('--cls_neighbor', dest='cle_neighbor',
+  # parser.add_argument('--cls_2048', dest='cls_2048',
+  # parser.add_argument('--reg_neighbor', dest='reg_neighbor',
+  # parser.add_argument('--reg_2048', dest='reg_2048',
+
+  cfg.CLS_NEIGHBOR = args.cls_neighbor
+  cfg.CLS_REDUCE_D = args.cls_reduce_d
+  cfg.REG_NEIGHBOR = args.reg_neighbor
+  cfg.REG_REDUCE_D = args.reg_reduce_d
+  cfg.REDUCE_DIMENSION = args.reduce_dimension
+  cfg.ALPHA_SAME_WITH_BETA = args.alpha_same_with_beta
+  cfg.SIGMA_GEOMETRY = args.sigma_geometry
+  cfg.CLS_ALPHA_OPTION = args.cls_alpha_option
+
+  print ("neighbor_move        : ", args.neighbor_move)
+  print ("cls_weight           : ", args.cls_weight)
+  print ("cls_beta_weight      : ", args.cls_beta_weight)
+  print ("bbox_weight          : ", args.bbox_weight)
+  print ("bbox_beta_weight     : ", args.bbox_beta_weight)
+  print ("kl_weight            : ", args.kl_weight)
+  print ("circle               : ", args.circle)
+
+  print ("cls_neighbor         : ", args.cls_neighbor)
+  print ("cls_reduce_d         : ", args.cls_reduce_d)
+  print ("reg_neighbor         : ", args.reg_neighbor)
+  print ("reg_reduce_d         : ", args.reg_reduce_d)
+  print ("reduce_dimension     : ", args.reduce_dimension)
+
+  print ("alpha_same_with_beta : ", args.alpha_same_with_beta)
+  print ("sigma_geometry       : ", args.sigma_geometry)
+  print ("cls_alpha_option     : ", args.cls_alpha_option)
 
 
 
 
+  # parser.add_argument('--neighbor_move', dest='neighbor_move',
+  #                     help='confg like 0.3',
+  #                     default="0.0", type=float)
+
+  # parser.add_argument('--cls_weight', dest='cls_weight',
+  #                     help='confg like 1.0',
+  #                     default="1.0", type=float)
+  # parser.add_argument('--bbox_alpha_weight', dest='bbox_alpha_weight',
+  #                     help='confg like 10.0',
+  #                     default="10.0", type=float)
+
+  # parser.add_argument('--bbox_beta_weight', dest='bbox_beta_weight',
+  #                     help='confg like 1.0',
+  #                     default="50.0", type=float)
+  # parser.add_argument('--kl_weight', dest='kl_weight'  
+
+
+
+
+  
   imdb, roidb, ratio_list, ratio_index = combined_roidb(args.imdb_name)
   train_size = len(roidb)
 
@@ -406,7 +493,8 @@ if __name__ == '__main__':
       rois, cls_prob, bbox_pred, \
       RCNN_loss_cls, RCNN_loss_bbox, \
       rois_label, \
-      RCNN_loss_bbox_beta, kl_loss  = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals)
+      RCNN_loss_bbox_beta, kl_loss,  \
+      RCNN_loss_cls_beta, kl_loss_cls = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals)
       # RCNN_loss_bbox_beta, kl_loss  = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
       # wx1, wy1, wx2, wy2, \
       # dx1, dy1, dx2, dy2, \
@@ -414,13 +502,30 @@ if __name__ == '__main__':
 
       # loss = rpn_loss_cls.mean() + rpn_loss_box.mean() \
       #      + RCNN_loss_cls.mean() + 10 * RCNN_loss_bbox.mean() \
+
       # loss = RCNN_loss_cls.mean() + 10 * RCNN_loss_bbox.mean() \
       #      + 50 * RCNN_loss_bbox_beta.mean() + kl_loss.mean()
 
       loss = args.cls_weight        * RCNN_loss_cls.mean() + \
-             args.bbox_alpha_weight * RCNN_loss_bbox.mean() + \
+             args.bbox_weight       * RCNN_loss_bbox.mean()
+
+      if args.cls_neighbor:
+          loss = loss + \
+             args.cls_beta_weight   * RCNN_loss_cls_beta.mean() + \
+             args.kl_weight         * kl_loss_cls.mean()
+
+      if args.reg_neighbor:
+          loss = loss + \
              args.bbox_beta_weight  * RCNN_loss_bbox_beta.mean() + \
-             args.kl_weight         * kl_loss.mean()
+             args.kl_weight         * kl_loss.mean() 
+      
+      
+      # loss = args.cls_weight        * RCNN_loss_cls.mean() + \
+      #        args.bbox_alpha_weight * RCNN_loss_bbox.mean() + \
+      #        args.bbox_beta_weight  * RCNN_loss_bbox_beta.mean() + \
+      #        args.kl_weight         * kl_loss.mean() + \
+      #        args.cls_weight        * RCNN_loss_cls_beta.mean() + \
+      #        args.kl_weight         * kl_loss_cls.mean()
 
 
       #     + 10 * RCNN_loss_bbox_beta.mean() + kl_loss.mean()
@@ -441,6 +546,27 @@ if __name__ == '__main__':
       # loss_temp += loss.data.item()
 
       # backward
+
+
+      #     + 10 * RCNN_loss_bbox_beta.mean() + kl_loss.mean()
+      #      + kl_loss.mean()
+      #      + 10 * RCNN_loss_bbox_beta.mean() + kl_loss.mean()
+      #      + RCNN_loss_cls.mean() + 15 * RCNN_loss_bbox.mean()
+      #      + RCNN_loss_cls.mean() + 10 * RCNN_loss_bbox.mean()
+      #      + RCNN_loss_cls.mean() +  RCNN_loss_bbox.mean()
+      #      + RCNN_loss_cls.mean() + 5 * RCNN_loss_bbox.mean()
+      #      + RCNN_loss_cls.mean() + 3 * RCNN_loss_bbox.mean()
+      #      + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
+
+      # loss = RCNN_loss_bbox.mean()
+
+      # loss = RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
+
+      loss_temp += loss.data[0]
+      # loss_temp += loss.data.item()
+
+      # backward
+      #pdb.set_trace()
       optimizer.zero_grad()
       loss.backward()
       if args.net == "vgg16":
@@ -462,12 +588,20 @@ if __name__ == '__main__':
           # loss_rcnn_cls = RCNN_loss_cls.mean().data.item()
           # loss_rcnn_box = RCNN_loss_bbox.mean().data.item()
           ## v0.2
-          loss_rcnn_box_beta = RCNN_loss_bbox_beta.mean().data[0]
-          # loss_rcnn_box_beta = RCNN_loss_bbox_beta.mean().data.item()
-          ## v0.3
-          # loss_rcnn_box_beta = RCNN_loss_bbox_beta.mean().data[0]
-          loss_kl = kl_loss.mean().data[0]
-          # loss_kl = kl_loss.mean().data.item()
+
+          if args.reg_neighbor:
+              loss_rcnn_box_beta = RCNN_loss_bbox_beta.mean().data[0]
+              loss_kl = kl_loss.mean().data[0]
+          else:
+              loss_rcnn_box_beta = 0 
+              loss_kl = 0
+          
+          if args.cls_neighbor:
+              loss_rcnn_cls_beta = RCNN_loss_cls_beta.mean().data[0]
+              loss_kl_cls = kl_loss_cls.mean().data[0]
+          else:
+              loss_rcnn_cls_beta = 0 
+              loss_kl_cls = 0
 
           fg_cnt = torch.sum(rois_label.data.ne(0))
           bg_cnt = rois_label.data.numel() - fg_cnt
@@ -481,12 +615,21 @@ if __name__ == '__main__':
           # loss_rcnn_cls = RCNN_loss_cls.data.item()
           # loss_rcnn_box = RCNN_loss_bbox.data.item()
           ## v0.2
-          loss_rcnn_box_beta = RCNN_loss_bbox_beta.data[0]
-          # loss_rcnn_box_beta = RCNN_loss_bbox_beta.data.item()
-          ## v0.3
-          # loss_rcnn_box_beta = RCNN_loss_bbox_beta.data[0]
-          loss_kl = kl_loss.data[0]
-          # loss_kl = kl_loss.data.item()
+
+          if args.reg_neighbor:
+              loss_rcnn_box_beta = RCNN_loss_bbox_beta.data[0]
+              loss_kl = kl_loss.data[0]
+          else:
+              loss_rcnn_box_beta = 0 
+              loss_kl = 0
+          
+          if args.cls_neighbor:
+              loss_rcnn_cls_beta = RCNN_loss_cls_beta.data[0]
+              loss_kl_cls = kl_loss_cls.data[0]
+          else:
+              loss_rcnn_cls_beta = 0 
+              loss_kl_cls = 0
+
 
           fg_cnt = torch.sum(rois_label.data.ne(0))
           bg_cnt = rois_label.data.numel() - fg_cnt
@@ -494,8 +637,10 @@ if __name__ == '__main__':
         print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e" \
                                 % (args.session, epoch, step, iters_per_epoch, loss_temp, lr), flush=True)
         print("\t\t\tfg/bg=(%d/%d), time cost: %f" % (fg_cnt, bg_cnt, end-start), flush=True)
-        print("\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f, bbox_beta %.4f, kl %.4f" \
-                      % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, loss_rcnn_box_beta, loss_kl), flush=True)
+
+        print("\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f, bbox_beta %.4f, kl %.4f, cls_beta %.4f, kl_cls %.4f" \
+                      % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, loss_rcnn_box_beta, loss_kl, loss_rcnn_cls_beta, loss_kl_cls), flush=True)
+
         #              % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, 0.0, loss_kl))
         if args.use_tfboard:
           info = {
@@ -531,7 +676,9 @@ if __name__ == '__main__':
         'pooling_mode': cfg.POOLING_MODE,
         'class_agnostic': args.class_agnostic,
       }, save_name)
+
     print('save model: {}'.format(save_name), flush=True)
+
 
     end = time.time()
     print(end - start)

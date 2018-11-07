@@ -25,9 +25,13 @@ def prepare_roidb(imdb):
     #      for i in range(imdb.num_images)]
     sizes = [imdb.image_h5object_at(i).shape
          for i in range(imdb.num_images)]
+    ## old
+    # sizes = [PIL.Image.open(imdb.image_path_at(i)).size
+    #      for i in range(imdb.num_images)]
          
   for i in range(len(imdb.image_index)):
     roidb[i]['img_id'] = imdb.image_id_at(i)
+
     # print (roidb[i]['img_id'])
     # roidb[i]['image'] = imdb.image_path_at(i)
     # roidb[i]['offline_proposal'] = imdb.image_offline_proposal_at(i)

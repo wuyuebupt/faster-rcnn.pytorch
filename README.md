@@ -1,5 +1,6 @@
 # A *Faster* Pytorch Implementation of Faster R-CNN
 
+
 ## new cmd
 --neighbor_move: 0.3 \
 --cls_weight 1 \
@@ -19,6 +20,17 @@ for square neighbor, remove --circle
 python trainval_net.py --dataset coco --net res50 --bs 4 --lr 4e-3 --nw 0 --lr_decay_step 4 --epochs 10  --cuda --config  cfgs/res50.yml --data_dir /work/tmp/coco/h5data_gt/ --save_dir /work/save_dir/ --pretrained_model /work/tmp/coco/pretrained_model/resnet50-caffe.pth --cag --mGPUs --neighbor_move 0.3 --cls_weight 1 --bbox_alpha_weight 10 --bbox_beta_weight 50 --kl_weight 1 
 ```
 
+--config: yml file  \
+--data_dir: dir with all files, e.g. h5, pkl, txt \
+--save_dir: save dir, not changed \
+--pretrained_model: path to the pth model file \
+--neighbor_move:  0.3 \
+--cls_weight 1 \
+--bbox_alpha_weight 10 \
+--bbox_beta_weight 50 \
+--kl_weight 1 \
+--circle \
+For circle neighbor 
 
 
 The h5datagt dir is like
