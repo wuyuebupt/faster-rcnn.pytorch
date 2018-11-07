@@ -116,6 +116,20 @@ def parse_args():
                       default=128, type=int)
 
 
+  parser.add_argument('--alpha_same_with_beta', dest='alpha_same_with_beta',
+                      help='True of False',
+                      action='store_true')
+
+  parser.add_argument('--sigma_geometry', dest='sigma_geometry',
+                      help='float',
+                      default='0.3', type=float)
+
+  parser.add_argument('--cls_alpha_option', dest='cls_alpha_option',
+                      help='options {0: logits, 1: softmax , 2: cross entropy}',
+                      default=2, type=int)
+
+
+
   args = parser.parse_args()
   return args
 
@@ -184,6 +198,10 @@ if __name__ == '__main__':
   cfg.REG_NEIGHBOR = args.reg_neighbor
   cfg.REG_REDUCE_D = args.reg_reduce_d
   cfg.REDUCE_DIMENSION = args.reduce_dimension
+  cfg.ALPHA_SAME_WITH_BETA = args.alpha_same_with_beta
+  cfg.SIGMA_GEOMETRY = args.sigma_geometry
+  cfg.CLS_ALPHA_OPTION = args.cls_alpha_option
+
 
   print ("cls_neighbor      : ", args.cls_neighbor)
   print ("cls_reduce_d      : ", args.cls_reduce_d)
@@ -191,6 +209,9 @@ if __name__ == '__main__':
   print ("reg_reduce_d      : ", args.reg_reduce_d)
   print ("reduce_dimension  : ", args.reduce_dimension)
 
+  print ("alpha_same_with_beta : ", args.alpha_same_with_beta)
+  print ("sigma_geometry       : ", args.sigma_geometry)
+  print ("cls_alpha_option     : ", args.cls_alpha_option)
 
 
 
