@@ -177,6 +177,20 @@ def parse_args():
                       help='reduce_dimension for attention',
                       default=128, type=int)
 
+
+  parser.add_argument('--alpha_same_with_beta', dest='alpha_same_with_beta',
+                      help='True of False',
+                      action='store_true')
+
+  parser.add_argument('--sigma_geometry', dest='sigma_geometry',
+                      help='float',
+                      default='0.3', type=float)
+
+  parser.add_argument('--cls_alpha_option', dest='cls_alpha_option',
+                      help='options {0: logits, 1: softmax , 2: cross entropy}',
+                      default=2, type=int)
+
+
 #      loss = RCNN_loss_cls.mean() + 10 * RCNN_loss_bbox.mean() \
 #           + 50 * RCNN_loss_bbox_beta.mean() + kl_loss.mean()
   args = parser.parse_args()
@@ -297,19 +311,30 @@ if __name__ == '__main__':
   cfg.REG_NEIGHBOR = args.reg_neighbor
   cfg.REG_REDUCE_D = args.reg_reduce_d
   cfg.REDUCE_DIMENSION = args.reduce_dimension
-  print ("neighbor_move     : ", args.neighbor_move)
-  print ("cls_weight        : ", args.cls_weight)
-  print ("cls_beta_weight   : ", args.cls_beta_weight)
-  print ("bbox_weight       : ", args.bbox_weight)
-  print ("bbox_beta_weight  : ", args.bbox_beta_weight)
-  print ("kl_weight         : ", args.kl_weight)
-  print ("circle            : ", args.circle)
+  cfg.ALPHA_SAME_WITH_BETA = args.alpha_same_with_beta
+  cfg.SIGMA_GEOMETRY = args.sigma_geometry
+  cfg.CLS_ALPHA_OPTION = args.cls_alpha_option
 
-  print ("cls_neighbor      : ", args.cls_neighbor)
-  print ("cls_reduce_d      : ", args.cls_reduce_d)
-  print ("reg_neighbor      : ", args.reg_neighbor)
-  print ("reg_reduce_d      : ", args.reg_reduce_d)
-  print ("reduce_dimension  : ", args.reduce_dimension)
+  print ("neighbor_move        : ", args.neighbor_move)
+  print ("cls_weight           : ", args.cls_weight)
+  print ("cls_beta_weight      : ", args.cls_beta_weight)
+  print ("bbox_weight          : ", args.bbox_weight)
+  print ("bbox_beta_weight     : ", args.bbox_beta_weight)
+  print ("kl_weight            : ", args.kl_weight)
+  print ("circle               : ", args.circle)
+
+  print ("cls_neighbor         : ", args.cls_neighbor)
+  print ("cls_reduce_d         : ", args.cls_reduce_d)
+  print ("reg_neighbor         : ", args.reg_neighbor)
+  print ("reg_reduce_d         : ", args.reg_reduce_d)
+  print ("reduce_dimension     : ", args.reduce_dimension)
+
+  print ("alpha_same_with_beta : ", args.alpha_same_with_beta)
+  print ("sigma_geometry       : ", args.sigma_geometry)
+  print ("cls_alpha_option     : ", args.cls_alpha_option)
+
+
+
 
   # parser.add_argument('--neighbor_move', dest='neighbor_move',
   #                     help='confg like 0.3',
