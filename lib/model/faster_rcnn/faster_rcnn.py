@@ -785,7 +785,8 @@ class RelationUnit(nn.Module):
             self.alpha_w_cls = Parameter(torch.Tensor(9, 1, appearance_feature_dim, 1))
             # self.cls_score = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.n_classes))
             # self.cls_score = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.n_classes))
-            self.cls_score = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.n_classes))
+            # self.cls_score = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.n_classes))
+            self.cls_score = Parameter(torch.Tensor(1, 1, appearance_feature_dim, self.n_classes))
             ## shared alpha
             # self.alpha_w_cls = Parameter(torch.Tensor(1, 1, appearance_feature_dim, 1))
             # self.cls_score = Parameter(torch.Tensor(1, 1, appearance_feature_dim, self.n_classes))
@@ -796,7 +797,9 @@ class RelationUnit(nn.Module):
                 self.alpha_w_cls = Parameter(torch.Tensor(9, 1, original_feature_dim, 1))
             # self.cls_score = Parameter(torch.Tensor(9, 1, original_feature_dim, self.n_classes))
             # self.cls_score = Parameter(torch.Tensor(9, 1, original_feature_dim, self.n_classes))
-            self.cls_score = Parameter(torch.Tensor(9, 1, original_feature_dim, self.n_classes))
+
+            # self.cls_score = Parameter(torch.Tensor(9, 1, original_feature_dim, self.n_classes))
+            self.cls_score = Parameter(torch.Tensor(1, 1, original_feature_dim, self.n_classes))
             ## shared alpha
             # self.alpha_w_cls = Parameter(torch.Tensor(9, 1, original_feature_dim, 1))
             # self.cls_score = Parameter(torch.Tensor(9, 1, original_feature_dim, self.n_classes))
