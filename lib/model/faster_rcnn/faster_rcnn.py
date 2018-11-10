@@ -315,7 +315,7 @@ class _fasterRCNN(nn.Module):
             if self.circle_neighbor:
                 cls_proposal = bbox_cls[8,:,:]
             else:
-                cls_proposal = bbox_cls[8,:,:]
+                cls_proposal = bbox_cls[4,:,:]
 
             cls_prob = torch.nn.Softmax(dim=1)(cls_proposal) 
        
