@@ -294,22 +294,22 @@ class _fasterRCNN(nn.Module):
         # exit()
 
         # compute object classification probability
-        # cls_score = self.RCNN_cls_score(pooled_feat)
-        # cls_prob = F.softmax(cls_score)
+        cls_score = self.RCNN_cls_score(pooled_feat)
+        cls_prob = F.softmax(cls_score)
 
-        if self.cls_neighbor: 
-            ## neighbor 
-            if self.cls_alpha_option == 1:
-                cls_score = bbox_cls * alpha_cls_softmax
-                cls_prob = torch.nn.Softmax(dim=2)(cls_score)
-            else:
-                cls_score_softmax = torch.nn.Softmax(dim=2)(bbox_cls)
-                cls_prob = cls_score_softmax * alpha_cls_softmax
-            cls_prob = torch.sum(cls_prob, 0)
-        else:
-            ## proposal
-            cls_prob = bbox_cls
-            cls_prob = torch.sum(cls_prob, 0)
+        # if self.cls_neighbor: 
+        #     ## neighbor 
+        #     if self.cls_alpha_option == 1:
+        #         cls_score = bbox_cls * alpha_cls_softmax
+        #         cls_prob = torch.nn.Softmax(dim=2)(cls_score)
+        #     else:
+        #         cls_score_softmax = torch.nn.Softmax(dim=2)(bbox_cls)
+        #         cls_prob = cls_score_softmax * alpha_cls_softmax
+        #     cls_prob = torch.sum(cls_prob, 0)
+        # else:
+        #     ## proposal
+        #     cls_prob = bbox_cls
+        #     cls_prob = torch.sum(cls_prob, 0)
        
 
         RCNN_loss_cls = 0
@@ -329,18 +329,29 @@ class _fasterRCNN(nn.Module):
             cls_weights_neg = Variable(cls_weights_neg)
 
             # classification loss
-            # RCNN_loss_cls = F.cross_entropy(cls_score, rois_label)
+            # RCNN_loss_cls_proposal = F.cross_entropy(cls_score, rois_label)
             # RCNN_loss_cls = F.cross_entropy(cls_score, rois_label)
             if self.cls_neighbor:
                 RCNN_loss_cls_pos = _cross_entropy_neighbor_positive(bbox_cls, alpha_cls_softmax, rois_label, self.cls_alpha_option, cls_weights_pos)
-                RCNN_loss_cls_neg = _cross_entropy_neighbor_negative(bbox_cls, alpha_cls_softmax, rois_label, self.cls_alpha_option, cls_weights_neg)
-                RCNN_loss_cls = RCNN_loss_cls_pos + RCNN_loss_cls_neg
+                # RCNN_loss_cls_neg = _cross_entropy_neighbor_negative(bbox_cls, alpha_cls_softmax, rois_label, self.cls_alpha_option, cls_weights_neg)
+                # RCNN_loss_cls = RCNN_loss_cls_pos + RCNN_loss_cls_neg
+                RCNN_loss_cls = RCNN_loss_cls_pos 
                 RCNN_loss_cls_beta_pos  = _cross_entropy_neighbor_positive(bbox_cls, beta_cls_softmax, rois_label, self.cls_alpha_option, cls_weights_pos)
-                RCNN_loss_cls_beta_neg  = _cross_entropy_neighbor_negative(bbox_cls, beta_cls_softmax, rois_label, self.cls_alpha_option, cls_weights_neg)
-                RCNN_loss_cls_beta  = RCNN_loss_cls_beta_pos + RCNN_loss_cls_beta_neg 
+                # RCNN_loss_cls_beta_neg  = _cross_entropy_neighbor_negative(bbox_cls, beta_cls_softmax, rois_label, self.cls_alpha_option, cls_weights_neg)
+                # RCNN_loss_cls_beta  = RCNN_loss_cls_beta_pos + RCNN_loss_cls_beta_neg 
+                RCNN_loss_cls_beta  = RCNN_loss_cls_beta_pos
+
+                ## for proposal
+                RCNN_loss_cls_proposal = F.cross_entropy(cls_score, rois_label)
             else:
-                RCNN_loss_cls = _cross_entropy_proposal(bbox_cls, rois_label, self.circle_neighbor)
+                # RCNN_loss_cls = _cross_entropy_proposal(bbox_cls, rois_label, self.circle_neighbor)
+                RCNN_loss_cls = None
                 RCNN_loss_cls_beta  = None
+                RCNN_loss_cls_proposal = F.cross_entropy(cls_score, rois_label)
+                # RCNN_loss_cls_proposal = _cross_entropy_proposal(bbox_cls, rois_label, self.circle_neighbor)
+                ## 
+
+
 
             # print (RCNN_loss_cls_alpha.shape)
             # print (RCNN_loss_cls_beta.shape)
@@ -413,7 +424,7 @@ class _fasterRCNN(nn.Module):
         ## adding beta, and kl divergency
         # return rois, cls_prob, bbox_pred, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_bbox_beta, KL_loss
         # return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_bbox_beta, KL_loss
-        return rois, cls_prob, bbox_pred, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_bbox_beta, KL_loss, \
+        return rois, cls_prob, bbox_pred, RCNN_loss_cls_proposal, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_bbox_beta, KL_loss, \
                  RCNN_loss_cls_beta, KL_loss_cls
 
     def _init_weights(self):
@@ -785,8 +796,8 @@ class RelationUnit(nn.Module):
             self.alpha_w_cls = Parameter(torch.Tensor(9, 1, appearance_feature_dim, 1))
             # self.cls_score = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.n_classes))
             # self.cls_score = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.n_classes))
-            # self.cls_score = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.n_classes))
-            self.cls_score = Parameter(torch.Tensor(1, 1, appearance_feature_dim, self.n_classes))
+            self.cls_score = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.n_classes))
+            # self.cls_score = Parameter(torch.Tensor(1, 1, appearance_feature_dim, self.n_classes))
             ## shared alpha
             # self.alpha_w_cls = Parameter(torch.Tensor(1, 1, appearance_feature_dim, 1))
             # self.cls_score = Parameter(torch.Tensor(1, 1, appearance_feature_dim, self.n_classes))
@@ -798,8 +809,8 @@ class RelationUnit(nn.Module):
             # self.cls_score = Parameter(torch.Tensor(9, 1, original_feature_dim, self.n_classes))
             # self.cls_score = Parameter(torch.Tensor(9, 1, original_feature_dim, self.n_classes))
 
-            # self.cls_score = Parameter(torch.Tensor(9, 1, original_feature_dim, self.n_classes))
-            self.cls_score = Parameter(torch.Tensor(1, 1, original_feature_dim, self.n_classes))
+            self.cls_score = Parameter(torch.Tensor(9, 1, original_feature_dim, self.n_classes))
+            # self.cls_score = Parameter(torch.Tensor(1, 1, original_feature_dim, self.n_classes))
             ## shared alpha
             # self.alpha_w_cls = Parameter(torch.Tensor(9, 1, original_feature_dim, 1))
             # self.cls_score = Parameter(torch.Tensor(9, 1, original_feature_dim, self.n_classes))

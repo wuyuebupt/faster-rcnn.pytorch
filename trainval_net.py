@@ -140,6 +140,10 @@ def parse_args():
                       help='confg like 1.0',
                       default="1.0", type=float)
 
+  parser.add_argument('--cls_weight_proposal', dest='cls_weight_proposal',
+                      help='confg like 1.0',
+                      default="1.0", type=float)
+
   parser.add_argument('--cls_weight', dest='cls_weight',
                       help='confg like 1.0',
                       default="1.0", type=float)
@@ -317,6 +321,7 @@ if __name__ == '__main__':
 
   print ("neighbor_move        : ", args.neighbor_move)
   print ("cls_weight           : ", args.cls_weight)
+  print ("cls_weight_proposal  : ", args.cls_weight_proposal)
   print ("cls_beta_weight      : ", args.cls_beta_weight)
   print ("bbox_weight          : ", args.bbox_weight)
   print ("bbox_beta_weight     : ", args.bbox_beta_weight)
@@ -482,13 +487,12 @@ if __name__ == '__main__':
       proposal_boxes.data.resize_(data[4].size()).copy_(data[4])
       num_proposals.data.resize_(data[5].size()).copy_(data[5])
 
-
       # rpn_loss_cls, rpn_loss_box, \
       # print (gt_boxes)
       # print (proposal_boxes)
       fasterRCNN.zero_grad()
       rois, cls_prob, bbox_pred, \
-      RCNN_loss_cls, RCNN_loss_bbox, \
+      RCNN_loss_cls_proposal, RCNN_loss_cls, RCNN_loss_bbox, \
       rois_label, \
       RCNN_loss_bbox_beta, kl_loss,  \
       RCNN_loss_cls_beta, kl_loss_cls = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals)
@@ -503,18 +507,23 @@ if __name__ == '__main__':
       # loss = RCNN_loss_cls.mean() + 10 * RCNN_loss_bbox.mean() \
       #      + 50 * RCNN_loss_bbox_beta.mean() + kl_loss.mean()
 
-      loss = args.cls_weight        * RCNN_loss_cls.mean() + \
-             args.bbox_weight       * RCNN_loss_bbox.mean()
+      # loss = args.cls_weight        * RCNN_loss_cls.mean() + \
+      #        args.bbox_weight       * RCNN_loss_bbox.mean()
+
+      loss = args.cls_weight_proposal *  RCNN_loss_cls_proposal.mean() + \
+             args.bbox_weight         * RCNN_loss_bbox.mean()
 
       if args.cls_neighbor:
           loss = loss + \
-             args.cls_beta_weight   * RCNN_loss_cls_beta.mean() + \
-             args.kl_weight         * kl_loss_cls.mean()
+             args.cls_beta_weight     * RCNN_loss_cls_beta.mean() + \
+             args.kl_weight           * kl_loss_cls.mean() + \
+             args.cls_weight          * RCNN_loss_cls.mean()
+          
 
       if args.reg_neighbor:
           loss = loss + \
-             args.bbox_beta_weight  * RCNN_loss_bbox_beta.mean() + \
-             args.kl_weight         * kl_loss.mean() 
+             args.bbox_beta_weight    * RCNN_loss_bbox_beta.mean() + \
+             args.kl_weight           * kl_loss.mean() 
       
       
       # loss = args.cls_weight        * RCNN_loss_cls.mean() + \
@@ -580,7 +589,8 @@ if __name__ == '__main__':
           # loss_rpn_box = rpn_loss_box.mean().data[0]
           loss_rpn_cls = 0
           loss_rpn_box = 0
-          loss_rcnn_cls = RCNN_loss_cls.mean().data[0]
+          # loss_rcnn_cls = RCNN_loss_cls.mean().data[0]
+          loss_rcnn_cls = RCNN_loss_cls_proposal.mean().data[0]
           loss_rcnn_box = RCNN_loss_bbox.mean().data[0]
           # loss_rcnn_cls = RCNN_loss_cls.mean().data.item()
           # loss_rcnn_box = RCNN_loss_bbox.mean().data.item()
@@ -596,9 +606,11 @@ if __name__ == '__main__':
           if args.cls_neighbor:
               loss_rcnn_cls_beta = RCNN_loss_cls_beta.mean().data[0]
               loss_kl_cls = kl_loss_cls.mean().data[0]
+              loss_rcnn_cls_alpha = RCNN_loss_cls.mean().data[0]
           else:
               loss_rcnn_cls_beta = 0 
               loss_kl_cls = 0
+              loss_rcnn_cls_alpha = 0
 
           fg_cnt = torch.sum(rois_label.data.ne(0))
           bg_cnt = rois_label.data.numel() - fg_cnt
@@ -607,7 +619,7 @@ if __name__ == '__main__':
           # loss_rpn_box = rpn_loss_box.data[0]
           loss_rpn_cls = 0
           loss_rpn_box = 0
-          loss_rcnn_cls = RCNN_loss_cls.data[0]
+          loss_rcnn_cls = RCNN_loss_cls_proposal.data[0]
           loss_rcnn_box = RCNN_loss_bbox.data[0]
           # loss_rcnn_cls = RCNN_loss_cls.data.item()
           # loss_rcnn_box = RCNN_loss_bbox.data.item()
@@ -623,8 +635,10 @@ if __name__ == '__main__':
           if args.cls_neighbor:
               loss_rcnn_cls_beta = RCNN_loss_cls_beta.data[0]
               loss_kl_cls = kl_loss_cls.data[0]
+              loss_rcnn_cls_alpha = RCNN_loss_cls.data[0]
           else:
               loss_rcnn_cls_beta = 0 
+              loss_rcnn_cls_alpha = 0
               loss_kl_cls = 0
 
 
@@ -634,8 +648,8 @@ if __name__ == '__main__':
         print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e" \
                                 % (args.session, epoch, step, iters_per_epoch, loss_temp, lr), flush=True)
         print("\t\t\tfg/bg=(%d/%d), time cost: %f" % (fg_cnt, bg_cnt, end-start), flush=True)
-        print("\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f, bbox_beta %.4f, kl %.4f, cls_beta %.4f, kl_cls %.4f" \
-                      % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, loss_rcnn_box_beta, loss_kl, loss_rcnn_cls_beta, loss_kl_cls), flush=True)
+        print("\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls_proposal: %.4f, rcnn_box %.4f, bbox_beta %.4f, kl %.4f, cls_alpha %.4f, cls_beta %.4f, kl_cls %.4f" \
+                      % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, loss_rcnn_box_beta, loss_kl, loss_rcnn_cls_alpha, loss_rcnn_cls_beta, loss_kl_cls), flush=True)
         #              % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, 0.0, loss_kl))
         if args.use_tfboard:
           info = {
