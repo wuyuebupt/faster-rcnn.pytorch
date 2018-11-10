@@ -311,8 +311,13 @@ class _fasterRCNN(nn.Module):
             cls_prob = torch.sum(cls_prob, 0)
         else:
             ## proposal
-            cls_prob = bbox_cls
-            cls_prob = torch.sum(cls_prob, 0)
+
+            if self.circle_neighbor:
+                cls_proposal = bbox_cls[8,:,:]
+            else:
+                cls_proposal = bbox_cls[8,:,:]
+
+            cls_prob = torch.nn.Softmax(dim=1)(cls_proposal) 
        
 
         RCNN_loss_cls = 0
