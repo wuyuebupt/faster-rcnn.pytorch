@@ -212,6 +212,10 @@ def parse_args():
                       help='True of False',
                       action='store_true')
 
+  parser.add_argument('--att_weight', dest='att_weight',
+                      help='float',
+                      default='1', type=float)
+
   parser.add_argument('--sigma_geometry', dest='sigma_geometry',
                       help='float',
                       default='0.3', type=float)
@@ -371,6 +375,8 @@ if __name__ == '__main__':
   print ("alpha_same_with_beta : ", args.alpha_same_with_beta)
   print ("sigma_geometry       : ", args.sigma_geometry)
   print ("cls_alpha_option     : ", args.cls_alpha_option)
+  print ("att_weight           : ", args.att_weight)
+  
 
 
 
@@ -469,8 +475,20 @@ if __name__ == '__main__':
       if 'bias' in key:
         params += [{'params':[value],'lr':lr*(cfg.TRAIN.DOUBLE_BIAS + 1), \
                 'weight_decay': cfg.TRAIN.BIAS_DECAY and cfg.TRAIN.WEIGHT_DECAY or 0}]
+      elif 'attention_regression' in key:
+        params += [{'params':[value],'lr': lr * args.att_weight, 'weight_decay': cfg.TRAIN.WEIGHT_DECAY}]
+        # print (key)
       else:
         params += [{'params':[value],'lr':lr, 'weight_decay': cfg.TRAIN.WEIGHT_DECAY}]
+  # print (len(params))
+  # print (params[0].keys())
+  # print (len(params[0]['params']))
+  # print (params[0]['params'][0].shape)
+  # print (params[0]['lr'])
+  # print (params[0]['weight_decay'])
+
+  # exit()
+
 
   if args.optimizer == "adam":
     lr = lr * 0.1
