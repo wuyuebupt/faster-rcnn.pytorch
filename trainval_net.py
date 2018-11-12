@@ -477,7 +477,7 @@ if __name__ == '__main__':
                 'weight_decay': cfg.TRAIN.BIAS_DECAY and cfg.TRAIN.WEIGHT_DECAY or 0}]
       elif 'attention_regression' in key:
         params += [{'params':[value],'lr': lr * args.att_weight, 'weight_decay': cfg.TRAIN.WEIGHT_DECAY}]
-        # print (key)
+        print (key, lr * args.att_weight)
       else:
         params += [{'params':[value],'lr':lr, 'weight_decay': cfg.TRAIN.WEIGHT_DECAY}]
   # print (len(params))
