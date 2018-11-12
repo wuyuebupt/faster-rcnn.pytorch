@@ -1,5 +1,10 @@
 # A *Faster* Pytorch Implementation of Faster R-CNN
 
+## base cmd
+
+python trainval_net.py --dataset coco --net res50 --bs 4 --nw 0 --lr 4e-3 --lr_decay_step 4 --cuda --mGPUs --epochs 10 --cag  --config cfgs/res50.yml  --data_dir data --bbox_weight 5
+
+
 ## cmd
 
 cmd to run bs-att0-reg
