@@ -226,6 +226,14 @@ if __name__ == '__main__':
   _t = {'im_detect': time.time(), 'misc': time.time()}
   det_file = os.path.join(output_dir, 'detections.pkl')
 
+  ### evaluate results
+  with open(det_file, 'rb') as f:
+      all_boxes = pickle.load(f)
+  print('Evaluating detections')
+  imdb.evaluate_detections(all_boxes, output_dir)
+  exit()
+
+
   fasterRCNN.eval()
   empty_array = np.transpose(np.array([[],[],[],[],[]]), (1,0))
   for i in range(num_images):
@@ -323,8 +331,8 @@ if __name__ == '__main__':
   with open(det_file, 'wb') as f:
       pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
 
-  # print('Evaluating detections')
-  # imdb.evaluate_detections(all_boxes, output_dir)
+  print('Evaluating detections')
+  imdb.evaluate_detections(all_boxes, output_dir)
 
   end = time.time()
   print("test time: %0.4fs" % (end - start))
