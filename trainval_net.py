@@ -225,6 +225,10 @@ def parse_args():
                       default=2, type=int)
 
 
+  parser.add_argument('--resume_dir', dest='resume_dir',
+                      # help='directory to save models', default="/srv/share/jyang375/models",
+                      help='directory to save models', default="/",
+                      type=str)
 
 
 #      loss = RCNN_loss_cls.mean() + 10 * RCNN_loss_bbox.mean() \
@@ -378,9 +382,6 @@ if __name__ == '__main__':
   print ("att_weight           : ", args.att_weight)
   
 
-
-
-
   # parser.add_argument('--neighbor_move', dest='neighbor_move',
   #                     help='confg like 0.3',
   #                     default="0.0", type=float)
@@ -408,6 +409,11 @@ if __name__ == '__main__':
   output_dir = args.save_dir + "/" + args.net + "/" + args.dataset
   if not os.path.exists(output_dir):
     os.makedirs(output_dir)
+
+  if args.resume_dir != '/':
+      output_resume_dir = args.resume_dir + "/" + args.net + "/" + args.dataset
+      if not os.path.exists(output_resume_dir):
+        os.makedirs(output_resume_dir)
 
   sampler_batch = sampler(train_size, args.batch_size)
 
@@ -497,6 +503,52 @@ if __name__ == '__main__':
   elif args.optimizer == "sgd":
     optimizer = torch.optim.SGD(params, momentum=cfg.TRAIN.MOMENTUM)
 
+
+
+  ## auto resume
+  from os import listdir
+  from os.path import isfile, join
+
+  if args.resume_dir != '/':
+      mypath = output_resume_dir
+      onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
+  else:
+      onlyfiles = []
+
+  print (onlyfiles)
+  if len(onlyfiles) > 0:
+      ## resume from last
+      sessions = [int(arr.split('_')[2]) for arr in onlyfiles]
+      checkepochs = [int(arr.split('_')[3]) for arr in onlyfiles]
+      checkpoints = [int(arr.split('_')[4].split('.')[0]) for arr in onlyfiles]
+      print (sessions)
+      print (checkepochs)
+      print (checkpoints)
+      lastepoch = max(checkepochs)
+      index = checkepochs.index(lastepoch)
+      lastsession = sessions[index]
+      lastpoints = checkpoints[index]
+      print (lastepoch)
+      print (lastsession)
+      print (lastpoints)
+
+      load_name = os.path.join(output_dir,
+        'faster_rcnn_{}_{}_{}.pth'.format(lastsession, lastepoch, lastpoints))
+      print("loading checkpoint %s" % (load_name))
+      checkpoint = torch.load(load_name)
+      args.session = checkpoint['session']
+      args.start_epoch = checkpoint['epoch']
+      fasterRCNN.load_state_dict(checkpoint['model'])
+      optimizer.load_state_dict(checkpoint['optimizer'])
+      lr = optimizer.param_groups[0]['lr']
+      if 'pooling_mode' in checkpoint.keys():
+        cfg.POOLING_MODE = checkpoint['pooling_mode']
+      print("loaded checkpoint %s" % (load_name))
+
+
+  ## checkout folder ??
+  ## if nan -> 
+
   if args.resume:
     load_name = os.path.join(output_dir,
       'faster_rcnn_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
@@ -510,6 +562,8 @@ if __name__ == '__main__':
     if 'pooling_mode' in checkpoint.keys():
       cfg.POOLING_MODE = checkpoint['pooling_mode']
     print("loaded checkpoint %s" % (load_name))
+
+
 
   if args.mGPUs:
     fasterRCNN = nn.DataParallel(fasterRCNN)

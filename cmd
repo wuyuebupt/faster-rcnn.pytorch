@@ -1,2 +1,0 @@
-python trainval_net.py --dataset pascal_voc  --net res101 --bs 4 --lr 4e-3 --nw 0 --lr_decay_step 8 --epochs 10  --cuda --config  cfgs/res101.yml --data_dir /work/dataforYinpeng/voc0712h5/ --save_dir /work/save_dir/ --pretrained_model /work/tmp/pretrained_model/resnet101_caffe.pth --neighbor_move 0.3 --cls_weight 0 --bbox_weight 0 --cls_beta_weight 1 --bbox_beta_weight 50 --kl_weight 1 --reduce_dimension 256  --cag    --reg_neighbor  --cls_neighbor  --reg_reduce_d --alpha_same_with_beta --sigma_geometry 0.3 --cls_alpha_option 2 --mGPUs
-
