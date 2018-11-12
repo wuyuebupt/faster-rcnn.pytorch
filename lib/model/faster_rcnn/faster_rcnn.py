@@ -61,11 +61,6 @@ class _fasterRCNN(nn.Module):
 
         self.attention_regression = RelationUnit(2048, self.reduce_dimension, 32, self.n_classes, self.cls_reduce_d, self.reg_reduce_d, self.alpha_same_with_beta) 
 
-        self.boundary_scale = cfg.NEIGHBOR_MOVE 
-        self.circle_neighbor = cfg.CIRCLE
-        print ("boundary move: ",self.boundary_scale)
-        print ("circle       : ",self.circle_neighbor)
-
         # self.attention_regression = RelationUnit(2048, 32) 
         # self.attention_regression = RelationUnit(512, 32) 
         # self.attention_regression = RelationUnit(2048, 64) 
@@ -120,6 +115,7 @@ class _fasterRCNN(nn.Module):
             neighbor_rois_inside_ws = Variable(neighbor_rois_inside_ws)
             neighbor_rois_outside_ws = Variable(neighbor_rois_outside_ws)
             ## end v0.5:
+            rois_label_long = rois_label.view(-1).long()
             rois_label = Variable(rois_label.view(-1).long())
             rois_target = Variable(rois_target)
             rois_inside_ws = Variable(rois_inside_ws)
@@ -145,9 +141,7 @@ class _fasterRCNN(nn.Module):
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.3)
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.1)
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.3)
-
         # boundary_move_scale = 0.3
-
         boundary_move_scale = self.boundary_scale
         # rois_attention_candidates, delta_rois = self._rois_to_candidates(rois, im_info,  0.5, boundary_move_scale)
 
@@ -171,7 +165,10 @@ class _fasterRCNN(nn.Module):
         # print (gt_rois.shape) 
         # print (rois_attention_candidates.shape) 
         ###
-        overlaps_iou_candidates_gt = self._iou_rois_candidates_to_gt(rois_attention_candidates, gt_rois)
+        if self.training:
+            overlaps_iou_candidates_gt = self._iou_rois_candidates_to_gt(rois_attention_candidates, gt_rois)
+        else:
+            overlaps_iou_candidates_gt = None
         
         # print (overlaps_iou_candidates_gt(:,:,0))
         # print (overlaps_iou_candidates_gt[:,:,0])
@@ -300,25 +297,24 @@ class _fasterRCNN(nn.Module):
         # exit()
 
         # compute object classification probability
-        # cls_score = self.RCNN_cls_score(pooled_feat)
-        # cls_prob = F.softmax(cls_score)
+        cls_score = self.RCNN_cls_score(pooled_feat)
+        cls_prob = F.softmax(cls_score)
 
-        if self.cls_neighbor: 
-            ## neighbor 
-            if self.cls_alpha_option == 1:
-                cls_score = bbox_cls * alpha_cls_softmax
-                cls_prob = torch.nn.Softmax(dim=2)(cls_score)
-            else:
-                cls_score_softmax = torch.nn.Softmax(dim=2)(bbox_cls)
-                cls_prob = cls_score_softmax * alpha_cls_softmax
-            cls_prob = torch.sum(cls_prob, 0)
-        else:
-            ## proposal
-            cls_prob = bbox_cls
-            cls_prob = torch.sum(cls_prob, 0)
+        # if self.cls_neighbor: 
+        #     ## neighbor 
+        #     if self.cls_alpha_option == 1:
+        #         cls_score = bbox_cls * alpha_cls_softmax
+        #         cls_prob = torch.nn.Softmax(dim=2)(cls_score)
+        #     else:
+        #         cls_score_softmax = torch.nn.Softmax(dim=2)(bbox_cls)
+        #         cls_prob = cls_score_softmax * alpha_cls_softmax
+        #     cls_prob = torch.sum(cls_prob, 0)
+        # else:
+        #     ## proposal
+        #     cls_prob = bbox_cls
+        #     cls_prob = torch.sum(cls_prob, 0)
        
 
-        RCNN_loss_cls = 0
         RCNN_loss_bbox = 0
         RCNN_loss_bbox_beta = 0
         RCNN_loss_cls_beta = 0
@@ -327,15 +323,40 @@ class _fasterRCNN(nn.Module):
         
 
         if self.training:
+
+
+
+            cls_weights_pos, cls_weights_neg = _get_cls_labels_pytorch(rois_label_long)
+            cls_weights_pos = Variable(cls_weights_pos)
+            cls_weights_neg = Variable(cls_weights_neg)
+
             # classification loss
-            # RCNN_loss_cls = F.cross_entropy(cls_score, rois_label)
+            # RCNN_loss_cls_proposal = F.cross_entropy(cls_score, rois_label)
             # RCNN_loss_cls = F.cross_entropy(cls_score, rois_label)
             if self.cls_neighbor:
-                RCNN_loss_cls = _cross_entropy_neighbor(bbox_cls, alpha_cls_softmax, rois_label, self.cls_alpha_option)
-                RCNN_loss_cls_beta  = _cross_entropy_neighbor(bbox_cls, beta_cls_softmax, rois_label, self.cls_alpha_option)
+                RCNN_loss_cls_pos = _cross_entropy_neighbor_positive(bbox_cls, alpha_cls_softmax, rois_label, self.cls_alpha_option, cls_weights_pos)
+                RCNN_loss_cls_neg = _cross_entropy_neighbor_negative(bbox_cls, alpha_cls_softmax, rois_label, self.cls_alpha_option, cls_weights_neg)
+                RCNN_loss_cls_alpha_positive = RCNN_loss_cls_pos 
+                RCNN_loss_cls_alpha_negative = RCNN_loss_cls_neg
+                # RCNN_loss_cls = RCNN_loss_cls_pos 
+                RCNN_loss_cls_beta_positive  = _cross_entropy_neighbor_positive(bbox_cls, beta_cls_softmax, rois_label, self.cls_alpha_option, cls_weights_pos)
+                # RCNN_loss_cls_beta_neg  = _cross_entropy_neighbor_negative(bbox_cls, beta_cls_softmax, rois_label, self.cls_alpha_option, cls_weights_neg)
+                # RCNN_loss_cls_beta  = RCNN_loss_cls_beta_pos + RCNN_loss_cls_beta_neg 
+                # RCNN_loss_cls_beta  = RCNN_loss_cls_beta_pos
+
+                ## for proposal
+                # RCNN_loss_cls_proposal = F.cross_entropy(cls_score, rois_label)
+                RCNN_loss_cls_proposal = None
             else:
-                RCNN_loss_cls = _cross_entropy_proposal(bbox_cls, rois_label, self.circle_neighbor)
-                RCNN_loss_cls_beta  = None
+                # RCNN_loss_cls = _cross_entropy_proposal(bbox_cls, rois_label, self.circle_neighbor)
+                RCNN_loss_cls_alpha_negative = None
+                RCNN_loss_cls_alpha_positive = None 
+                RCNN_loss_cls_beta_positive  = None 
+                RCNN_loss_cls_proposal = F.cross_entropy(cls_score, rois_label)
+                # RCNN_loss_cls_proposal = _cross_entropy_proposal(bbox_cls, rois_label, self.circle_neighbor)
+                ## 
+
+
 
             # print (RCNN_loss_cls_alpha.shape)
             # print (RCNN_loss_cls_beta.shape)
@@ -376,14 +397,16 @@ class _fasterRCNN(nn.Module):
             # KL_loss = _kl_divergence_loss(alpha_softmax, beta_softmax)
             if self.cls_neighbor:
                 ## neighbor
-                KL_loss_cls = _kl_divergence_loss(alpha_cls, beta_cls)
+                # KL_loss_cls = _kl_divergence_loss(alpha_cls, beta_cls, )
+                KL_loss_cls = _kl_divergence_loss(alpha_cls, beta_cls, cls_weights_pos)
+
                 # KL_loss_cls = F.mse_loss(alpha_cls_softmax, beta_cls_softmax)
             else:
                 ## proposal
                 KL_loss_cls = None
 
             if self.reg_neighbor:
-                KL_loss = _kl_divergence_loss(alpha, beta)
+                KL_loss = _kl_divergence_loss(alpha, beta, cls_weights_pos)
             else:
                 KL_loss = None
 
@@ -408,8 +431,13 @@ class _fasterRCNN(nn.Module):
         ## adding beta, and kl divergency
         # return rois, cls_prob, bbox_pred, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_bbox_beta, KL_loss
         # return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_bbox_beta, KL_loss
-        return rois, cls_prob, bbox_pred, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_bbox_beta, KL_loss, \
-                 RCNN_loss_cls_beta, KL_loss_cls
+        # return rois, cls_prob, bbox_pred, RCNN_loss_cls_proposal, RCNN_loss_cls_alpha_negative, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_bbox_beta, KL_loss, \
+        #          RCNN_loss_cls_beta, KL_loss_cls 
+        return rois, cls_prob, bbox_pred, rois_label, \
+               RCNN_loss_cls_proposal, \
+               RCNN_loss_cls_alpha_positive, RCNN_loss_cls_alpha_negative, RCNN_loss_cls_beta_positive, \
+               RCNN_loss_bbox, RCNN_loss_bbox_beta, \
+               KL_loss, KL_loss_cls 
 
     def _init_weights(self):
         def normal_init(m, mean, stddev, truncated=False):
@@ -710,7 +738,7 @@ class _fasterRCNN(nn.Module):
 
 
 
-def _kl_divergence_loss(distribution_p, distribution_q):
+def _kl_divergence_loss(distribution_p, distribution_q, mask):
         ## kl distance of two input 
         # print (distribution_p.shape)
         # print (distribution_q.shape)
@@ -722,7 +750,13 @@ def _kl_divergence_loss(distribution_p, distribution_q):
        
         kl_distance = softmax_p * (log_p - log_q)
         # print (kl_distance.shape)
-        kl_distance_mean = torch.sum(kl_distance, 0)
+        # kl_distance_mean_mask = kl_distance_mean * mask
+        # print (kl_distance.shape)
+        # print (mask.shape)
+        mask_view = mask.view(1, mask.size(0), 1)
+        kl_distance_mask = kl_distance * mask_view
+        kl_distance_mean = torch.sum(kl_distance_mask, 0)
+
         # print (kl_distance_mean.shape)
         loss_kl = kl_distance.mean()
         # print (loss_kl.shape)
@@ -781,6 +815,7 @@ class RelationUnit(nn.Module):
             # self.cls_score = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.n_classes))
             # self.cls_score = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.n_classes))
             self.cls_score = Parameter(torch.Tensor(9, 1, appearance_feature_dim, self.n_classes))
+            # self.cls_score = Parameter(torch.Tensor(1, 1, appearance_feature_dim, self.n_classes))
             ## shared alpha
             # self.alpha_w_cls = Parameter(torch.Tensor(1, 1, appearance_feature_dim, 1))
             # self.cls_score = Parameter(torch.Tensor(1, 1, appearance_feature_dim, self.n_classes))
@@ -791,7 +826,9 @@ class RelationUnit(nn.Module):
                 self.alpha_w_cls = Parameter(torch.Tensor(9, 1, original_feature_dim, 1))
             # self.cls_score = Parameter(torch.Tensor(9, 1, original_feature_dim, self.n_classes))
             # self.cls_score = Parameter(torch.Tensor(9, 1, original_feature_dim, self.n_classes))
+
             self.cls_score = Parameter(torch.Tensor(9, 1, original_feature_dim, self.n_classes))
+            # self.cls_score = Parameter(torch.Tensor(1, 1, original_feature_dim, self.n_classes))
             ## shared alpha
             # self.alpha_w_cls = Parameter(torch.Tensor(9, 1, original_feature_dim, 1))
             # self.cls_score = Parameter(torch.Tensor(9, 1, original_feature_dim, self.n_classes))
@@ -1147,8 +1184,29 @@ def _cross_entropy_proposal(cls, labels, circle):
     # print (loss_cls.shape)
     return loss
 
+## 
+def _get_cls_labels_pytorch(labels):
+    # print (labels.shape)
+    cls_weights = labels.new(labels.size()).zero_().float()
+    # print (cls_weights.shape)
+
+    batch_size = labels.size(0)
+    inds = torch.nonzero(labels > 0).view(-1)
+
+    # print (labels) 
+    for i in range(inds.numel()):
+        ind = inds[i]
+        # print (ind)
+        # print (cls_weights[ind])
+        cls_weights[ind] = 1.0
+    # print (cls_weights)
+    cls_weights_pos = cls_weights
+    cls_weights_neg = 1.0 - cls_weights
+    return cls_weights_pos, cls_weights_neg
+
+
 # bbox_cls, alpha_cls_softmax, beta_cls_softmax, alpha_cls, beta_cls
-def _cross_entropy_neighbor(cls, cls_weights, labels, cls_option):
+def _cross_entropy_neighbor_positive(cls, cls_weights, labels, cls_option, mask):
     ## 
     # print (cls.shape)
     # print (cls_weights.shape)
@@ -1166,12 +1224,19 @@ def _cross_entropy_neighbor(cls, cls_weights, labels, cls_option):
     # neighbor_rois_target     = rois_target.expand(neighbor_num, rois_target.shape[0], rois_target.shape[1])
  
 
+    # print (mask.shape)
+    # print (cls.shape)
 
     ####### option 1 logits 
     if cls_option == 0:
         cls_dot = cls * cls_weights
         cls_sum = torch.sum(cls_dot, 0)
-        loss = F.cross_entropy(cls_sum, labels)
+        # print (cls_sum.shape)
+        loss = F.cross_entropy(cls_sum, labels, reduce=False)
+        # print (loss.shape)
+        loss = loss * mask
+        loss = torch.mean(loss)
+        # exit()
         return loss
     ####### end option 1 logits 
     # cls_prob = torch.nn.Softmax(dim=1)(cls)
@@ -1191,7 +1256,11 @@ def _cross_entropy_neighbor(cls, cls_weights, labels, cls_option):
         cls_sum = F.threshold(cls_sum, 1e-6, 1e-6)
         
         cls_sum_log = torch.log(cls_sum)
-        loss = F.nll_loss(cls_sum_log, labels)
+        loss = F.nll_loss(cls_sum_log, labels, reduce=False)
+        # print (loss.shape)
+        loss = loss * mask
+        loss = torch.mean(loss)
+        # exit()
         return loss
     ######## end option 2
     # print (cls_sum.shape)
@@ -1221,12 +1290,126 @@ def _cross_entropy_neighbor(cls, cls_weights, labels, cls_option):
         # print (loss.shape)
         loss = torch.sum(loss, 0)
         # print (loss.shape)
+        # print (loss)
+        loss = loss * mask
+        # print (loss)
+        # exit()
         loss = torch.mean(loss)
         # print (loss.shape)
         # print (loss_cls.shape)
         return loss
-
     raise("should not happen")
+
+# bbox_cls, alpha_cls_softmax, beta_cls_softmax, alpha_cls, beta_cls
+def _cross_entropy_neighbor_negative(cls, cls_weights, labels, cls_option, mask):
+
+    # all_features_offset_pre_nogradient = Variable(all_features_offset_pre.data, requires_grad=False)
+    cls_weights_no_gradient =  Variable( cls_weights.data, requires_grad=False)
+    ## 
+    # print (cls.shape)
+    # print (cls_weights.shape)
+    # print (labels.shape)
+    # cls_permute = cls.permute(1, 2, 0)
+    # key_out = key_out.permute([3,1,2,0])
+    # print (cls_permute.shape)
+
+    # labels_extend = labels.expand(cls.shape[0], labels.shape[0])
+    # # print (labels_extend.shape)
+    # labels_extend_permute = labels_extend.permute(1,0)
+    # loss = F.cross_entropy(cls_permute, labels_extend_permute, reduce=False)
+    # print (loss.shape)
+    # print (labels_extend_permute.shape)
+    # neighbor_rois_target     = rois_target.expand(neighbor_num, rois_target.shape[0], rois_target.shape[1])
+ 
+
+
+    ##### option 1 logits 
+    if cls_option == 0:
+        # cls_dot = cls * cls_weights
+        cls_dot = cls * cls_weights_no_gradient
+        cls_sum = torch.sum(cls_dot, 0)
+        loss = F.cross_entropy(cls_sum, labels)
+        return loss
+    ####### end option 1 logits 
+    # cls_prob = torch.nn.Softmax(dim=1)(cls)
+
+
+    # print (cls_prob.shape)
+    # print (cls_dot.shape)
+    # cls_sum.clamp_(1e-6, 1.1)
+
+
+    ####### option 2 2048
+    if cls_option == 1:
+        cls_prob = torch.nn.Softmax(dim=2)(cls)
+
+        # cls_dot = cls_prob * cls_weights
+        cls_dot = cls_prob * cls_weights_no_gradient
+        cls_sum = torch.sum(cls_dot, 0)
+        cls_sum = F.threshold(cls_sum, 1e-6, 1e-6)
+        
+        cls_sum_log = torch.log(cls_sum)
+        loss = F.nll_loss(cls_sum_log, labels)
+        return loss
+    ######## end option 2
+    # print (cls_sum.shape)
+
+    # loss = F.cross_entropy(cls_sum, labels)
+
+    ## nll_loss(input, target)
+    # print (cls_sum.shape)
+    # print (labels.shape)
+   
+    # print (loss.shape)
+    # exit()
+
+    # exit()
+    ######## cross entropy
+    ######## cross entropy
+    if cls_option == 2:
+        loss_cls = []
+        for i in range(9):
+            loss_cls_tmp = F.cross_entropy(cls[i,:,:], labels, reduce=False) 
+            # print (loss_cls_tmp.shape)
+            loss_cls.append(loss_cls_tmp)
+        loss_cls_tensor = torch.stack(loss_cls)
+        # print (loss_cls_tensor.shape)
+        # cls_weights = cls_weights.view(cls_weights.shape[0], cls_weights.shape[1])
+        cls_weights_no_gradient = cls_weights_no_gradient.view(cls_weights.shape[0], cls_weights.shape[1])
+
+        # loss = loss_cls_tensor * cls_weights
+        loss = loss_cls_tensor * cls_weights_no_gradient
+        # print (loss.shape)
+        loss = torch.sum(loss, 0)
+        # print (loss.shape)
+        # print (loss)
+        loss = loss * mask
+        # print (loss)
+        # exit()
+        loss = torch.mean(loss)
+        # print (loss.shape)
+        # print (loss_cls.shape)
+        return loss
+    raise("should not happen")
+
+
+    ################## negative ###########
+    # if True:
+    #     if cfg.CIRCLE:
+    #         loss = F.cross_entropy(cls[8,:,:], labels, reduce=False) 
+    #     else: 
+    #         loss = F.cross_entropy(cls[4,:,:], labels, reduce=False) 
+
+    #     # print (loss.shape)
+    #     # print (loss.shape)
+    #     loss = loss * mask
+    #     # print (loss)
+    #     loss = torch.mean(loss)
+    #     # print (loss.shape)
+    #     # print (loss_cls.shape)
+    #     return loss
+
+    # raise("should not happen")
 
 
 def _smooth_l1_loss_proposal(bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_weights, neighbor_pred, circle, sigma=1.0, dim=[1]):
