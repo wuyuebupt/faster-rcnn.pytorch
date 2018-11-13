@@ -319,6 +319,11 @@ if __name__ == '__main__':
 
   det_file_pred = os.path.join(output_dir, 'detections_cls_alpha.pkl')
 
+  print ("Loading results")
+  with open(det_file_pred, 'rb') as f:
+      rois_cls_alpha = pickle.load(f)
+  print ("Finish loading results")
+
   ### evaluate results
   # with open(det_file, 'rb') as f:
   #     all_boxes = pickle.load(f)
@@ -331,16 +336,13 @@ if __name__ == '__main__':
   fasterRCNN.eval()
   empty_array = np.transpose(np.array([[],[],[],[],[]]), (1,0))
   iou_pairs = []
-  cls_prob_alpha = []
+  # cls_prob_alpha = []
+
 
   # for i in range(10):
-  # for i in range(10):
   # for i in range(5):
-  # for i in range(5):
-  # for i in range(1):
-
-  for i in range(num_images):
-  # for i in range(20):
+  for i in range(1):
+  # for i in range(num_images):
 
       data = next(data_iter)
       im_data.data.resize_(data[0].size()).copy_(data[0])
@@ -358,13 +360,251 @@ if __name__ == '__main__':
       # RCNN_loss_bbox_beta, kl_loss,  \
       # RCNN_loss_cls_beta, kl_loss_cls = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals)
 
-      rois, cls_prob, bbox_pred, rois_label, \
-      RCNN_loss_cls_proposal, \
-      RCNN_loss_cls_alpha_positive, RCNN_loss_cls_alpha_negative, RCNN_loss_cls_beta_positive, \
-      RCNN_loss_bbox, RCNN_loss_bbox_beta, \
-      kl_loss, kl_loss_cls, \
-      alpha_cls_softmax, cls_score = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals)
+      # rois, cls_prob, bbox_pred, rois_label, \
+      # RCNN_loss_cls_proposal, \
+      # RCNN_loss_cls_alpha_positive, RCNN_loss_cls_alpha_negative, RCNN_loss_cls_beta_positive, \
+      # RCNN_loss_bbox, RCNN_loss_bbox_beta, \
+      # kl_loss, kl_loss_cls, \
+      # alpha_cls_softmax, cls_score_softmax = fasterRCNN(im_data, im_info, gt_boxes, num_boxes, proposal_boxes, num_proposals)
+      
+      rois      = rois_cls_alpha[i][0]
+      bbox_pred = rois_cls_alpha[i][1]
+      alpha     = rois_cls_alpha[i][2]
+      score     = rois_cls_alpha[i][3]
+      print (rois.dtype)
+      # print (rois)
+      rois = Variable(torch.from_numpy(rois))
+      # print (rois.dtype)
+      # exit()
+      bbox_pred = Variable(torch.from_numpy(bbox_pred))
+      alpha = Variable(torch.from_numpy(alpha))
+      score = Variable(torch.from_numpy(score))
+      rois = rois.cuda()
+      bbox_pred = bbox_pred.cuda()
+      alpha     = alpha.cuda()
+      score     = score.cuda()
+      # print (rois.shape)
 
+      print (rois[0,0,:])
+      print (bbox_pred[0,0,:])
+      print (alpha[:,0,0])
+      print (score[:,0,0])
+      # if i == 4:
+      #     print (rois[0,0,:])
+      #     print (bbox_pred[0,0,:])
+      #     print (alpha[:,0,0])
+      #     print (score[:,0,0])
+
+      # print (rois.shape)
+      # print (bbox_pred.shape)
+      # rois      = rois_cls_alpha[i+1][0]
+      # bbox_pred = rois_cls_alpha[i+1][1]
+      # alpha     = rois_cls_alpha[i+1][2]
+      # score     = rois_cls_alpha[i+1][3]
+      # print (rois[0,0,:])
+      # print (bbox_pred[0,0,:])
+      # print (alpha[:,0,0])
+      # print (score[:,0,0])
+      # print (rois.shape)
+      # print (bbox_pred.shape)
+
+      # exit()
+      # print (alpha.shape)
+      # print (score.shape)
+      alpha_cls_softmax = alpha
+      bbox_cls = score
+
+      if args.cls_neighbor:
+          ## neighbor 
+          ## if args.cls_alpha_option == 0:
+          ##     cls_score = bbox_cls * alpha_cls_softmax
+          ##     cls_prob = torch.nn.Softmax(dim=2)(cls_score)
+          ##     cls_prob = torch.sum(cls_prob, 0)
+          ## else:
+          ##     cls_score_softmax = torch.nn.Softmax(dim=2)(bbox_cls)
+          ##     if args.circle:
+          ##         cls_proposal = cls_score_softmax[8, :, :]
+          ##     else:
+          ##         cls_proposal = cls_score_softmax[4, :, :]
+          ##     # print (cls_proposal.shape)
+          ##     # cls_proposal = cls_score_softmax[0, :, :]
+
+          ##     value, indices = torch.max(alpha_cls_softmax, 0)
+          ##     # print (indices.shape)
+          ##     # one_hot = torch.cuda.FloatTensor(alpha_cls_softmax.size(0), alpha_cls_softmax.size(1), alpha_cls_softmax.size(2))
+          ##     y = torch.cuda.FloatTensor(alpha_cls_softmax.size(0), alpha_cls_softmax.size(1))
+          ##     y.zero_()
+          ##     # indices = indices.view(indices.size(0))
+          ##     indices = indices.permute(1, 0)
+          ##     # print (indices.shape)
+          ##     # print (y.shape)
+          ##     # y = y.scatter_(0, indices.data, 1)
+          ##     y = y.scatter_(0, indices.data, 1)
+          ##     y = y.view(y.size(0), y.size(1), 1)
+          ##     y = Variable(y)
+          ##     cls_prob_alpha = cls_score_softmax * y
+
+          ##     # cls_prob_alpha = cls_prob_alpha * y
+
+          ##     ## new select prob
+          ##     # cls_prob_pre = torch.sum(cls_prob_alpha, 0)
+          ##     cls_prob_pre = torch.sum(cls_prob_alpha, 0)
+          ##     # cls_prob = cls_score_softmax[4,:,:]
+
+          ##     ## mask for neg
+          ##     # mask = torch.nonzero(cls_score_softmax[4,:,0] > cls_prob_pre[:,0])
+          ##     mask = torch.nonzero(cls_score_softmax[4,:,0] > cls_prob_pre[:,0])
+          ##     # mask = torch.
+          ##     # print (mask)
+
+          ##     cls_weights = torch.cuda.FloatTensor(cls_prob_pre.size(0), 1).zero_()
+          ##     # # print (cls_weights.shape)
+
+          ##     # # print (cls_prob_alpha.shape)
+          ##     # for i in range(mask.numel()):
+          ##     for j in range(mask.numel()):
+          ##         # print (mask[i]) 
+          ##         ind = int(mask[j])
+          ##         cls_weights[ind, 0] = 1.0
+          ##     # print (cls_weights)
+          ##     cls_weights = Variable(cls_weights)
+          ##     # print (cls_weights.shape)
+          ##     # print (cls_prob_pre.shape)
+          ##     # cls_weights = cls_weights.view()
+          ##     # cls_prob = cls_weights * cls_score_softmax[4,:,:] + (1 - cls_weights) * cls_prob_pre
+          ##     # cls_prob =  cls_prob_pre
+          ##     cls_prob =  cls_score_softmax[4,:,:]
+              if args.cls_alpha_option == 0:
+                  cls_score = bbox_cls * alpha_cls_softmax
+                  cls_prob = torch.nn.Softmax(dim=2)(cls_score)
+                  cls_prob = torch.sum(cls_prob, 0)
+              else:
+                  cls_score_softmax = torch.nn.Softmax(dim=2)(bbox_cls)
+                  if args.circle:
+                      cls_proposal = cls_score_softmax[8, :, :]
+
+                  else:
+                      cls_proposal = cls_score_softmax[4, :, :]
+                  # print (cls_proposal.shape)
+                  # cls_proposal = cls_score_softmax[0, :, :]
+
+                  #### proposal bg if max
+                  value_bg_p, indices_bg_p = torch.max(cls_proposal, 1)
+                  # print (indices.shape)
+                  # print (indices)
+                  mask_bg_p = torch.nonzero( indices_bg_p )
+
+                  cls_weights_bg_p = torch.cuda.FloatTensor(cls_proposal.size(0), 1).zero_()
+                  for h in range(mask_bg_p.numel()):
+                      # print (mask[i]) 
+                      ind = int(mask_bg_p[h])
+                      cls_weights_bg_p[ind, 0] = 1.0
+
+                  # print (cls_weights)
+                  cls_weights_bg_p = Variable(cls_weights_bg_p)
+
+                  # print (mask)
+
+                  #### neighbor alpha if max
+                  value_alpha_n, indices_alpha_n = torch.max(alpha_cls_softmax, 0)
+                  # print (indices.shape)
+                  # one_hot = torch.cuda.FloatTensor(alpha_cls_softmax.size(0), alpha_cls_softmax.size(1), alpha_cls_softmax.size(2))
+                  y = torch.cuda.FloatTensor(alpha_cls_softmax.size(0), alpha_cls_softmax.size(1))
+                  y.zero_()
+                  # indices = indices.view(indices.size(0))
+                  indices_alpha_n = indices_alpha_n.permute(1, 0)
+                  # print (indices.shape)
+                  # print (y.shape)
+                  y = y.scatter_(0, indices_alpha_n.data, 1)
+                  y = y.view(y.size(0), y.size(1), 1)
+                  y = Variable(y)
+                  # print (y[:,0,0])
+                  # print (y[:,2,0])
+                  # value, indices = torch.max(alpha_cls_softmax, 0)
+                  # indices = indices.permute(1, 0)
+                  # y = torch.cuda.FloatTensor(alpha_cls_softmax.size(0), alpha_cls_softmax.size(1))
+                  # y.zero_()
+                  # y = y.view(y.size(0), y.size(1), 1)
+                  # y = Variable(y)
+                  # cls_prob = cls_score_softmax * y
+                  # print (mask)
+                  # exit()
+                  # cls_proposal = cls_prob_proposal
+                  # argmax = cls_proposal.max(1)[1]
+                  # print (argmax)
+                  # mask = torch.nonzero(argmax)
+                  # print (mask)
+
+
+
+                  cls_prob_alpha_ave = cls_score_softmax * alpha_cls_softmax
+
+                  ##########
+                  cls_prob_pre_ave = torch.sum(cls_prob_alpha_ave, 0)
+                  mask_bg_p_n = torch.nonzero(cls_proposal[:,0] > cls_prob_pre_ave[:,0])
+                  cls_weights_bg_p_n = torch.cuda.FloatTensor(cls_proposal.size(0), 1).zero_()
+                  # # print (cls_weights.shape)
+
+                  # # print (cls_prob_alpha.shape)
+                  for h in range(mask_bg_p_n.numel()):
+                      # print (mask[i]) 
+                      ind = int(mask_bg_p_n[h])
+                      cls_weights_bg_p_n[ind, 0] = 1.0
+                  # print (cls_weights)
+                  cls_weights_bg_p_n = Variable(cls_weights_bg_p_n)
+                  # print (cls_weights.shape)
+                  # print (cls_prob_pre.shape)
+                  # cls_weights = cls_weights.view()
+
+                  cls_prob_alpha = cls_score_softmax * y
+                  cls_prob_max_alpha_pre = torch.sum(cls_prob_alpha, 0)
+
+                  #### neighbor bg if max
+                  value_bg_n, indices_bg_n = torch.max(cls_prob_pre_ave, 1)
+                  # print (indices.shape)
+                  # print (indices)
+                  mask_bg_n = torch.nonzero( indices_bg_n )
+
+                  cls_weights_bg_n = torch.cuda.FloatTensor(cls_proposal.size(0), 1).zero_()
+                  for h in range(mask_bg_n.numel()):
+                      # print (mask[i]) 
+                      ind = int(mask_bg_n[h])
+                      cls_weights_bg_n[ind, 0] = 1.0
+
+                  # print (cls_weights)
+                  cls_weights_bg_n = Variable(cls_weights_bg_n)
+
+                  ## combine
+                  ## cls_prob = cls_weights_bg_p * (cls_weights_bg_p_n * cls_proposal + (1 - cls_weights_bg_p_n) * cls_prob_pre_ave ) + (1 - cls_weights_bg_p) * cls_prob_pre_ave
+
+                  ## cls_weights_bg_p : proposal pos weight
+                  ## cls_weights_bg_n : neighjbor pos weight
+                  ## cls_weights_bg_p_n : proposal bg > neighbor bg
+
+                  mask_bg_p_or_n = 1 - cls_weights_bg_p * cls_weights_bg_n
+
+                  # cls_prob =  mask_bg_p_or_n * (cls_weights_bg_p_n * cls_proposal + (1 - cls_weights_bg_p_n) * cls_prob_pre_ave ) + (1-mask_bg_p_or_n) * cls_prob_max_alpha_pre 
+                  # cls_prob = cls_prob_max_alpha_pre
+                  # cls_prob = cls_prob_pre_ave
+                  cls_prob = cls_proposal
+
+
+                  #######################################################
+
+      # print (rois.size(1))
+      # print (rois.shape)
+      cls_prob = cls_prob.view(1, rois.size(1) , -1)
+      # print (cls_prob.shape)
+      # exit()
+
+      scores = cls_prob.data
+      print (scores.shape)
+      print (scores[0,0,:])
+      exit()
+      # scores = cls_prob.data
+      boxes = rois.data[:, :, 1:5]
+
+      # cls_prob_alpha.append([boxes, alpha_cls_softmax.data, cls_score_softmax])
 
       # wx1, wy1, wx2, wy2, \
       # dx1, dy1, dx2, dy2, \
@@ -375,28 +615,6 @@ if __name__ == '__main__':
       # print (bbox_pred[0,0,:])
       # wx1, dx1, ox1 = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
       # rois_label = fasterRCNN(im_data, im_info, gt_boxes, num_boxes)
-
-      scores = cls_prob.data
-      boxes = rois.data[:, :, 1:5]
-      # print (scores.shape)
-      # print (scores[0,0,:])
-      # exit()
-
-      ## cpu
-      # print (type(rois.data.cpu().numpy()))
-      # print (rois.data.cpu().numpy().dtype)
-
-      # exit()
-
-
-      cls_prob_alpha.append([rois.data.cpu().numpy(), bbox_pred.data.cpu().numpy(), alpha_cls_softmax.data.cpu().numpy(),cls_score.data.cpu().numpy()])
-      ## gpu
-      # cls_prob_alpha.append([rois, bbox_pred, alpha_cls_softmax,cls_score])
-
-      # print (rois[0,0,:])
-      # print (bbox_pred[0,0,:])
-      # print (alpha_cls_softmax[:,0,0])
-      # print (cls_score[:,0,0])
 
 
       if cfg.TEST.BBOX_REG:
@@ -431,10 +649,12 @@ if __name__ == '__main__':
       pred_boxes = pred_boxes.squeeze()
       roi_boxes = roi_boxes.squeeze()
       box_deltas = box_deltas.squeeze()
-      # print (pred_boxes.shape)
-      # print (pred_boxes.cpu().numpy())
-      # print (scores.shape)
-      # print (scores.cpu().numpy())
+
+      print (pred_boxes.shape)
+      print (pred_boxes.cpu().numpy())
+      print (scores.shape)
+      print (scores.cpu().numpy())
+      print (pred_boxes.cpu().numpy())
 
       # wx1 = wx1.squeeze()
       # dx1 = dx1.squeeze()
@@ -563,8 +783,6 @@ if __name__ == '__main__':
             all_boxes[j][i] = empty_array
             all_boxes_rois[j][i] = empty_array
 
-      # print (all_boxes[15][i])
-
       # Limit to max_per_image detections *over all classes*
       if max_per_image > 0:
           image_scores = np.hstack([all_boxes[j][i][:, -1]
@@ -575,14 +793,14 @@ if __name__ == '__main__':
                   keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
                   all_boxes[j][i] = all_boxes[j][i][keep, :]
                   all_boxes_rois[j][i] = all_boxes_rois[j][i][keep, :]
-
-      # print (i)
-      # print (len(all_boxes))
+      print (i)
+      print (len(all_boxes))
       obj = [all_boxes[j][i] for j in xrange(1, imdb.num_classes)]
       # obj =np.hstack( [all_boxes[j][i] for j in xrange(1, imdb.num_classes)])
-      # print (obj)
-      # print (all_boxes[15][i])
+      print (obj)
+      print (all_boxes[15][i])
 
+      # print (all_boxes[1][i])
       ### analyze
       # load gt boxes
       # print (gt_boxes)
@@ -710,22 +928,18 @@ if __name__ == '__main__':
 
   with open(det_file, 'wb') as f:
       pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
-  with open(det_file_rois, 'wb') as f:
-      pickle.dump( all_boxes_rois, f, pickle.HIGHEST_PROTOCOL)
+  # with open(det_file_rois, 'wb') as f:
+  #     pickle.dump( all_boxes_rois, f, pickle.HIGHEST_PROTOCOL)
 
-      # pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
+  #     # pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
 
-  # print (iou_pairs)
-  with open(det_file_ious, 'wb') as f:
-      pickle.dump( iou_pairs, f, pickle.HIGHEST_PROTOCOL)
+  # # print (iou_pairs)
+  # with open(det_file_ious, 'wb') as f:
+  #     pickle.dump( iou_pairs, f, pickle.HIGHEST_PROTOCOL)
 
-  b = time.time()
-  with open(det_file_pred, 'wb') as f:
-      pickle.dump( cls_prob_alpha, f, pickle.HIGHEST_PROTOCOL)
+  # with open(det_file_pred, 'wb') as f:
+  #     pickle.dump( cls_prob_alpha, f, pickle.HIGHEST_PROTOCOL)
 
-  a = time.time()
-  print("test time: %0.4fs" % (a -b))
-  # exit()
   print('Evaluating detections')
   imdb.evaluate_detections(all_boxes, output_dir)
   # imdb.evaluate_detections(all_boxes_rois, output_dir)

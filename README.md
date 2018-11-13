@@ -1,5 +1,10 @@
 # A *Faster* Pytorch Implementation of Faster R-CNN
 
+## test cmd
+
+python test_net_with_rois.py --dataset coco --net res50 --checksession 1 --checkepoch 1 --checkpoint 58632 --load_dir save_dir/ --cuda --cag --neighbor_move 0.3 --reduce_dimension 256 --reg_neighbor --cls_neighbor --reg_reduce_d --alpha_same_with_beta --sigma_geometry 0.3 --cls_alpha_option 2
+
+
 ## cmd
 
 coco test with 0.3 and circle neighbor
