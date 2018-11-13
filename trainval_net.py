@@ -863,8 +863,8 @@ if __name__ == '__main__':
             logger.scalar_summary(tag, value, step)
 
         ## loss temp is nan
-        loss_temp = float('nan') 
-        print (loss_temp)
+        # loss_temp = float('nan') 
+        # print (loss_temp)
         if math.isnan(loss_temp):
             nan_flag = True
             print ("################NAN in epoch " +str(epoch)+ "########")
