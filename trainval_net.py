@@ -533,7 +533,8 @@ if __name__ == '__main__':
       print (lastsession)
       print (lastpoints)
 
-      load_name = os.path.join(output_dir,
+      # load_name = os.path.join(output_dir,
+      load_name = os.path.join(output_resume_dir,
         'faster_rcnn_{}_{}_{}.pth'.format(lastsession, lastepoch, lastpoints))
       print("loading checkpoint %s" % (load_name))
       checkpoint = torch.load(load_name)
