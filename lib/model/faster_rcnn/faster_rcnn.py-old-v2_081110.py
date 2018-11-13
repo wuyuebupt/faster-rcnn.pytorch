@@ -115,7 +115,6 @@ class _fasterRCNN(nn.Module):
             neighbor_rois_inside_ws = Variable(neighbor_rois_inside_ws)
             neighbor_rois_outside_ws = Variable(neighbor_rois_outside_ws)
             ## end v0.5:
-            rois_label_long = rois_label.view(-1).long()
             rois_label = Variable(rois_label.view(-1).long())
             rois_target = Variable(rois_target)
             rois_inside_ws = Variable(rois_inside_ws)
@@ -165,8 +164,11 @@ class _fasterRCNN(nn.Module):
         # print (gt_rois.shape) 
         # print (rois_attention_candidates.shape) 
         ###
-        # overlaps_iou_candidates_gt = self._iou_rois_candidates_to_gt(rois_attention_candidates, gt_rois)
-        overlaps_iou_candidates_gt = None
+        if self.training:
+            overlaps_iou_candidates_gt = self._iou_rois_candidates_to_gt(rois_attention_candidates, gt_rois)
+        else:
+            overlaps_iou_candidates_gt = None
+ 
         
         # print (overlaps_iou_candidates_gt(:,:,0))
         # print (overlaps_iou_candidates_gt[:,:,0])
@@ -295,12 +297,10 @@ class _fasterRCNN(nn.Module):
         # exit()
 
         # compute object classification probability
-        # cls_score = self.RCNN_cls_score(pooled_feat)
-        # cls_prob = F.softmax(cls_score)
         cls_score = self.RCNN_cls_score(pooled_feat)
         cls_prob_proposal = F.softmax(cls_score)
 
-        if self.cls_neighbor:
+        if self.cls_neighbor: 
             ## neighbor 
             if self.cls_alpha_option == 0:
                 cls_score = bbox_cls * alpha_cls_softmax
@@ -308,45 +308,88 @@ class _fasterRCNN(nn.Module):
                 cls_prob = torch.sum(cls_prob, 0)
             else:
                 cls_score_softmax = torch.nn.Softmax(dim=2)(bbox_cls)
-                if self.circle_neighbor:
-                    cls_proposal = cls_score_softmax[8, :, :]
-                else:
-                    cls_proposal = cls_score_softmax[4, :, :]
+                # if self.circle_neighbor:
+                #     cls_proposal = cls_score_softmax[8, :, :]
+                # else:
+                #     cls_proposal = cls_score_softmax[4, :, :]
                 # print (cls_proposal.shape)
                 # cls_proposal = cls_score_softmax[0, :, :]
-
-                #### proposal bg if max
-                value_bg_p, indices_bg_p = torch.max(cls_proposal, 1)
-                # print (indices.shape)
-                # print (indices)
-                mask_bg_p = torch.nonzero( indices_bg_p )
-
-                cls_weights_bg_p = torch.cuda.FloatTensor(cls_proposal.size(0), 1).zero_()
-                for i in range(mask_bg_p.numel()):
-                    # print (mask[i]) 
-                    ind = int(mask_bg_p[i])
-                    cls_weights_bg_p[ind, 0] = 1.0
-
-                # print (cls_weights)
-                cls_weights_bg_p = Variable(cls_weights_bg_p)
- 
+                
+                cls_proposal = cls_prob_proposal
+                argmax = cls_proposal.max(1)[1]
+                # print (argmax)
+                mask = torch.nonzero(argmax)
                 # print (mask)
+                cls_prob_alpha = cls_score_softmax * alpha_cls_softmax
+                cls_prob_neighbor = torch.sum(cls_prob_alpha, 0)
 
-                #### neighbor alpha if max
-                value_alpha_n, indices_alpha_n = torch.max(alpha_cls_softmax, 0)
+                cls_weights = torch.cuda.FloatTensor(cls_proposal.size(0), 1).zero_()
+                # print (cls_weights.shape)
+
+                # print (cls_prob_alpha.shape)
+                for i in range(mask.numel()):
+                    # print (mask[i]) 
+                    ind = int(mask[i])
+                    cls_weights[ind, 0] = 1.0
+                # print (cls_weights)
+                cls_weights = Variable(cls_weights)
+
+                prob_neg = 1 - cls_proposal[:,0]
+                
+                # print (prob_neg.shape)
+                # print (prob_neg.shape)
+                # print (prob_neg)
+                prob_neg = prob_neg.view(300, 1)
+                # exit()
+
+                cls_prob_neighbor_ = cls_prob_neighbor * prob_neg
+                # print (cls_prob_neighbor_.shape)
+
+                cls_prob = cls_weights * cls_prob_neighbor_ + (1 - cls_weights) * cls_proposal 
+
+
+                # cls_prob = cls_proposal 
+                # exit()
+                # cls_prob_alpha = cls_score_softmax * alpha_cls_softmax
+
+                # print (alpha_cls_softmax.shape)
+                # print (alpha_cls_softmax[:,2,0])
+                # print (cls_score_softmax.shape)
+                # print (cls_score_softmax[4,2,:])
+                # exit()
+
+                # print (alpha_cls_softmax[:,200,0])
+                # print (indices)
+                # print (value)
+
                 # print (indices.shape)
-                # one_hot = torch.cuda.FloatTensor(alpha_cls_softmax.size(0), alpha_cls_softmax.size(1), alpha_cls_softmax.size(2))
-                y = torch.cuda.FloatTensor(alpha_cls_softmax.size(0), alpha_cls_softmax.size(1))
-                y.zero_()
-                # indices = indices.view(indices.size(0))
-                indices_alpha_n = indices_alpha_n.permute(1, 0)
-                # print (indices.shape)
+                # print (cls_score_softmax.shape)
+                # argmax = alpha_cls_softmax.max(0)[1]
+                # print (argmax.shape)
+                # print (argmax)
+
+                # indices = indices.view(indices.size(1))
                 # print (y.shape)
-                y = y.scatter_(0, indices_alpha_n.data, 1)
-                y = y.view(y.size(0), y.size(1), 1)
-                y = Variable(y)
-                # print (y[:,0,0])
-                # print (y[:,2,0])
+                # print (y.shape)
+                # print (y[:,0])
+                
+
+                # cls_prob = cls_score_softmax[argmax]
+                
+                # cls_prob = cls_score_softmax[indices, :, :]
+                # print (cls_prob.shape)
+
+
+                # print ( alpha_softmax[:,0,0])
+                # value2, indices2 = torch.max(alpha_softmax, 0)
+                # print (value2[:,0])
+                # print (value2.shape)
+                # print (indices2.shape)
+                # print (indices2[:,0])
+                # one_hot = torch.cuda.FloatTensor(alpha_cls_softmax.size(0), alpha_cls_softmax.size(1), alpha_cls_softmax.size(2))
+                # one_hot = one_hot.scatter_(0, indices.data, 1)
+
+                # y.scatter_(0, indices.data, 1)
                 # value, indices = torch.max(alpha_cls_softmax, 0)
                 # indices = indices.permute(1, 0)
                 # y = torch.cuda.FloatTensor(alpha_cls_softmax.size(0), alpha_cls_softmax.size(1))
@@ -354,206 +397,30 @@ class _fasterRCNN(nn.Module):
                 # y = y.view(y.size(0), y.size(1), 1)
                 # y = Variable(y)
                 # cls_prob = cls_score_softmax * y
-                # print (mask)
                 # exit()
-                # cls_proposal = cls_prob_proposal
-                # argmax = cls_proposal.max(1)[1]
-                # print (argmax)
-                # mask = torch.nonzero(argmax)
-                # print (mask)
-
-                cls_prob_alpha_ave = cls_score_softmax * alpha_cls_softmax
-
-                ##########
-                cls_prob_pre_ave = torch.sum(cls_prob_alpha_ave, 0)
-                mask_bg_p_n = torch.nonzero(cls_proposal[:,0] > cls_prob_pre_ave[:,0])
-                cls_weights_bg_p_n = torch.cuda.FloatTensor(cls_proposal.size(0), 1).zero_()
-                # # print (cls_weights.shape)
-
-                # # print (cls_prob_alpha.shape)
-                for i in range(mask_bg_p_n.numel()):
-                    # print (mask[i]) 
-                    ind = int(mask_bg_p_n[i])
-                    cls_weights_bg_p_n[ind, 0] = 1.0
-                # print (cls_weights)
-                cls_weights_bg_p_n = Variable(cls_weights_bg_p_n)
-                # print (cls_weights.shape)
-                # print (cls_prob_pre.shape)
-                # cls_weights = cls_weights.view()
- 
-                cls_prob_alpha = cls_score_softmax * y
-                cls_prob_max_alpha_pre = torch.sum(cls_prob_alpha, 0)
-
-                #### neighbor bg if max
-                value_bg_n, indices_bg_n = torch.max(cls_prob_pre_ave, 1)
-                # print (indices.shape)
-                # print (indices)
-                mask_bg_n = torch.nonzero( indices_bg_n )
-
-                cls_weights_bg_n = torch.cuda.FloatTensor(cls_proposal.size(0), 1).zero_()
-                for i in range(mask_bg_n.numel()):
-                    # print (mask[i]) 
-                    ind = int(mask_bg_n[i])
-                    cls_weights_bg_n[ind, 0] = 1.0
-
-                # print (cls_weights)
-                cls_weights_bg_n = Variable(cls_weights_bg_n)
- 
-                ## combine
-                ## cls_prob = cls_weights_bg_p * (cls_weights_bg_p_n * cls_proposal + (1 - cls_weights_bg_p_n) * cls_prob_pre_ave ) + (1 - cls_weights_bg_p) * cls_prob_pre_ave
-
-                ## cls_weights_bg_p : proposal pos weight
-                ## cls_weights_bg_n : neighjbor pos weight
-                ## cls_weights_bg_p_n : proposal bg > neighbor bg
-
-                mask_bg_p_or_n = 1 - cls_weights_bg_p * cls_weights_bg_n
-
-                # cls_prob =  mask_bg_p_or_n * (cls_weights_bg_p_n * cls_proposal + (1 - cls_weights_bg_p_n) * cls_prob_pre_ave ) + (1-mask_bg_p_or_n) * cls_prob_max_alpha_pre 
-                # cls_prob = cls_prob_max_alpha_pre 
-                cls_prob =  cls_proposal
-
-                ### # cls_prob_alpha = cls_prob_alpha * y
-
-                ### ## new select prob
-                ### # cls_prob_pre = torch.sum(cls_prob_alpha, 0)
-                # cls_prob_pre_ave = torch.sum(cls_prob_alpha_ave, 0)
-                ### # cls_prob = cls_score_softmax[4,:,:]
-
-                ### ## mask for neg
-                ### # mask = torch.nonzero(cls_score_softmax[4,:,0] > cls_prob_pre[:,0])
-                # mask2 = torch.nonzero(cls_score_softmax[4,:,0] > cls_prob_pre_ave[:,0])
-                ### # mask = torch.
-                ### # print (mask)
-
-                # cls_prob_alpha_ave = cls_score_softmax * alpha_cls_softmax
-                # cls_prob_pre = torch.sum(cls_prob_alpha_ave, 0)
-
-                # cls_weights = torch.cuda.FloatTensor(cls_proposal.size(0), 1).zero_()
-                # # print (cls_weights.shape)
-
-                # # print (cls_prob_alpha.shape)
-                # for i in range(mask.numel()):
-                #    # print (mask[i]) 
-                #    ind = int(mask[i])
-                #    cls_weights[ind, 0] = 1.0
-                # print (cls_weights)
-                # cls_weights = Variable(cls_weights)
-                # print (cls_weights.shape)
-                # print (cls_prob_pre.shape)
-                # cls_weights = cls_weights.view()
-                
-
-                # cls_prob = cls_weights * cls_score_softmax[4,:,:] + (1 - cls_weights) * cls_prob_pre
-
-                # cls_prob =  cls_prob_pre
-                # cls_prob = cls_score_softmax[4,:,:]
-                # exit()
-
-
-                #### original plan
-
- 
- 
-                # print (alpha_cls_softmax.shape)
-                # print (alpha_cls_softmax[4,:,0])
-                # print (cls_score_softmax.shape)
-                # print (cls_score_softmax[4,:,0])
-                # print (cls_prob[:,0])
-                # tmp = torch.stack([alpha_cls_softmax[4,:,0], cls_score_softmax[4,:,0]])
-                # tmp = torch.stack([alpha_cls_softmax[4,:,0], cls_score_softmax[4,:,0], cls_prob[:,0]])
-                # # tmp = tmp.view(300,2)
-                # tmp = tmp.permute(1, 0)
-                # print (tmp.shape)
-                # print (tmp)
-
-                ## old select 1
-                ### cls_prob_neighbor = torch.sum(cls_prob_alpha, 0)
-
-                ### cls_weights = torch.cuda.FloatTensor(cls_proposal.size(0), 1).zero_()
-                ### # print (cls_weights.shape)
-
-                ### # print (cls_prob_alpha.shape)
-                ### for i in range(mask.numel()):
-                ###     # print (mask[i]) 
-                ###     ind = int(mask[i])
-                ###     cls_weights[ind, 0] = 1.0
-                ### # print (cls_weights)
-                ### cls_weights = Variable(cls_weights)
-
-                ### prob_neg = 1 - cls_proposal[:,0]
-
-                ### # print (prob_neg.shape)
-                ### # print (prob_neg.shape)
-                ### # print (prob_neg)
-                ### prob_neg = prob_neg.view(300, 1)
-                ### # exit()
-                ### cls_prob_neighbor_ = cls_prob_neighbor * prob_neg
-                ### # print (cls_prob_neighbor_.shape)
-                ### cls_prob = cls_weights * cls_prob_neighbor_ + (1 - cls_weights) * cls_proposal
         else:
             ## proposal
             cls_prob = cls_prob_proposal
-
-
-        # if self.cls_neighbor: 
-        #     ## neighbor 
-        #     if self.cls_alpha_option == 1:
-        #         cls_score = bbox_cls * alpha_cls_softmax
-        #         cls_prob = torch.nn.Softmax(dim=2)(cls_score)
-        #     else:
-        #         cls_score_softmax = torch.nn.Softmax(dim=2)(bbox_cls)
-        #         cls_prob = cls_score_softmax * alpha_cls_softmax
-        #     cls_prob = torch.sum(cls_prob, 0)
-        # else:
-        #     ## proposal
-        #     cls_prob = bbox_cls
-        #     cls_prob = torch.sum(cls_prob, 0)
        
 
+        RCNN_loss_cls = 0
         RCNN_loss_bbox = 0
         RCNN_loss_bbox_beta = 0
         RCNN_loss_cls_beta = 0
         KL_loss = 0
         KL_loss_cls = 0
-        RCNN_loss_cls_proposal = 0
-        RCNN_loss_cls_alpha_positive = 0  
-        RCNN_loss_cls_alpha_negative = 0
-        # RCNN_loss_cls = RCNN_loss_cls_pos 
-        RCNN_loss_cls_beta_positive  = 0 
-
+        
 
         if self.training:
-            cls_weights_pos, cls_weights_neg = _get_cls_labels_pytorch(rois_label_long)
-            cls_weights_pos = Variable(cls_weights_pos)
-            cls_weights_neg = Variable(cls_weights_neg)
-
             # classification loss
-            # RCNN_loss_cls_proposal = F.cross_entropy(cls_score, rois_label)
+            # RCNN_loss_cls = F.cross_entropy(cls_score, rois_label)
             # RCNN_loss_cls = F.cross_entropy(cls_score, rois_label)
             if self.cls_neighbor:
-                RCNN_loss_cls_pos = _cross_entropy_neighbor_positive(bbox_cls, alpha_cls_softmax, rois_label, self.cls_alpha_option, cls_weights_pos)
-                RCNN_loss_cls_neg = _cross_entropy_neighbor_negative(bbox_cls, alpha_cls_softmax, rois_label, self.cls_alpha_option, cls_weights_neg)
-                RCNN_loss_cls_alpha_positive = RCNN_loss_cls_pos 
-                RCNN_loss_cls_alpha_negative = RCNN_loss_cls_neg
-                # RCNN_loss_cls = RCNN_loss_cls_pos 
-                RCNN_loss_cls_beta_positive  = _cross_entropy_neighbor_positive(bbox_cls, beta_cls_softmax, rois_label, self.cls_alpha_option, cls_weights_pos)
-                # RCNN_loss_cls_beta_neg  = _cross_entropy_neighbor_negative(bbox_cls, beta_cls_softmax, rois_label, self.cls_alpha_option, cls_weights_neg)
-                # RCNN_loss_cls_beta  = RCNN_loss_cls_beta_pos + RCNN_loss_cls_beta_neg 
-                # RCNN_loss_cls_beta  = RCNN_loss_cls_beta_pos
-
-                ## for proposal
-                # RCNN_loss_cls_proposal = F.cross_entropy(cls_score, rois_label)
-                RCNN_loss_cls_proposal = None
+                RCNN_loss_cls = _cross_entropy_neighbor(bbox_cls, alpha_cls_softmax, rois_label, self.cls_alpha_option)
+                RCNN_loss_cls_beta  = _cross_entropy_neighbor(bbox_cls, beta_cls_softmax, rois_label, self.cls_alpha_option)
             else:
-                # RCNN_loss_cls = _cross_entropy_proposal(bbox_cls, rois_label, self.circle_neighbor)
-                RCNN_loss_cls_alpha_negative = None
-                RCNN_loss_cls_alpha_positive = None 
-                RCNN_loss_cls_beta_positive  = None 
-                RCNN_loss_cls_proposal = F.cross_entropy(cls_score, rois_label)
-                # RCNN_loss_cls_proposal = _cross_entropy_proposal(bbox_cls, rois_label, self.circle_neighbor)
-                ## 
-
-
+                RCNN_loss_cls = _cross_entropy_proposal(bbox_cls, rois_label, self.circle_neighbor)
+                RCNN_loss_cls_beta  = None
 
             # print (RCNN_loss_cls_alpha.shape)
             # print (RCNN_loss_cls_beta.shape)
@@ -594,16 +461,14 @@ class _fasterRCNN(nn.Module):
             # KL_loss = _kl_divergence_loss(alpha_softmax, beta_softmax)
             if self.cls_neighbor:
                 ## neighbor
-                # KL_loss_cls = _kl_divergence_loss(alpha_cls, beta_cls, )
-                KL_loss_cls = _kl_divergence_loss(alpha_cls, beta_cls, cls_weights_pos)
-
+                KL_loss_cls = _kl_divergence_loss(alpha_cls, beta_cls)
                 # KL_loss_cls = F.mse_loss(alpha_cls_softmax, beta_cls_softmax)
             else:
                 ## proposal
                 KL_loss_cls = None
 
             if self.reg_neighbor:
-                KL_loss = _kl_divergence_loss(alpha, beta, cls_weights_pos)
+                KL_loss = _kl_divergence_loss(alpha, beta)
             else:
                 KL_loss = None
 
@@ -628,14 +493,8 @@ class _fasterRCNN(nn.Module):
         ## adding beta, and kl divergency
         # return rois, cls_prob, bbox_pred, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_bbox_beta, KL_loss
         # return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_bbox_beta, KL_loss
-        # return rois, cls_prob, bbox_pred, RCNN_loss_cls_proposal, RCNN_loss_cls_alpha_negative, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_bbox_beta, KL_loss, \
-        #          RCNN_loss_cls_beta, KL_loss_cls 
-        return rois, cls_prob, bbox_pred, rois_label, \
-               RCNN_loss_cls_proposal, \
-               RCNN_loss_cls_alpha_positive, RCNN_loss_cls_alpha_negative, RCNN_loss_cls_beta_positive, \
-               RCNN_loss_bbox, RCNN_loss_bbox_beta, \
-               KL_loss, KL_loss_cls, \
-               alpha_cls_softmax,  bbox_cls
+        return rois, cls_prob, bbox_pred, RCNN_loss_cls, RCNN_loss_bbox, rois_label, RCNN_loss_bbox_beta, KL_loss, \
+                 RCNN_loss_cls_beta, KL_loss_cls
 
     def _init_weights(self):
         def normal_init(m, mean, stddev, truncated=False):
@@ -936,7 +795,7 @@ class _fasterRCNN(nn.Module):
 
 
 
-def _kl_divergence_loss(distribution_p, distribution_q, mask):
+def _kl_divergence_loss(distribution_p, distribution_q):
         ## kl distance of two input 
         # print (distribution_p.shape)
         # print (distribution_q.shape)
@@ -948,13 +807,7 @@ def _kl_divergence_loss(distribution_p, distribution_q, mask):
        
         kl_distance = softmax_p * (log_p - log_q)
         # print (kl_distance.shape)
-        # kl_distance_mean_mask = kl_distance_mean * mask
-        # print (kl_distance.shape)
-        # print (mask.shape)
-        mask_view = mask.view(1, mask.size(0), 1)
-        kl_distance_mask = kl_distance * mask_view
-        kl_distance_mean = torch.sum(kl_distance_mask, 0)
-
+        kl_distance_mean = torch.sum(kl_distance, 0)
         # print (kl_distance_mean.shape)
         loss_kl = kl_distance.mean()
         # print (loss_kl.shape)
@@ -1024,7 +877,6 @@ class RelationUnit(nn.Module):
                 self.alpha_w_cls = Parameter(torch.Tensor(9, 1, original_feature_dim, 1))
             # self.cls_score = Parameter(torch.Tensor(9, 1, original_feature_dim, self.n_classes))
             # self.cls_score = Parameter(torch.Tensor(9, 1, original_feature_dim, self.n_classes))
-
             self.cls_score = Parameter(torch.Tensor(9, 1, original_feature_dim, self.n_classes))
             # self.cls_score = Parameter(torch.Tensor(1, 1, original_feature_dim, self.n_classes))
             ## shared alpha
@@ -1348,9 +1200,9 @@ class RelationUnit(nn.Module):
             beta_softmax = None
             output_beta = None
             delta_pred_offset_beta = None
+            beta_out = None
             beta_softmax_cls = None
             beta_out_cls = None
-            beta_out = None
 
         # return output, w_x1, w_y1, w_x2, w_y2, delta_x1, delta_y1, delta_x2, delta_y2, output_x1_before,  output_y1_before, output_x2_before, output_y2_before
         return output, output_beta, alpha_softmax, beta_softmax, delta_pred_offset, delta_pred_offset_beta, alpha, beta_out, \
@@ -1384,29 +1236,8 @@ def _cross_entropy_proposal(cls, labels, circle):
     # print (loss_cls.shape)
     return loss
 
-## 
-def _get_cls_labels_pytorch(labels):
-    # print (labels.shape)
-    cls_weights = labels.new(labels.size()).zero_().float()
-    # print (cls_weights.shape)
-
-    batch_size = labels.size(0)
-    inds = torch.nonzero(labels > 0).view(-1)
-
-    # print (labels) 
-    for i in range(inds.numel()):
-        ind = inds[i]
-        # print (ind)
-        # print (cls_weights[ind])
-        cls_weights[ind] = 1.0
-    # print (cls_weights)
-    cls_weights_pos = cls_weights
-    cls_weights_neg = 1.0 - cls_weights
-    return cls_weights_pos, cls_weights_neg
-
-
 # bbox_cls, alpha_cls_softmax, beta_cls_softmax, alpha_cls, beta_cls
-def _cross_entropy_neighbor_positive(cls, cls_weights, labels, cls_option, mask):
+def _cross_entropy_neighbor(cls, cls_weights, labels, cls_option):
     ## 
     # print (cls.shape)
     # print (cls_weights.shape)
@@ -1424,19 +1255,12 @@ def _cross_entropy_neighbor_positive(cls, cls_weights, labels, cls_option, mask)
     # neighbor_rois_target     = rois_target.expand(neighbor_num, rois_target.shape[0], rois_target.shape[1])
  
 
-    # print (mask.shape)
-    # print (cls.shape)
 
     ####### option 1 logits 
     if cls_option == 0:
         cls_dot = cls * cls_weights
         cls_sum = torch.sum(cls_dot, 0)
-        # print (cls_sum.shape)
-        loss = F.cross_entropy(cls_sum, labels, reduce=False)
-        # print (loss.shape)
-        loss = loss * mask
-        loss = torch.mean(loss)
-        # exit()
+        loss = F.cross_entropy(cls_sum, labels)
         return loss
     ####### end option 1 logits 
     # cls_prob = torch.nn.Softmax(dim=1)(cls)
@@ -1456,11 +1280,7 @@ def _cross_entropy_neighbor_positive(cls, cls_weights, labels, cls_option, mask)
         cls_sum = F.threshold(cls_sum, 1e-6, 1e-6)
         
         cls_sum_log = torch.log(cls_sum)
-        loss = F.nll_loss(cls_sum_log, labels, reduce=False)
-        # print (loss.shape)
-        loss = loss * mask
-        loss = torch.mean(loss)
-        # exit()
+        loss = F.nll_loss(cls_sum_log, labels)
         return loss
     ######## end option 2
     # print (cls_sum.shape)
@@ -1490,126 +1310,12 @@ def _cross_entropy_neighbor_positive(cls, cls_weights, labels, cls_option, mask)
         # print (loss.shape)
         loss = torch.sum(loss, 0)
         # print (loss.shape)
-        # print (loss)
-        loss = loss * mask
-        # print (loss)
-        # exit()
         loss = torch.mean(loss)
         # print (loss.shape)
         # print (loss_cls.shape)
         return loss
+
     raise("should not happen")
-
-# bbox_cls, alpha_cls_softmax, beta_cls_softmax, alpha_cls, beta_cls
-def _cross_entropy_neighbor_negative(cls, cls_weights, labels, cls_option, mask):
-
-    # all_features_offset_pre_nogradient = Variable(all_features_offset_pre.data, requires_grad=False)
-    cls_weights_no_gradient =  Variable( cls_weights.data, requires_grad=False)
-    ## 
-    # print (cls.shape)
-    # print (cls_weights.shape)
-    # print (labels.shape)
-    # cls_permute = cls.permute(1, 2, 0)
-    # key_out = key_out.permute([3,1,2,0])
-    # print (cls_permute.shape)
-
-    # labels_extend = labels.expand(cls.shape[0], labels.shape[0])
-    # # print (labels_extend.shape)
-    # labels_extend_permute = labels_extend.permute(1,0)
-    # loss = F.cross_entropy(cls_permute, labels_extend_permute, reduce=False)
-    # print (loss.shape)
-    # print (labels_extend_permute.shape)
-    # neighbor_rois_target     = rois_target.expand(neighbor_num, rois_target.shape[0], rois_target.shape[1])
- 
-
-
-    ##### option 1 logits 
-    if cls_option == 0:
-        # cls_dot = cls * cls_weights
-        cls_dot = cls * cls_weights_no_gradient
-        cls_sum = torch.sum(cls_dot, 0)
-        loss = F.cross_entropy(cls_sum, labels)
-        return loss
-    ####### end option 1 logits 
-    # cls_prob = torch.nn.Softmax(dim=1)(cls)
-
-
-    # print (cls_prob.shape)
-    # print (cls_dot.shape)
-    # cls_sum.clamp_(1e-6, 1.1)
-
-
-    ####### option 2 2048
-    if cls_option == 1:
-        cls_prob = torch.nn.Softmax(dim=2)(cls)
-
-        # cls_dot = cls_prob * cls_weights
-        cls_dot = cls_prob * cls_weights_no_gradient
-        cls_sum = torch.sum(cls_dot, 0)
-        cls_sum = F.threshold(cls_sum, 1e-6, 1e-6)
-        
-        cls_sum_log = torch.log(cls_sum)
-        loss = F.nll_loss(cls_sum_log, labels)
-        return loss
-    ######## end option 2
-    # print (cls_sum.shape)
-
-    # loss = F.cross_entropy(cls_sum, labels)
-
-    ## nll_loss(input, target)
-    # print (cls_sum.shape)
-    # print (labels.shape)
-   
-    # print (loss.shape)
-    # exit()
-
-    # exit()
-    ######## cross entropy
-    ######## cross entropy
-    if cls_option == 2:
-        loss_cls = []
-        for i in range(9):
-            loss_cls_tmp = F.cross_entropy(cls[i,:,:], labels, reduce=False) 
-            # print (loss_cls_tmp.shape)
-            loss_cls.append(loss_cls_tmp)
-        loss_cls_tensor = torch.stack(loss_cls)
-        # print (loss_cls_tensor.shape)
-        # cls_weights = cls_weights.view(cls_weights.shape[0], cls_weights.shape[1])
-        cls_weights_no_gradient = cls_weights_no_gradient.view(cls_weights.shape[0], cls_weights.shape[1])
-
-        # loss = loss_cls_tensor * cls_weights
-        loss = loss_cls_tensor * cls_weights_no_gradient
-        # print (loss.shape)
-        loss = torch.sum(loss, 0)
-        # print (loss.shape)
-        # print (loss)
-        loss = loss * mask
-        # print (loss)
-        # exit()
-        loss = torch.mean(loss)
-        # print (loss.shape)
-        # print (loss_cls.shape)
-        return loss
-    raise("should not happen")
-
-
-    ################## negative ###########
-    # if True:
-    #     if cfg.CIRCLE:
-    #         loss = F.cross_entropy(cls[8,:,:], labels, reduce=False) 
-    #     else: 
-    #         loss = F.cross_entropy(cls[4,:,:], labels, reduce=False) 
-
-    #     # print (loss.shape)
-    #     # print (loss.shape)
-    #     loss = loss * mask
-    #     # print (loss)
-    #     loss = torch.mean(loss)
-    #     # print (loss.shape)
-    #     # print (loss_cls.shape)
-    #     return loss
-
-    # raise("should not happen")
 
 
 def _smooth_l1_loss_proposal(bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_weights, neighbor_pred, circle, sigma=1.0, dim=[1]):
