@@ -32,6 +32,7 @@ from model.utils.net_utils import weights_normal_init, save_net, load_net, \
 
 from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
+import math
 
 def parse_args():
   """
@@ -573,7 +574,67 @@ if __name__ == '__main__':
 
   iters_per_epoch = int(train_size / args.batch_size)
 
-  for epoch in range(args.start_epoch, args.max_epochs + 1):
+  nan_flag = False
+
+
+
+  # for epoch in range(args.start_epoch, args.max_epochs + 1):
+  epoch = args.start_epoch - 1
+  print (epoch)
+  
+  # for epoch in range(args.start_epoch, args.max_epochs + 1):
+
+  while True:
+
+    ## if from nan
+    if nan_flag:
+        ## back to the current epoch
+        epoch = epoch - 1  
+        ## reset the flag
+        nan_flag = False
+
+        ## load last model, as we continue, nan model should not be saved
+        mypath = output_dir
+        onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
+
+        print (onlyfiles)
+        if len(onlyfiles) > 0:
+            ## resume from last
+            sessions = [int(arr.split('_')[2]) for arr in onlyfiles]
+            checkepochs = [int(arr.split('_')[3]) for arr in onlyfiles]
+            checkpoints = [int(arr.split('_')[4].split('.')[0]) for arr in onlyfiles]
+            print (sessions)
+            print (checkepochs)
+            print (checkpoints)
+            lastepoch = max(checkepochs)
+            index = checkepochs.index(lastepoch)
+            lastsession = sessions[index]
+            lastpoints = checkpoints[index]
+            print (lastepoch)
+            print (lastsession)
+            print (lastpoints)
+
+            load_name = os.path.join(output_dir,
+              'faster_rcnn_{}_{}_{}.pth'.format(lastsession, lastepoch, lastpoints))
+            print("loading checkpoint %s" % (load_name))
+            checkpoint = torch.load(load_name)
+            # print (checkpoint['model'].keys())
+            # print (fasterRCNN.state_dict().keys())
+            # args.session = checkpoint['session']
+            # args.start_epoch = checkpoint['epoch']
+            # fasterRCNN.load_state_dict(checkpoint['model'])
+            fasterRCNN.load_state_dict({'module.'+k:v for k,v in checkpoint['model'].items()})
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            lr = optimizer.param_groups[0]['lr']
+            if 'pooling_mode' in checkpoint.keys():
+              cfg.POOLING_MODE = checkpoint['pooling_mode']
+            print("loaded checkpoint %s" % (load_name))
+
+    if epoch == args.max_epochs:
+        break
+    epoch = epoch + 1
+   
+
     # setting to train mode
     fasterRCNN.train()
     loss_temp = 0
@@ -777,6 +838,8 @@ if __name__ == '__main__':
           fg_cnt = torch.sum(rois_label.data.ne(0))
           bg_cnt = rois_label.data.numel() - fg_cnt
 
+        
+
         print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e" \
                                 % (args.session, epoch, step, iters_per_epoch, loss_temp, lr), flush=True)
         print("\t\t\tfg/bg=(%d/%d), time cost: %f" % (fg_cnt, bg_cnt, end-start), flush=True)
@@ -785,6 +848,8 @@ if __name__ == '__main__':
         # print("\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls_proposal: %.4f, rcnn_box %.4f, bbox_beta %.4f, kl %.4f, cls_alpha %.4f, cls_beta %.4f, kl_cls %.4f" \
         #              % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, loss_rcnn_box_beta, loss_kl, loss_rcnn_cls_alpha, loss_rcnn_cls_beta, loss_kl_cls), flush=True)
         #              % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box, 0.0, loss_kl))
+
+        ## 
         if args.use_tfboard:
           info = {
             'loss': loss_temp,
@@ -796,8 +861,19 @@ if __name__ == '__main__':
           for tag, value in info.items():
             logger.scalar_summary(tag, value, step)
 
+        ## loss temp is nan
+        loss_temp = float('nan') 
+        print (loss_temp)
+        if math.isnan(loss_temp):
+            nan_flag = True
+            print ("################NAN in epoch " +str(epoch)+ "########")
+            break
         loss_temp = 0
         start = time.time()
+
+    ## if nan, no save, continue
+    if nan_flag:
+        continue
 
     if args.mGPUs:
       save_name = os.path.join(output_dir, 'faster_rcnn_{}_{}_{}.pth'.format(args.session, epoch, step))
