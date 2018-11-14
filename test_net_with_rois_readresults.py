@@ -128,6 +128,9 @@ def parse_args():
                       help='options {0: logits, 1: softmax , 2: cross entropy}',
                       default=2, type=int)
 
+  parser.add_argument('--prob_opt', dest='prob_opt',
+                      help='options {0: proposal, 1: neighbor  , 2: max alpha, 3: max bp}',
+                      default=0, type=int)
 
 
   args = parser.parse_args()
@@ -212,6 +215,7 @@ if __name__ == '__main__':
   print ("alpha_same_with_beta : ", args.alpha_same_with_beta)
   print ("sigma_geometry       : ", args.sigma_geometry)
   print ("cls_alpha_option     : ", args.cls_alpha_option)
+  print ("prob_opt             : ", args.prob_opt)
 
 
 
@@ -586,8 +590,22 @@ if __name__ == '__main__':
                   # cls_prob =  mask_bg_p_or_n * (cls_weights_bg_p_n * cls_proposal + (1 - cls_weights_bg_p_n) * cls_prob_pre_ave ) + (1-mask_bg_p_or_n) * cls_prob_max_alpha_pre 
                   # cls_prob = cls_prob_max_alpha_pre
                   # cls_prob = cls_prob_pre_ave
-                  cls_prob = cls_proposal
 
+
+                  if args.prob_opt == 0:
+                      ## proposal
+                      cls_prob = cls_proposal
+                  elif args.prob_opt == 1:
+                      ## neighbor
+                      cls_prob = cls_prob_pre_ave
+                  elif args.prob_opt == 2:
+                      ## max alpha
+                      cls_prob = cls_prob_max_alpha_pre
+                  elif args.prob_opt == 3:
+                      ## max background prob
+                      cls_prob = cls_weights_bg_p_n * cls_proposal + (1 - cls_weights_bg_p_n) * cls_prob_pre_ave 
+                  else:
+                      raise("error")
 
                   #######################################################
 
