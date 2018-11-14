@@ -337,7 +337,8 @@ class _fasterRCNN(nn.Module):
                 RCNN_loss_cls_pos = _cross_entropy_neighbor_positive(bbox_cls, alpha_cls_softmax, rois_label, self.cls_alpha_option, cls_weights_pos)
                 RCNN_loss_cls_neg = _cross_entropy_neighbor_negative(bbox_cls, alpha_cls_softmax, rois_label, self.cls_alpha_option, cls_weights_neg)
                 RCNN_loss_cls_alpha_positive = RCNN_loss_cls_pos 
-                RCNN_loss_cls_alpha_negative = RCNN_loss_cls_neg
+                # RCNN_loss_cls_alpha_negative = RCNN_loss_cls_neg
+                RCNN_loss_cls_alpha_negative = None
                 # RCNN_loss_cls = RCNN_loss_cls_pos 
                 RCNN_loss_cls_beta_positive  = _cross_entropy_neighbor_positive(bbox_cls, beta_cls_softmax, rois_label, self.cls_alpha_option, cls_weights_pos)
                 # RCNN_loss_cls_beta_neg  = _cross_entropy_neighbor_negative(bbox_cls, beta_cls_softmax, rois_label, self.cls_alpha_option, cls_weights_neg)
@@ -345,8 +346,8 @@ class _fasterRCNN(nn.Module):
                 # RCNN_loss_cls_beta  = RCNN_loss_cls_beta_pos
 
                 ## for proposal
-                # RCNN_loss_cls_proposal = F.cross_entropy(cls_score, rois_label)
-                RCNN_loss_cls_proposal = None
+                RCNN_loss_cls_proposal = F.cross_entropy(cls_score, rois_label)
+                # RCNN_loss_cls_proposal = None
             else:
                 # RCNN_loss_cls = _cross_entropy_proposal(bbox_cls, rois_label, self.circle_neighbor)
                 RCNN_loss_cls_alpha_negative = None

@@ -688,8 +688,9 @@ if __name__ == '__main__':
           loss = loss + \
              args.kl_weight              * kl_loss_cls.mean() +\
              args.cls_weights_alpha_pos  * RCNN_loss_cls_alpha_positive.mean() +\
-             args.cls_weights_alpha_neg  * RCNN_loss_cls_alpha_negative.mean() +\
-             args.cls_weights_beta_pos   * RCNN_loss_cls_beta_positive.mean()
+             args.cls_weights_beta_pos   * RCNN_loss_cls_beta_positive.mean() +\
+             args.cls_weights_proposal   * RCNN_loss_cls_proposal.mean() 
+             # args.cls_weights_alpha_neg  * RCNN_loss_cls_alpha_negative.mean() +\
       else:
           loss = loss + \
              args.cls_weights_proposal   * RCNN_loss_cls_proposal.mean() 
@@ -785,9 +786,10 @@ if __name__ == '__main__':
               # loss_rcnn_cls_beta = RCNN_loss_cls_beta.mean().data[0]
               # loss_rcnn_cls_alpha = RCNN_loss_cls.mean().data[0]
               loss_rcnn_alpha_positive =  RCNN_loss_cls_alpha_positive.mean().data[0]
-              loss_rcnn_alpha_negative =  RCNN_loss_cls_alpha_negative.mean().data[0] 
+              # loss_rcnn_alpha_negative =  RCNN_loss_cls_alpha_negative.mean().data[0] 
+              loss_rcnn_alpha_negative =  0
               loss_rcnn_beta_positive  =  RCNN_loss_cls_beta_positive.mean().data[0]
-              loss_rcnn_cls_proposal = 0 
+              loss_rcnn_cls_proposal = RCNN_loss_cls_proposal.mean().data[0]
               loss_kl_cls = kl_loss_cls.mean().data[0]
           else:
               loss_kl_cls = 0
@@ -821,9 +823,11 @@ if __name__ == '__main__':
               # loss_kl_cls = kl_loss_cls.data[0]
               # loss_rcnn_cls_alpha = RCNN_loss_cls.data[0]
               loss_rcnn_alpha_positive =  RCNN_loss_cls_alpha_positive.data[0]
-              loss_rcnn_alpha_negative =  RCNN_loss_cls_alpha_negative.data[0] 
+              # loss_rcnn_alpha_negative =  RCNN_loss_cls_alpha_negative.data[0] 
+              loss_rcnn_alpha_negative =  0
               loss_rcnn_beta_positive  =  RCNN_loss_cls_beta_positive.data[0]
-              loss_rcnn_cls_proposal = 0 
+              # loss_rcnn_cls_proposal = 0 
+              loss_rcnn_cls_proposal = RCNN_loss_cls_proposal.data[0]
               loss_kl_cls = kl_loss_cls.data[0]
           else:
               # loss_rcnn_cls_beta = 0 
