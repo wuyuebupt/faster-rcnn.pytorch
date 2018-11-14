@@ -598,9 +598,9 @@ if __name__ == '__main__':
       # exit()
 
       scores = cls_prob.data
-      print (scores.shape)
-      print (scores[0,0,:])
-      exit()
+      # print (scores.shape)
+      # print (scores[0,0,:])
+      # exit()
       # scores = cls_prob.data
       boxes = rois.data[:, :, 1:5]
 
@@ -650,11 +650,11 @@ if __name__ == '__main__':
       roi_boxes = roi_boxes.squeeze()
       box_deltas = box_deltas.squeeze()
 
-      print (pred_boxes.shape)
-      print (pred_boxes.cpu().numpy())
-      print (scores.shape)
-      print (scores.cpu().numpy())
-      print (pred_boxes.cpu().numpy())
+      # print (pred_boxes.shape)
+      # print (pred_boxes.cpu().numpy())
+      # print (scores.shape)
+      # print (scores.cpu().numpy())
+      # print (pred_boxes.cpu().numpy())
 
       # wx1 = wx1.squeeze()
       # dx1 = dx1.squeeze()
@@ -793,12 +793,12 @@ if __name__ == '__main__':
                   keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
                   all_boxes[j][i] = all_boxes[j][i][keep, :]
                   all_boxes_rois[j][i] = all_boxes_rois[j][i][keep, :]
-      print (i)
-      print (len(all_boxes))
-      obj = [all_boxes[j][i] for j in xrange(1, imdb.num_classes)]
+      # print (i)
+      # print (len(all_boxes))
+      # obj = [all_boxes[j][i] for j in xrange(1, imdb.num_classes)]
       # obj =np.hstack( [all_boxes[j][i] for j in xrange(1, imdb.num_classes)])
-      print (obj)
-      print (all_boxes[15][i])
+      # print (obj)
+      # print (all_boxes[15][i])
 
       # print (all_boxes[1][i])
       ### analyze
