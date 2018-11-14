@@ -341,8 +341,8 @@ if __name__ == '__main__':
 
   # for i in range(10):
   # for i in range(5):
-  for i in range(1):
-  # for i in range(num_images):
+  # for i in range(1):
+  for i in range(num_images):
 
       data = next(data_iter)
       im_data.data.resize_(data[0].size()).copy_(data[0])
@@ -371,7 +371,7 @@ if __name__ == '__main__':
       bbox_pred = rois_cls_alpha[i][1]
       alpha     = rois_cls_alpha[i][2]
       score     = rois_cls_alpha[i][3]
-      print (rois.dtype)
+      # print (rois.dtype)
       # print (rois)
       rois = Variable(torch.from_numpy(rois))
       # print (rois.dtype)
@@ -385,10 +385,10 @@ if __name__ == '__main__':
       score     = score.cuda()
       # print (rois.shape)
 
-      print (rois[0,0,:])
-      print (bbox_pred[0,0,:])
-      print (alpha[:,0,0])
-      print (score[:,0,0])
+      # print (rois[0,0,:])
+      # print (bbox_pred[0,0,:])
+      # print (alpha[:,0,0])
+      # print (score[:,0,0])
       # if i == 4:
       #     print (rois[0,0,:])
       #     print (bbox_pred[0,0,:])
