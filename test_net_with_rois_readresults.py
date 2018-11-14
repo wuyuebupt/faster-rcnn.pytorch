@@ -129,7 +129,7 @@ def parse_args():
                       default=2, type=int)
 
   parser.add_argument('--prob_opt', dest='prob_opt',
-                      help='options {0: proposal, 1: neighbor  , 2: max alpha, 3: max bp}',
+                      help='options {0: proposal, 1: neighbor  , 2: max alpha, 3: max bp, 4: p0 + (1-p0)* p_20}',
                       default=0, type=int)
 
 
@@ -375,6 +375,8 @@ if __name__ == '__main__':
       bbox_pred = rois_cls_alpha[i][1]
       alpha     = rois_cls_alpha[i][2]
       score     = rois_cls_alpha[i][3]
+      proposal_score = rois_cls_alpha[i][4]
+
       # print (rois.dtype)
       # print (rois)
       rois = Variable(torch.from_numpy(rois))
@@ -383,15 +385,19 @@ if __name__ == '__main__':
       bbox_pred = Variable(torch.from_numpy(bbox_pred))
       alpha = Variable(torch.from_numpy(alpha))
       score = Variable(torch.from_numpy(score))
+      proposal_score = Variable(torch.from_numpy(proposal_score))
       rois = rois.cuda()
       bbox_pred = bbox_pred.cuda()
       alpha     = alpha.cuda()
       score     = score.cuda()
+      proposal_score = proposal_score.cuda()
       # print (rois.shape)
 
       # print (rois[0,0,:])
       # print (bbox_pred[0,0,:])
       # print (alpha[:,0,0])
+      # print (alpha[4,:,0])
+      # exit()
       # print (score[:,0,0])
       # if i == 4:
       #     print (rois[0,0,:])
@@ -604,6 +610,24 @@ if __name__ == '__main__':
                   elif args.prob_opt == 3:
                       ## max background prob
                       cls_prob = cls_weights_bg_p_n * cls_proposal + (1 - cls_weights_bg_p_n) * cls_prob_pre_ave 
+                  elif args.prob_opt == 4:
+                      ## two stage results
+                      # print (proposal_score.shape)
+                      proposal_300 = torch.sum(proposal_score, 0)
+                      # print (proposal_300.shape)
+                      # print (cls_prob_pre_ave.shape)
+                      y_fg = torch.cuda.FloatTensor(1, proposal_300.size(1))
+                      y_fg.zero_()
+                      y_fg[0,0] = 1.0
+                      # indices = indices.view(indices.size(0))
+                      y_fg = Variable(y_fg)
+                      # print(y_fg)
+                      fg_p = 1 - proposal_300[:,0]
+                      fg_p = fg_p.view(fg_p.size(0), 1)
+                      # print (fg_p.shape)
+                      cls_prob = y_fg * proposal_300 + (1 - y_fg) *(fg_p * cls_prob_pre_ave)
+                      # print (cls_prob.shape)
+                      # exit()
                   else:
                       raise("error")
 

@@ -389,7 +389,7 @@ if __name__ == '__main__':
       # exit()
 
 
-      cls_prob_alpha.append([rois.data.cpu().numpy(), bbox_pred.data.cpu().numpy(), alpha_cls_softmax.data.cpu().numpy(),cls_score.data.cpu().numpy()])
+      cls_prob_alpha.append([rois.data.cpu().numpy(), bbox_pred.data.cpu().numpy(), alpha_cls_softmax.data.cpu().numpy(),cls_score.data.cpu().numpy(), cls_prob.data.cpu().numpy()])
       ## gpu
       # cls_prob_alpha.append([rois, bbox_pred, alpha_cls_softmax,cls_score])
 

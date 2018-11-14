@@ -410,7 +410,11 @@ class _fasterRCNN(nn.Module):
 
                 # cls_prob =  mask_bg_p_or_n * (cls_weights_bg_p_n * cls_proposal + (1 - cls_weights_bg_p_n) * cls_prob_pre_ave ) + (1-mask_bg_p_or_n) * cls_prob_max_alpha_pre 
                 # cls_prob = cls_prob_max_alpha_pre 
-                cls_prob =  cls_proposal
+
+
+                # cls_prob =  cls_proposal
+
+
 
                 ### # cls_prob_alpha = cls_prob_alpha * y
 
@@ -494,6 +498,7 @@ class _fasterRCNN(nn.Module):
             ## proposal
             cls_prob = cls_prob_proposal
 
+        cls_prob = cls_prob_proposal
 
         # if self.cls_neighbor: 
         #     ## neighbor 
